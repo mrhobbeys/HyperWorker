@@ -1,5 +1,18 @@
 # Changelog — Focus & Execution Harness
 
+## v3.1.1 (2026-04-15) — Memory scope default hardening
+
+### Changed
+- **MEMORY-PIPELINE.md example row** — Changed the LEARNINGS.md example from scope `Universal` to `Engagement:[ID]`. The most-read template was teaching the maximally-broad scope as the default, which causes cross-project contamination. This mirrors a fix the OpenClaw project made to their memory subsystem (defaulting to separated storage instead of unified).
+- **MEMORY-PIPELINE.md** — Added an explicit "default to the narrowest scope that fits" rule. Universal now requires the operator to answer a disambiguation question before applying. Makes the principle match what VISION.md already claimed.
+- **case-studies/02-software-feature-ship/SCENARIO.md** — Corrected two misapplied Universal scopes. DISC-001 (OAuth provider endpoint flakiness) is now `Provider:X`. DISC-003 (staging DB pool size) is now `Environment:staging`. The Universal tags were actively teaching the wrong pattern.
+
+### Added
+- **VISION.md** — Architectural constitution with explicit "What HyperWorker Will Not Become" section. Documents the Council #5 rejections (learning systems, feedback loops, meta-orchestration) as out-of-scope on purpose. Prevents re-litigation.
+- **LICENSE** — MIT.
+- **README.md** — Repo-level README (distinct from starter/README.md).
+- **.gitignore** — Standard ignores, operator-sandbox directory excludes.
+
 ## v3.1 (2026-04-15)
 
 ### Added

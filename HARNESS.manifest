@@ -47,6 +47,9 @@ harness_files:
   root:
     - "HARNESS.manifest"
     - "CHANGELOG.md"
+    - "VISION.md"
+    - "README.md"
+    - "LICENSE"
 
 # --- Project Files (Content — Created Per-Project) ---
 # These files are generated from templates when a project is created.

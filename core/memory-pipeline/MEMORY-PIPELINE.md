@@ -47,7 +47,7 @@ Only discoveries that the human operator has personally validated get promoted h
 ```markdown
 | ID | Category | Rule | Confidence | First Observed | Last Validated | Lifecycle | Applies To | Why |
 |---|---|---|---|---|---|---|---|---|
-| L-001 | [Category] | [The rule, stated clearly] | High | 2026-04-12 | 2026-04-12 | ACTIVE | Universal | [Why this rule exists — the incident or decision] |
+| L-001 | [Category] | [The rule, stated clearly] | High | 2026-04-12 | 2026-04-12 | ACTIVE | Engagement:[ID] | [Why this rule exists — the incident or decision] |
 ```
 
 **Fields:**
@@ -90,6 +90,8 @@ Every learning is tagged with a scope that controls where it applies:
 | **Engagement:[ID]** | True only for a specific project | "Q2 Migration uses legacy API v2 endpoints" |
 
 When launching a new engagement, filter LEARNINGS.md to only rows where `Applies To` matches: Universal + the relevant vertical + the specific client + the engagement. One context's lessons never silently influence another.
+
+**Default to the narrowest scope that fits.** Universal should be the rare case, not the default. Before tagging a learning Universal, the operator must be able to answer: "Would this rule be true and relevant in a completely different domain, for a completely different client, on a completely different engagement?" If the answer is "probably yes," Universal is appropriate. If the answer is "only if the same vendor, platform, or client is involved," use a narrower scope. When in doubt, start narrower — a learning tagged `Engagement:[ID]` can be widened on re-validation if the pattern actually does recur. A learning tagged Universal is already polluting every future context.
 
 The scope taxonomy is configurable. The four-level hierarchy above works for service businesses with multiple clients. A product team might use: Universal / Feature:[Name] / Release:[Version]. A consulting firm might use: Universal / Industry:[Name] / Client:[Name] / Engagement:[ID].
 

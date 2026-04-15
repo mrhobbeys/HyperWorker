@@ -42,9 +42,9 @@ If Task 03 changes the API contract, Tasks 04-10 all need re-evaluation. The TAS
 ### Memory Pipeline
 Discoveries captured during this project:
 
-- **DISC-001:** "Provider X's OAuth token refresh endpoint returns 500 intermittently under load." → Promoted to LEARNINGS.md with scope tag `Universal` (affects all projects using this provider).
+- **DISC-001:** "Provider X's OAuth token refresh endpoint returns 500 intermittently under load." → Promoted to LEARNINGS.md with scope tag `Provider:X` (affects only projects integrating Provider X — not Universal, because a project that never touches Provider X has no use for this rule).
 - **DISC-002:** "Frontend OAuth redirect fails silently in Safari when third-party cookies are blocked." → Promoted with scope tag `Feature:Auth` (only affects auth-related work).
-- **DISC-003:** "The staging environment's database connection pool maxes out at 10 connections." → Promoted with scope tag `Universal` (affects all deployments, not just this feature).
+- **DISC-003:** "The staging environment's database connection pool maxes out at 10 connections." → Promoted with scope tag `Environment:staging` (affects anything deploying to this environment — not Universal, because production and other environments have different pool sizes).
 
 ### Precedence
 Example tiers for a software project:
