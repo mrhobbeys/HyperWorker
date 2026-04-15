@@ -1,0 +1,42 @@
+# General
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.swp
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.env
+.env
+.venv
+venv/
+build/
+dist/
+.eggs/
+*.egg-info/
+
+# VS Code
+.vscode/
+
+# OS
+*.bak
+~$*
+
+# Misc
+*.sublime-workspace
+*.sublime-project
+
+# Node
+node_modules/
+
+# Backup
+*~
+
+# Operator sandboxes / local test runs (NOT the worked case-study examples)
+/test-runs/
+/sandbox/
+/_scratch/

@@ -1,0 +1,68 @@
+# config.yaml — Marketing Funnel Launch
+# Customized from config-skeleton.yaml for a small business launching
+# a lead-generation funnel (landing page → email sequence → booking page).
+
+harness_version: "3.1"
+
+execution:
+  orchestrator_model: "opus-class"
+  worker_model: "sonnet-class"
+  platform: "Cowork"
+  operator_count: 1
+
+version_control:
+  enabled: true
+  tool: "git"
+  remote: "local"
+  auto_commit_on_completion: true
+
+# Renamed tiers for marketing context:
+# Tier 1 = legal/brand absolutes
+# Tier 2 = offer scope (what we're actually selling)
+# Tier 3 = platform limits (email provider, landing page builder)
+# Tier 4 = copywriting methodology
+precedence_tiers:
+  1: "BRAND-ABSOLUTE"
+  2: "OFFER-SCOPE"
+  3: "PLATFORM-LIMITS"
+  4: "COPY-METHOD"
+
+memory:
+  review_cadence_months: 1             # Marketing moves fast — monthly review
+  reference_threshold_months: 2
+  deprecated_threshold_months: 4
+  archive_threshold_months: 8
+  deprecated_grace_period_days: 14
+
+scope_taxonomy:
+  - "Universal"
+  - "Channel:[Name]"                   # e.g., Channel:Email, Channel:Landing-Page
+  - "Campaign:[Name]"                  # e.g., Campaign:Spring-Launch
+
+checkpoints:
+  gate_type: "human"
+  default_checkpoint_frequency: "per-phase"
+
+verification:
+  enabled: true
+  require_confirmation:
+    - "project_description"
+    - "precedence_tiers"
+    - "task_breakdown"
+
+worker:
+  draft_only: true                     # All copy saved as drafts — human publishes
+  content_mode: "generate"             # Worker generates copy within constraints
+  output_hashing: true
+
+research:
+  enabled: false
+
+learning_categories:
+  - "Legal Language"
+  - "Platform Specs"
+  - "Audience Insight"
+  - "Conversion Pattern"
+  - "Failure Mode"
+  - "Channel Behavior"
+  - "Messaging"

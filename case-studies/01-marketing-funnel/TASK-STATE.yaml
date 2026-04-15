@@ -1,0 +1,92 @@
+# TASK-STATE.yaml — Spring Lead-Gen Funnel
+# Status: pending | in_progress | complete | blocked | invalidated
+# Phase gates: Phase 1 must be human-approved before Phase 2 starts.
+
+project: "Spring Lead-Gen Funnel"
+last_updated: "2026-04-12"
+
+phases:
+  1:
+    name: "Foundation"
+    checkpoint: true
+    checkpoint_criteria: "Landing page copy approved. Reference rules confirmed."
+  2:
+    name: "Nurture Sequence"
+    checkpoint: true
+    checkpoint_criteria: "All 5 emails reviewed. CAN-SPAM compliance verified."
+  3:
+    name: "Conversion Path"
+    checkpoint: false
+
+tasks:
+  - id: "01"
+    title: "Write landing page headline and subhead"
+    phase: 1
+    status: complete
+    depends_on: []
+    assumptions:
+      - "Target audience is small business owners age 30-55"
+      - "Primary pain point is inconsistent lead flow"
+    output_hash: "a3f7c2"
+
+  - id: "02"
+    title: "Write landing page body copy and social proof section"
+    phase: 1
+    status: complete
+    depends_on: ["01"]
+    assumptions:
+      - "Task 01 headline sets the tone for body copy"
+      - "We have at least 3 real client results to reference (no fabrication)"
+    output_hash: "b8d4e1"
+
+  - id: "03"
+    title: "Write email 1 — Welcome and value proposition"
+    phase: 2
+    status: pending
+    depends_on: ["01"]
+    assumptions:
+      - "Landing page headline/subhead establishes the core promise"
+      - "Email platform supports HTML templates"
+
+  - id: "04"
+    title: "Write email 2 — Problem agitation"
+    phase: 2
+    status: pending
+    depends_on: ["03"]
+    assumptions:
+      - "Email 1 established rapport and credibility"
+
+  - id: "05"
+    title: "Write email 3 — Case study / proof"
+    phase: 2
+    status: pending
+    depends_on: ["04"]
+    assumptions:
+      - "We have a real client story with permission to share"
+      - "Email 2 created urgency around the problem"
+
+  - id: "06"
+    title: "Write email 4 — Objection handling"
+    phase: 2
+    status: pending
+    depends_on: ["05"]
+    assumptions:
+      - "Top 3 objections are known (price, time, trust)"
+
+  - id: "07"
+    title: "Write email 5 — CTA to book discovery call"
+    phase: 2
+    status: pending
+    depends_on: ["06"]
+    assumptions:
+      - "Booking page URL is confirmed"
+      - "Emails 1-4 built enough trust for a direct ask"
+
+  - id: "08"
+    title: "Write booking page copy and confirmation message"
+    phase: 3
+    status: pending
+    depends_on: ["01", "07"]
+    assumptions:
+      - "Calendar integration is functional"
+      - "Landing page and email sequence are consistent in tone"

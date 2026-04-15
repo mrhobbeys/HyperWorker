@@ -1,0 +1,105 @@
+# config-skeleton.yaml — Harness Configuration
+#
+# All configurable parameters for the Focus & Execution Harness v3.1.
+# Copy this file to your harness root as config.yaml and fill in values.
+# Every parameter has a sensible default. Override only what differs.
+
+# --- Harness Identity ---
+harness_version: "3.1"
+
+# --- Execution Model ---
+execution:
+  orchestrator_model: "[Most capable available model — e.g., opus-class]"
+  worker_model: "[Fast, reliable model — e.g., sonnet-class]"
+  platform: "[AI platform — e.g., Cowork, API, CLI, custom]"
+  operator_count: 1                    # Number of human operators. 1 = solo. >1 = see FAILURE-MODES.md
+
+# --- Version Control ---
+version_control:
+  enabled: true
+  tool: "[git, gitea, github, gitlab, none]"
+  remote: "[URL or 'local']"
+  auto_commit_on_completion: true      # Commit during project completion protocol
+
+# --- Precedence Tiers ---
+# Name your tiers. Higher number = lower precedence. Tier 1 always wins.
+precedence_tiers:
+  1: "NON-NEGOTIABLE"                  # Cannot be overridden. Legal, safety, ethical.
+  2: "SCOPE/REGULATORY"                # External constraints. Regulatory, contractual.
+  3: "TECHNICAL"                       # Platform and tool limits.
+  4: "STYLE"                           # Methodology, voice, tone.
+  # Add more tiers if needed:
+  # 0: "SAFETY"                        # For safety-critical domains (nuclear, aviation)
+
+# --- Memory Lifecycle ---
+memory:
+  review_cadence_months: 3             # How often to review LEARNINGS.md
+  reference_threshold_months: 3        # ACTIVE → REFERENCE after this many months
+  deprecated_threshold_months: 6       # REFERENCE → DEPRECATED after this many months
+  archive_threshold_months: 12         # DEPRECATED → ARCHIVED after this many months
+  deprecated_grace_period_days: 30     # Days before un-revalidated DEPRECATED entries archive
+
+# --- Scope Tags ---
+# Define the scope hierarchy for your context. Examples:
+#
+# Service business (MSSP, agency, consultancy):
+#   - Universal
+#   - [Vertical]-General          (e.g., Finance-General, Manufacturing-General)
+#   - Client:[Name]               (e.g., Client:AcmeCorp)
+#   - Engagement:[ID]             (e.g., Engagement:SOC-Migration-Q2)
+#
+# Product team:
+#   - Universal
+#   - Feature:[Name]              (e.g., Feature:Onboarding)
+#   - Release:[Version]           (e.g., Release:v3.2)
+#
+# Solo creator:
+#   - Universal
+#   - Project:[Name]              (e.g., Project:CourseV2)
+scope_taxonomy:
+  - "Universal"
+  - "[Vertical]-General"
+  - "Client:[Name]"
+  - "Engagement:[ID]"
+
+# --- Phase Checkpoints ---
+checkpoints:
+  gate_type: "human"                   # "human" = manual approval. "automated" = CI/programmatic gate.
+  default_checkpoint_frequency: "per-phase"  # "per-phase", "per-milestone", "none"
+
+# --- Verification Checkpoint ---
+# Controls the mandatory new-project verification gate.
+verification:
+  enabled: true                        # Set false only if you're an experienced operator
+  require_confirmation:
+    - "project_description"            # Operator confirms PROJECT.md objective + scope
+    - "precedence_tiers"               # Operator confirms tier names and example rules
+    - "task_breakdown"                 # Operator confirms TASK-STATE.yaml structure
+
+# --- Worker Behavior ---
+worker:
+  draft_only: true                     # true = all content saved as drafts, never auto-published
+  content_mode: "execute"              # "execute" = paste pre-authored content. "generate" = create within constraints. Can be overridden per task.
+  output_hashing: true                 # Track output hashes for change detection. Set false for simple projects.
+
+# --- Domain Research (Optional) ---
+# If enabled, the orchestrator will research the user's domain before scaffolding.
+# See reference/RESEARCH-PROTOCOL.md for details.
+research:
+  enabled: false                       # Set true to activate domain research during onboarding
+  max_duration_minutes: 5              # Cap research time to prevent latency bloat
+  outputs:                             # Research MUST produce exactly these two files, nothing else
+    - "draft config.yaml"
+    - "draft 00-REFERENCE-rules.md"
+
+# --- Discovery Categories ---
+# Categories used in LEARNINGS.md. Add or remove as needed.
+learning_categories:
+  - "Legal Language"
+  - "Platform Specs"
+  - "Workflow"
+  - "Failure Mode"
+  - "Compliance"
+  - "Tool Behavior"
+  - "Client Preference"
+  - "Domain Knowledge"
