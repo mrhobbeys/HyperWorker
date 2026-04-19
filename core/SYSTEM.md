@@ -14,11 +14,11 @@ The harness is built on five mechanisms. Each solves a specific failure mode. To
 
 | Mechanism | What It Solves | Core File |
 |---|---|---|
-| **Lock** | Diffusion — too many projects in flight | [/core/lock/](lock/LOCK.md) |
-| **Atomicity** | Drift — AI loses context in long sessions | [/core/atomicity/](atomicity/ATOMICITY.md) |
-| **Dependency** | Silent failures — tasks run on stale assumptions | [/core/dependency/](dependency/DEPENDENCY.md) |
-| **Memory Pipeline** | Knowledge loss — discoveries never become operating knowledge | [/core/memory-pipeline/](memory-pipeline/MEMORY-PIPELINE.md) |
-| **Precedence** | Rule conflicts — contradictory constraints with no resolution order | [/core/precedence/](precedence/PRECEDENCE.md) |
+| **Lock** | Diffusion — too many projects in flight | [core/LOCK.md](LOCK.md) |
+| **Atomicity** | Drift — AI loses context in long sessions | [core/ATOMICITY.md](ATOMICITY.md) |
+| **Dependency** | Silent failures — tasks run on stale assumptions | [core/DEPENDENCY.md](DEPENDENCY.md) |
+| **Memory Pipeline** | Knowledge loss — discoveries never become operating knowledge | [core/MEMORY.md](MEMORY.md) |
+| **Precedence** | Rule conflicts — contradictory constraints with no resolution order | [core/PRECEDENCE.md](PRECEDENCE.md) |
 
 ## System Architecture
 
@@ -28,11 +28,11 @@ harness/
 ├── CHANGELOG.md                       # Version history
 ├── core/                              # Mechanism documentation (you are here)
 │   ├── SYSTEM.md
-│   ├── lock/
-│   ├── atomicity/
-│   ├── dependency/
-│   ├── memory-pipeline/
-│   └── precedence/
+│   ├── LOCK.md
+│   ├── ATOMICITY.md
+│   ├── DEPENDENCY.md
+│   ├── MEMORY.md
+│   └── PRECEDENCE.md
 ├── projects/
 │   ├── active_project.md              # Pointer to current active project
 │   ├── [project-name]/                # Per-project folders

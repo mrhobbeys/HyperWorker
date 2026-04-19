@@ -19,11 +19,11 @@ purpose: "Manage projects using the five core mechanisms defined in this harness
 harness_files:
   core:
     - "core/SYSTEM.md"
-    - "core/lock/LOCK.md"
-    - "core/atomicity/ATOMICITY.md"
-    - "core/dependency/DEPENDENCY.md"
-    - "core/memory-pipeline/MEMORY-PIPELINE.md"
-    - "core/precedence/PRECEDENCE.md"
+    - "core/LOCK.md"
+    - "core/ATOMICITY.md"
+    - "core/DEPENDENCY.md"
+    - "core/MEMORY.md"
+    - "core/PRECEDENCE.md"
   templates:
     - "templates/config-skeleton.yaml"
     - "templates/worker-prompt-template.md"
