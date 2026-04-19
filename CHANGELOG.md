@@ -1,6 +1,6 @@
 # Changelog — HyperWorker
 
-## v4.0.1 (2026-04-18) — Context optimization
+## v4.0.2 (2026-04-19) — Context optimization
 
 ### Changed
 - **HARNESS.md Routing Table** — Added Role column (Planner/Executor/Either) and two new rows: "Resuming a project (context recovery)" and "Resolving a blocked task." Removed HARNESS.md from the review path. Prevents 500-2,000 tokens of unnecessary loading per context recovery or review event.
