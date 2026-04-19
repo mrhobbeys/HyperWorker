@@ -1,6 +1,5 @@
 # Mechanism: Lock — Single-Project Focus
 
-> **Audit trace:** A1, B1, B2, B4, B8, G1, G2, G3
 
 ## The Problem It Solves
 

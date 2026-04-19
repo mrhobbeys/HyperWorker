@@ -6,7 +6,7 @@
 
 Plan and execute a 100-person industry networking event. Venue, catering, speakers, promotion, registration, day-of logistics, and follow-up. Estimated 10-14 tasks across 4 phases with a fixed event date creating a hard deadline.
 
-## How the Five Mechanisms Apply
+## How the Six Mechanisms Apply
 
 ### Lock
 The networking event is the active project. When someone suggests "we should also do a podcast" — that goes to the backlog. The event has a fixed date; distractions directly threaten the deadline.

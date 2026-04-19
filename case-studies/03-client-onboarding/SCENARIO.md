@@ -6,7 +6,7 @@
 
 Onboard a new client onto your service platform. This is a repeatable process — you do it for every new client — but each client has unique requirements, integrations, and constraints. The project covers: kickoff call prep, account provisioning, data migration, configuration, training, and handoff. Estimated 6-8 tasks across 2 phases.
 
-## How the Five Mechanisms Apply
+## How the Six Mechanisms Apply
 
 ### Lock
 Client onboarding for "Acme Corp" is the active project. When another client signs mid-onboarding, their setup gets logged to the backlog. You finish Acme before starting the next client — no half-configured accounts.

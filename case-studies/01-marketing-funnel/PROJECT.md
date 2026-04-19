@@ -1,6 +1,6 @@
 # PROJECT: Spring Lead-Gen Funnel
 
-> This is a project file managed by the Focus & Execution Harness.
+> This is a project file managed by HyperWorker.
 
 ## Status
 IN PROGRESS

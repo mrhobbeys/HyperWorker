@@ -6,7 +6,7 @@
 
 Prepare for an upcoming compliance audit (could be SOC 2, ISO 27001, PCI DSS, industry-specific regulation, or internal quality audit). The project covers: gap assessment, evidence gathering, policy documentation, remediation of gaps, and audit-ready package assembly. Estimated 8-12 tasks across 3 phases.
 
-## How the Five Mechanisms Apply
+## How the Six Mechanisms Apply
 
 ### Lock
 Audit prep is the one domain where the Lock mechanism is non-negotiable. With an audit date approaching, every distraction is a risk. "We should also update the website" → backlog, immediately. "Can we also fix the onboarding flow?" → backlog. The audit has a deadline and consequences for failure.

@@ -1,6 +1,5 @@
 # Mechanism: Atomicity — One Task Per File, One File Per Session
 
-> **Audit trace:** A2, B3, C1, C8-C10, E1-E2, E6, E8
 
 ## The Problem It Solves
 

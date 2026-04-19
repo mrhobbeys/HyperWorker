@@ -6,7 +6,7 @@
 
 Ship a new user authentication feature (OAuth2 social login) for a web application. The feature touches the database schema, backend API, frontend UI, and deployment pipeline. Estimated 8-12 tasks across 3 phases.
 
-## How the Five Mechanisms Apply
+## How the Six Mechanisms Apply
 
 ### Lock
 The auth feature is the active project. A request to "also fix the dashboard bug" gets logged to the backlog. The operator decides later whether to park auth and promote the bug fix, or finish auth first.

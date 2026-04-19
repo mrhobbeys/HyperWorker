@@ -7,6 +7,7 @@ assumptions:
   - "Email platform supports HTML templates"
 phase: 2
 status: pending
+risk_level: standard
 ---
 
 # Task 03: Write Email 1 — Welcome and Value Proposition
@@ -50,6 +51,19 @@ Write the first email in the 5-part nurture sequence. This email fires immediate
 - [ ] Reading level: 6th-8th grade
 - [ ] All content saved as DRAFT (not sent)
 - [ ] STOP HERE — do not proceed to Email 2
+
+## Evidence Trail
+
+| Check | Method | Result | Pass |
+|---|---|---|---|
+| Subject line < 50 chars | Character count | | |
+| Body 150-300 words | Word count | | |
+| One CTA only | Manual review | | |
+| Unsubscribe link present | Visual check | | |
+| Physical address present | Visual check | | |
+| Zero Tier 1 violations | Scan against banned phrases table | | |
+| Reading level 6th-8th grade | Readability tool or manual assessment | | |
+| Saved as DRAFT | Platform check | | |
 
 ## Post-Task Discovery Capture
 - **Discovery:** [leave blank if nothing unexpected]

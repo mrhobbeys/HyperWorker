@@ -56,7 +56,7 @@ risk_level: standard  # standard | elevated | critical — see core/VERIFICATION
 ## Post-Task Discovery Capture
 If you encountered anything unexpected — a failed assumption, a platform behavior
 that wasn't documented, a constraint that should exist but doesn't — note it here.
-The orchestrator will review and decide whether to promote it to DISCOVERIES.md.
+The planner will review and decide whether to promote it to DISCOVERIES.md.
 
 - **Discovery:** [what you found — leave blank if nothing unexpected]
 - **Assumption affected:** [which assumption was wrong or missing]

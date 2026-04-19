@@ -2,7 +2,7 @@
 # Customized from config-skeleton.yaml for a small business launching
 # a lead-generation funnel (landing page → email sequence → booking page).
 
-harness_version: "3.1"
+harness_version: "4.0"
 
 execution:
   planner_model: "opus-class"

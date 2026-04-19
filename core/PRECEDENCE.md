@@ -1,6 +1,5 @@
 # Mechanism: Precedence — Tiered Rule Resolution
 
-> **Audit trace:** D1-D6, D11-D12, E3
 
 ## The Problem It Solves
 

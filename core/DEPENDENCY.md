@@ -1,6 +1,5 @@
 # Mechanism: Dependency — Task State Engine
 
-> **Audit trace:** C2-C7, E7
 
 ## The Problem It Solves
 

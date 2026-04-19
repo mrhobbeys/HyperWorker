@@ -7,6 +7,7 @@ assumptions:
   - "Landing page and email sequence are consistent in tone"
 phase: 3
 status: pending
+risk_level: standard
 ---
 
 # Task 08: Write Booking Page Copy and Confirmation Message
@@ -52,6 +53,20 @@ Write the copy for the booking page (where the reader schedules their discovery 
 - [ ] Zero Tier 1 violations
 - [ ] All content saved as DRAFT
 - [ ] STOP HERE — final task in sequence
+
+## Evidence Trail
+
+| Check | Method | Result | Pass |
+|---|---|---|---|
+| Headline < 12 words | Word count | | |
+| Tone matches funnel | Compare with Tasks 01-07 output | | |
+| Real client social proof | Verify source | | |
+| Calendar embed placement noted | Visual check | | |
+| Confirmation message 50-100 words | Word count | | |
+| Confirmation email 100-150 words | Word count | | |
+| No pricing on page | Manual scan | | |
+| Zero Tier 1 violations | Scan against banned phrases table | | |
+| Saved as DRAFT | Platform check | | |
 
 ## Post-Task Discovery Capture
 - **Discovery:** [leave blank if nothing unexpected]

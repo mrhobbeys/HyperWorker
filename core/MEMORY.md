@@ -1,6 +1,5 @@
 # Mechanism: Memory Pipeline — Discovery to Learning Lifecycle
 
-> **Audit trace:** A3, B5, B7, C12, E6, F1-F5, F8-F12
 
 ## The Problem It Solves
 
