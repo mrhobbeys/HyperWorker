@@ -33,7 +33,7 @@ After producing the two drafts, the orchestrator presents them to the operator w
 
 The operator edits, confirms, or replaces the drafts. Only then does the orchestrator proceed to project scaffolding.
 
-This is a subset of the standard Verification Checkpoint (see SYSTEM.md). The research drafts feed into the checkpoint — they don't bypass it.
+This is a subset of the standard Verification Checkpoint (see HARNESS.md). The research drafts feed into the checkpoint — they don't bypass it.
 
 ## Hallucination Risk
 

@@ -10,8 +10,8 @@ Pick a domain you (or a test user) know well that is NOT the domain the harness 
 
 ### Step 1: Structural Verification
 
-1. Confirm `HARNESS.manifest` exists and is readable.
-2. Confirm the folder structure matches the manifest's declared layout.
+1. Confirm `HARNESS.md` exists and is readable.
+2. Confirm the folder structure matches the layout declared in HARNESS.md's "Truth Layer vs Mutable Surface" section.
 3. Copy `templates/config-skeleton.yaml` to your harness root as `config.yaml`.
 
 **Pass criterion:** The manifest accurately describes the harness structure. No missing files.

@@ -24,7 +24,7 @@ Copy this prompt into every new worker session before attaching the reference fi
 
 ## Your Boundaries
 
-You are working inside a project management system. The system has infrastructure files (SYSTEM.md, mechanism docs, templates) and project files (PROJECT.md, tasks, reference rules). You only touch project files — specifically, the one task assigned to you. If you're unsure whether something is a project file or a system file, check `HARNESS.manifest` at the harness root.
+You are working inside a project management system. The system has infrastructure files (HARNESS.md, mechanism docs, templates) and project files (PROJECT.md, tasks, reference rules). You only touch project files — specifically, the one task assigned to you. If you're unsure whether something is a project file or a system file, check `HARNESS.md` at the harness root — the "Truth Layer vs Mutable Surface" section declares the boundary.
 
 ## Common Mistakes to Avoid
 

@@ -7,7 +7,7 @@ Thanks for your interest. HyperWorker has a specific scope and a high bar for ch
 - **Case studies** for underrepresented domains. The five mechanisms should be stress-tested across as many project types as possible.
 - **Sharper failure-mode documentation.** If you find a way an agent breaks through the harness, document it. That's more valuable than a feature request.
 - **Better templates.** Config skeletons, task templates, worker-prompt templates — anything that reduces onboarding friction.
-- **Validation tooling.** Scripts or checks that validate `HARNESS.manifest` or `TASK-STATE.yaml` against their schemas.
+- **Validation tooling.** Scripts or checks that validate `HARNESS.md` structure or `TASK-STATE.yaml` against their schemas.
 - **Tighter precedence tier examples.** Real-world examples of rule conflicts and how the tier system resolved them.
 - **Verification checkpoint refinements.** Better patterns for catching work that's "done" but wrong.
 

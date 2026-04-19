@@ -80,9 +80,9 @@ Version control for code (commits, diffs, branches) works well. Marketing copy, 
 **Mitigation:** Use task files and completion reports as the audit trail for non-code deliverables.
 
 ### Harness Version Coexistence
-When the harness itself evolves (e.g., v3.1 → v4), existing projects created under an earlier version remain in their original structure. The harness version is declared in `HARNESS.manifest` and `config.yaml`. There is no automated migration path for existing projects to a new harness version.
+When the harness itself evolves (e.g., v3.1 → v4), existing projects created under an earlier version remain in their original structure. The harness version is declared in `HARNESS.md` and `config.yaml`. There is no automated migration path for existing projects to a new harness version.
 
-**Mitigation:** The `harness_version` field in both the manifest and config allows the orchestrator to detect version mismatches. Projects on older versions should either be completed under their original version or manually migrated.
+**Mitigation:** The `harness_version` field in the config allows the planner to detect version mismatches. Projects on older versions should either be completed under their original version or manually migrated.
 
 ## Platform Dependencies
 

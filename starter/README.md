@@ -6,7 +6,7 @@ A project management system for AI-assisted delivery. It keeps you focused on on
 
 ## First Time Setup
 
-1. **Read `HARNESS.manifest`** in the root folder. This tells you (and the AI) which files are the system and which are your project.
+1. **Read `HARNESS.md`** in the root folder. This tells you (and the AI) which files are the system and which are your project.
 
 2. **Copy `templates/config-skeleton.yaml`** to the root as `config.yaml`. Fill in your settings — at minimum, set the AI models you're using and your platform.
 
@@ -44,7 +44,7 @@ If you want the AI to research your domain before scaffolding (to pre-populate c
 
 ```
 harness/
-├── HARNESS.manifest     ← Read this first
+├── HARNESS.md           ← Read this first
 ├── config.yaml          ← Your settings
 ├── core/                ← System docs (don't modify during projects)
 ├── templates/           ← Starting points for project files

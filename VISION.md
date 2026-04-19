@@ -36,7 +36,7 @@ The following requests keep coming up. They are out of scope on purpose.
 
 ## What We Would Consider
 
-We'd consider contributions that strengthen what's already there: case studies for underrepresented domains, sharper failure-mode documentation, better templates, tooling that validates HARNESS.manifest or TASK-STATE.yaml against schemas, tighter precedence tier examples, and verification checkpoint refinements.
+We'd consider contributions that strengthen what's already there: case studies for underrepresented domains, sharper failure-mode documentation, better templates, tooling that validates HARNESS.md structure or TASK-STATE.yaml against schemas, tighter precedence tier examples, and verification checkpoint refinements.
 
 We'd consider a v4 if — and only if — blind testing at scale reveals a failure mode that the five current mechanisms cannot address. Not before.
 
