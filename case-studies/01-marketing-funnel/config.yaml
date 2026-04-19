@@ -7,7 +7,7 @@ harness_version: "3.1"
 execution:
   orchestrator_model: "opus-class"
   worker_model: "sonnet-class"
-  platform: "Cowork"
+  agent: "Claude Code"
   operator_count: 1
 
 version_control:
