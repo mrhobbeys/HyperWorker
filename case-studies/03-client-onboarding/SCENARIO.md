@@ -30,7 +30,7 @@ Phase 2: Handoff [checkpoint — client reviews before training]
   07: Handoff + support documentation (depends on: 06)
 ```
 
-**Key assumption:** "Client's existing data is in a format we can import." If this fails (Task 03 discovers their data is in an unsupported format), Task 03 blocks and downstream tasks (05-07) can't proceed until the orchestrator decides how to handle it.
+**Key assumption:** "Client's existing data is in a format we can import." If this fails (Task 03 discovers their data is in an unsupported format), Task 03 blocks and downstream tasks (05-07) can't proceed until the planner decides how to handle it.
 
 ### Memory Pipeline (Primary Showcase)
 This is where the harness compounds knowledge across clients.
@@ -45,7 +45,7 @@ This is where the harness compounds knowledge across clients.
 - DISC-001 becomes Learning L-015: "When importing CSV data, verify delimiter format before running the import tool." Category: Tool Behavior. Scope: Universal (generalized from the specific incident).
 - DISC-003 stays as a discovery scoped to `Client:AcmeCorp`. If a second client requires the same, it gets promoted to `Universal` with the pattern "Ask about compliance documentation requirements during kickoff."
 
-**The scope tag payoff:** When onboarding the next client ("Beta Inc"), the orchestrator loads LEARNINGS.md filtered for `Universal` scope. L-014 and L-015 appear. Acme-specific learnings don't — because Beta's data format and compliance requirements may be different. This prevents cross-client contamination while preserving universal lessons.
+**The scope tag payoff:** When onboarding the next client ("Beta Inc"), the planner loads LEARNINGS.md filtered for `Universal` scope. L-014 and L-015 appear. Acme-specific learnings don't — because Beta's data format and compliance requirements may be different. This prevents cross-client contamination while preserving universal lessons.
 
 ### Precedence
 Example tiers for a service onboarding:
@@ -74,7 +74,7 @@ scope_taxonomy:
 memory:
   review_cadence_months: 1    # High client volume = monthly review
 
-worker:
+executor:
   draft_only: true             # All configs reviewed before applying
   content_mode: "execute"      # Follow the checklist exactly
 ```

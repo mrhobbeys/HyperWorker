@@ -39,7 +39,7 @@ Phase 4: Post-Event (1 week after)
   13: Compile post-mortem and capture discoveries (depends on: 12)
 ```
 
-**Why atomicity matters here:** Each task has a clear "done" state that's verifiable in the real world. Task 02 is done when the venue contract is signed. Task 05 is done when the catering order is confirmed with a headcount. Task 09 is done when every 15-minute block of the event day has an assigned owner. There's no ambiguity — which means the worker can execute the task, check the list, and stop.
+**Why atomicity matters here:** Each task has a clear "done" state that's verifiable in the real world. Task 02 is done when the venue contract is signed. Task 05 is done when the catering order is confirmed with a headcount. Task 09 is done when every 15-minute block of the event day has an assigned owner. There's no ambiguity — which means the executor can execute the task, check the list, and stop.
 
 **The anti-pattern this prevents:** "Work on event stuff" → the AI drafts a venue comparison, starts a speaker list, half-writes a promo email, and suggests a menu. None of it is finished. With atomicity, each task gets done completely before the next one starts.
 
@@ -86,7 +86,7 @@ checkpoints:
   gate_type: "human"
   default_checkpoint_frequency: "per-phase"  # Critical — each phase has real-world commitments
 
-worker:
+executor:
   draft_only: true       # All vendor communications reviewed before sending
   content_mode: "generate"
 ```

@@ -5,7 +5,7 @@
 ## Precedence Order
 
 When rules conflict, higher tiers override lower tiers.
-Workers must check Tier 1 first. If a lower-tier rule produces output that violates Tier 1, Tier 1 wins.
+Executors must check Tier 1 first. If a lower-tier rule produces output that violates Tier 1, Tier 1 wins.
 
 ### Tier 1: BRAND-ABSOLUTE (absolute — never override)
 - No income guarantees or implied earnings claims ("You'll make $X" / "guaranteed results")

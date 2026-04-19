@@ -35,7 +35,7 @@ Phase 3: Ship
   10: Production deployment (depends on: 09)
 ```
 
-If Task 03 changes the API contract, Tasks 04-10 all need re-evaluation. The TASK-STATE engine catches this: when Task 03's output hash changes, all downstream tasks with `depends_on: ["03"]` (and their dependents) get flagged. The orchestrator reviews whether the change breaks assumptions.
+If Task 03 changes the API contract, Tasks 04-10 all need re-evaluation. The TASK-STATE engine catches this: when Task 03's output hash changes, all downstream tasks with `depends_on: ["03"]` (and their dependents) get flagged. The planner reviews whether the change breaks assumptions.
 
 **Key assumption to track:** "OAuth provider API is stable and matches documented spec." If this assumption fails mid-project (provider changes their API), every task depending on Task 02 gets invalidated.
 
@@ -56,7 +56,7 @@ Example tiers for a software project:
 | 3 | TESTING | All new code requires unit tests. Integration tests for cross-service calls. No deploying without passing CI. |
 | 4 | STYLE | Follow team code style guide. Descriptive variable names. Comments explain "why" not "what." |
 
-**Conflict example:** A Tier 4 style rule says "keep functions under 20 lines." But implementing proper input validation (Tier 1: SECURITY) on the OAuth callback requires a 35-line function. Tier 1 wins — security over style. The worker doesn't need to guess; the precedence resolves it.
+**Conflict example:** A Tier 4 style rule says "keep functions under 20 lines." But implementing proper input validation (Tier 1: SECURITY) on the OAuth callback requires a 35-line function. Tier 1 wins — security over style. The executor doesn't need to guess; the precedence resolves it.
 
 ## Config Highlights
 
@@ -72,9 +72,9 @@ scope_taxonomy:
   - "Feature:[Name]"
   - "Service:[Name]"
 
-worker:
+executor:
   draft_only: false        # Code goes directly to branch, not "draft"
-  content_mode: "generate" # Worker writes code within constraints
+  content_mode: "generate" # Executor writes code within constraints
   output_hashing: true     # Critical for detecting API contract changes
 ```
 

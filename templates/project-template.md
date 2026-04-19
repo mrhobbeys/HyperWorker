@@ -1,6 +1,6 @@
 # PROJECT: [Project Name]
 
-> **This is a project file managed by the Focus & Execution Harness.** It defines the work being done, not the system doing the work.
+> **This is a project file managed by HyperWorker.** It defines the work being done, not the system doing the work.
 
 ## Status
 [IN PROGRESS | BLOCKED | COMPLETE]

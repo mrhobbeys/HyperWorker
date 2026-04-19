@@ -1,20 +1,18 @@
-# Quick Start — Focus & Execution Harness v3.1
+# Quick Start — HyperWorker v4.0
 
 ## What Is This?
 
-A project management system for AI-assisted delivery. It keeps you focused on one project at a time, breaks work into small executable tasks, tracks what depends on what, remembers what you learn, and resolves rule conflicts automatically.
+A project management harness for AI agents. It keeps you focused on one project at a time, breaks work into small executable tasks, tracks dependencies, remembers what you learn, resolves rule conflicts automatically, and proves completion with evidence.
 
 ## First Time Setup
 
-1. **Read `HARNESS.md`** in the root folder. This tells you (and the AI) which files are the system and which are your project.
+1. **Point any AI agent at this repository.**
 
-2. **Copy `templates/config-skeleton.yaml`** to the root as `config.yaml`. Fill in your settings — at minimum, set the AI models you're using and your platform.
+2. **Say:** "Read `HARNESS.md` and build me a harness for [describe your goal]."
 
-3. **Tell the AI what you want to accomplish.** Describe your project. The AI will ask you questions, then scaffold your project files from the templates.
+The agent reads HARNESS.md, asks you clarifying questions, scaffolds project files from the templates, runs a verification checkpoint (confirming your project description, rules, and task breakdown), and begins execution. No config to copy manually — the agent handles it.
 
-4. **Review the scaffold.** The AI will pause and ask you to confirm three things: your project description, your priority rules, and your task breakdown. Fix anything that's wrong before proceeding.
-
-5. **Start working.** Say "next step" to get your first task.
+3. **Start working.** Say "next step" to get your first task.
 
 ## Day-to-Day Commands
 

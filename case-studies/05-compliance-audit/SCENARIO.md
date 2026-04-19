@@ -68,7 +68,7 @@ Compliance audit prep uses ALL four tiers at full weight, and conflicts between 
 
 1. *Tier 4 says: "Follow the organization's policy template."* But the auditor (Tier 1: REGULATORY) requires specific language that doesn't fit the template. Tier 1 wins — rewrite the policy section to meet the regulatory requirement, even if it breaks template consistency.
 
-2. *Tier 3 says: "Evidence must be from production systems."* But a new control was implemented in staging and hasn't been promoted to production yet. The audit scope (Tier 2) says this control is in scope. The resolution: escalate — you can't provide production evidence for something that's only in staging. The task blocks, and the orchestrator decides whether to rush the promotion to production or negotiate the control out of scope with the auditor.
+2. *Tier 3 says: "Evidence must be from production systems."* But a new control was implemented in staging and hasn't been promoted to production yet. The audit scope (Tier 2) says this control is in scope. The resolution: escalate — you can't provide production evidence for something that's only in staging. The task blocks, and the planner decides whether to rush the promotion to production or negotiate the control out of scope with the auditor.
 
 3. *Tier 4 says: "Consistent naming conventions for evidence files."* But one system exports reports with auto-generated names that can't be changed (Tier 3: TECHNICAL). Tier 3 wins — use the auto-generated names and add a mapping document instead of renaming.
 
@@ -90,7 +90,7 @@ scope_taxonomy:
 memory:
   review_cadence_months: 3    # Quarterly — matches typical audit evidence periods
 
-worker:
+executor:
   draft_only: true             # All policies and evidence reviewed before submission
   content_mode: "execute"      # Follow remediation instructions exactly
   output_hashing: true         # Critical — evidence must not change after review

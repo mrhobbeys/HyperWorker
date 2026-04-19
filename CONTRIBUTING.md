@@ -4,18 +4,18 @@ Thanks for your interest. HyperWorker has a specific scope and a high bar for ch
 
 ## What we want
 
-- **Case studies** for underrepresented domains. The five mechanisms should be stress-tested across as many project types as possible.
+- **Case studies** for underrepresented domains. The six mechanisms should be stress-tested across as many project types as possible.
 - **Sharper failure-mode documentation.** If you find a way an agent breaks through the harness, document it. That's more valuable than a feature request.
-- **Better templates.** Config skeletons, task templates, worker-prompt templates — anything that reduces onboarding friction.
+- **Better templates.** Config skeletons, task templates, executor-prompt templates — anything that reduces onboarding friction.
 - **Validation tooling.** Scripts or checks that validate `HARNESS.md` structure or `TASK-STATE.yaml` against their schemas.
 - **Tighter precedence tier examples.** Real-world examples of rule conflicts and how the tier system resolved them.
 - **Verification checkpoint refinements.** Better patterns for catching work that's "done" but wrong.
 
 ## What we don't want
 
-- **New mechanisms.** The five mechanisms are the product. If something can't be solved within Lock, Atomicity, Dependency, Memory Pipeline, and Precedence, it's out of scope.
+- **New mechanisms.** The six mechanisms are the product. If something can't be solved within Lock, Atomicity, Dependency, Memory, Precedence, and Verification, it's out of scope.
 - **Scope expansion.** Multi-user handoff, web UIs, dashboards, hosted services, vendor-specific integrations — these are all explicit non-goals. See [VISION.md](VISION.md).
-- **Auto-generalization features.** The Memory Pipeline is deliberately scoped. Cross-project learning was rejected after testing.
+- **Auto-generalization features.** The Memory mechanism is deliberately scoped. Cross-project learning was rejected after testing.
 
 ## The bar
 

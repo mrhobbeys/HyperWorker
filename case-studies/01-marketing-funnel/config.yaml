@@ -5,8 +5,8 @@
 harness_version: "3.1"
 
 execution:
-  orchestrator_model: "opus-class"
-  worker_model: "sonnet-class"
+  planner_model: "opus-class"
+  executor_model: "sonnet-class"
   agent: "Claude Code"
   operator_count: 1
 
@@ -50,9 +50,9 @@ verification:
     - "precedence_tiers"
     - "task_breakdown"
 
-worker:
+executor:
   draft_only: true                     # All copy saved as drafts — human publishes
-  content_mode: "generate"             # Worker generates copy within constraints
+  content_mode: "generate"             # Executor generates copy within constraints
   output_hashing: true
 
 research:
