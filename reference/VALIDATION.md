@@ -96,7 +96,7 @@ Document the validation in a separate file:
 # Validation: [Domain Name]
 **Date:** [YYYY-MM-DD]
 **Validator:** [Name/role]
-**Harness version:** 3.1
+**Harness version:** 4.1.1
 
 ## Config Adjustments Needed
 [What had to change from defaults and why]

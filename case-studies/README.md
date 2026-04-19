@@ -1,4 +1,4 @@
-# Case Studies — HyperWorker v4.0
+# Case Studies — HyperWorker v4.1.1
 
 These case studies show the harness applied to five different domains. They serve as reference patterns when the optional domain research is turned off, or as supplementary examples alongside research.
 

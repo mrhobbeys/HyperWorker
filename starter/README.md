@@ -1,4 +1,4 @@
-# Quick Start — HyperWorker v4.0
+# Quick Start — HyperWorker v4.1.1
 
 ## What Is This?
 

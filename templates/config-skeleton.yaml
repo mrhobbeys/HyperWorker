@@ -1,11 +1,11 @@
 # config-skeleton.yaml — Harness Configuration
 #
-# All configurable parameters for HyperWorker v4.0.
+# All configurable parameters for HyperWorker v4.1.1.
 # Copy this file to your harness root as config.yaml and fill in values.
 # Every parameter has a sensible default. Override only what differs.
 
 # --- Harness Identity ---
-harness_version: "4.0"
+harness_version: "4.1.1"
 
 # --- Execution Model ---
 execution:

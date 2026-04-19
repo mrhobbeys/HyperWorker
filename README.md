@@ -1,5 +1,5 @@
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
-![Version: 4.0](https://img.shields.io/badge/Version-4.0-blue.svg)
+![Version: 4.1.1](https://img.shields.io/badge/Version-4.1.1-blue.svg)
 
 # HyperWorker
 
@@ -117,7 +117,7 @@ VISION.md              — opinionated scope document
 
 The marketing campaign for the original launch was managed by HyperWorker itself. Sixteen tasks across four phases. Every draft, every channel, every review checkpoint — run through the harness. The planner decomposed the work, executors handled individual tasks, and the state file tracked progress across sessions.
 
-v4.0 incorporates lessons from blind testing across five domains and research into Anvil's verification ledger, Karpathy's ratchet pattern, and the emerging harness engineering discipline.
+v4 incorporates lessons from blind testing across five domains and research into Anvil's verification ledger, Karpathy's ratchet pattern, and the emerging harness engineering discipline.
 
 ## Contributing
 
