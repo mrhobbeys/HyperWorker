@@ -1,5 +1,16 @@
 # Changelog — HyperWorker
 
+## v4.0.1 (2026-04-18) — Context optimization
+
+### Changed
+- **HARNESS.md Routing Table** — Added Role column (Planner/Executor/Either) and two new rows: "Resuming a project (context recovery)" and "Resolving a blocked task." Removed HARNESS.md from the review path. Prevents 500-2,000 tokens of unnecessary loading per context recovery or review event.
+- **core/ATOMICITY.md** — Replaced stale 39-line task anatomy code block (missing v4 fields `risk_level`, `Baseline`, `Evidence Trail`) with reference to `templates/task-template.md`. Compressed Key Design Principles to bullet list, Content Delivery Modes to table. Added Pushback Protocol cross-reference.
+- **core/VERIFICATION.md** — Compressed "What Verification Is NOT" to single-line-per-item format. Replaced escalation re-explanation in Pushback Protocol with cross-reference to ATOMICITY.md.
+- **core/MEMORY.md** — Converted Platform-Native Memory integration prose to comparison table.
+- **core/PRECEDENCE.md** — Compressed "Why a Single File" from paragraph to one sentence.
+
+---
+
 ## v4.0 (2026-04-18) — Agent-agnostic refactor
 
 ### Philosophy

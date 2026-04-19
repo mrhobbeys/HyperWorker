@@ -9,65 +9,21 @@ AI models suffer from context degradation. In long sessions, early instructions 
 
 ### The Atomic Task File
 
-Every task file is self-contained, single-session-sized, explicitly bounded, and verifiable. The anatomy:
-
-```markdown
----
-task_id: "[ID]"
-title: "[Descriptive Task Name]"
-depends_on: []
-assumptions:
-  - "[What must be true for this task to succeed]"
-phase: [N]
-status: pending
----
-
-# Task [ID]: [Descriptive Task Name]
-
-**Read `00-REFERENCE-rules.md` first.**
-
-## What To Do
-[One paragraph stating the exact objective. Be specific about the end state.]
-
-## Step-by-Step Instructions
-[Detailed, numbered steps. Exact text to paste, fields to fill, buttons to click.]
-
-## CRITICAL — [Domain-Relevant Check]
-[A mandatory check relevant to the project. Examples:]
-[- Scan all text for Tier 1 violations from the reference file]
-[- Verify all URLs resolve correctly]
-[- Confirm output meets platform constraints]
-
-## Do NOT Touch
-[Explicit list of things the executor must leave alone]
-
-## Verification Checklist
-- [ ] [Specific deliverable confirmed]
-- [ ] Zero violations of reference rules (Tier 1 checked first)
-- [ ] No unintended changes to out-of-scope areas
-- [ ] STOP HERE — do not proceed to next task
-
-## Post-Task Discovery Capture
-[See Memory Pipeline mechanism]
-```
+Every task file is self-contained, single-session-sized, explicitly bounded, and verifiable. See `templates/task-template.md` for the complete format. Key fields: `task_id`, `depends_on`, `assumptions`, `phase`, `status`, `risk_level`.
 
 ### Key Design Principles
 
-**Explicit over implicit.** The task file doesn't say "update the headline." It says: "Go to this URL. Click the pencil icon. Edit the Headline field. Paste this exact text. Save."
-
-**Boundaries are stated as positives AND negatives.** "What To Do" defines the positive scope. "Do NOT Touch" defines the negative scope. Both are required.
-
-**Verification is mandatory.** The checklist at the end is the definition of "done." No task is complete until every checkbox is confirmed.
-
-**Discovery capture is baked in.** Every task includes a section for the executor to note unexpected findings. This feeds the Memory Pipeline without giving the executor permission to act autonomously on discoveries.
+- **Explicit over implicit.** Not "update the headline" but "go to this URL, click the pencil icon, edit the Headline field, paste this exact text, save."
+- **Boundaries stated as positives AND negatives.** "What To Do" defines positive scope. "Do NOT Touch" defines negative scope. Both required.
+- **Verification is mandatory.** The checklist + evidence trail is the definition of "done." No task is complete until every item is confirmed and evidence recorded.
+- **Discovery capture is baked in.** Every task includes a section for the executor to note unexpected findings. This feeds the Memory Pipeline without giving the executor permission to act on discoveries.
 
 ### Content Delivery Modes
 
-Tasks can operate in two modes depending on the project type:
-
-**Execute pre-authored** — The exact content to deliver is pre-written during planning. The executor pastes it, doesn't write it. Writing happened during the planner planning phase. This is the default for regulated, legal-sensitive, or brand-critical work.
-
-**Generate within constraints** — The task specifies the objective, constraints, and style parameters, and the executor generates content within those boundaries. This mode is appropriate for creative, exploratory, or technical documentation work where the planner cannot pre-author every deliverable.
+| Mode | Who Writes | When to Use |
+|---|---|---|
+| **Execute pre-authored** | Planner writes content during planning; executor pastes it exactly | Regulated, legal-sensitive, or brand-critical work |
+| **Generate within constraints** | Executor generates content within specified boundaries | Creative, exploratory, or technical documentation work |
 
 The mode is declared per task. Both are valid.
 
@@ -103,6 +59,8 @@ When an executor hits something it cannot resolve — conflicting constraints, b
 4. **Report** the specific conflict and the clashing rules/assumptions.
 
 Being blocked is a valid and expected outcome, not a failure. The planner resolves the conflict and the executor resumes.
+
+For the proactive counterpart (flagging problems *before* execution begins), see the Pushback Protocol in `core/VERIFICATION.md`.
 
 ## Relationship to Other Mechanisms
 

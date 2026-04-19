@@ -145,9 +145,7 @@ Before executing a task, the executor evaluates whether the instructions make se
 3. Set task status to `blocked`.
 4. Report the specific concern to the planner.
 
-This upgrades the existing Escalation Protocol in ATOMICITY.md. The difference: Escalation is reactive (the executor hits a problem during execution). Pushback is proactive (the executor identifies a problem before execution begins).
-
-Pushback is not defiance. It is quality control. An executor that blindly executes a task with a known problem is less valuable than one that flags the problem first.
+This is the proactive counterpart to the Escalation Protocol in `core/ATOMICITY.md` (which is reactive — triggered during execution). Pushback is triggered before execution begins.
 
 ---
 
@@ -165,6 +163,6 @@ Pushback is not defiance. It is quality control. An executor that blindly execut
 
 ## What Verification Is NOT
 
-- **Not automated testing.** The harness does not run scripts or make API calls. Verification is the executor checking and recording. If automated checks are available (test suites, linters, validators), the executor runs them and records the results in the evidence trail.
-- **Not a quality gate that blocks all progress.** Standard-risk tasks need a checklist and evidence trail. That's lightweight. Only critical-risk tasks require planner review before completion.
-- **Not perfection enforcement.** A task can pass verification with known limitations — as long as those limitations are documented in the evidence trail and the planner accepts them.
+- **Not automated testing.** Verification is the executor checking and recording. If automated checks exist, use them and record results in the evidence trail.
+- **Not a quality gate that blocks all progress.** Standard-risk tasks need a checklist and evidence trail — that's lightweight. Only critical-risk tasks require planner review.
+- **Not perfection enforcement.** Tasks can pass with known limitations if documented in the evidence trail and accepted by the planner.

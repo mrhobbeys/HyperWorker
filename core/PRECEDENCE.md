@@ -69,9 +69,7 @@ Loading the methodology at every layer makes it impossible for the AI to forget 
 
 ### Why a Single File
 
-Multiple reference files create ambiguity. If `legal-rules.md` says one thing and `style-guide.md` says another, the executor has to figure out which file wins. A single consolidated file with explicit tiers eliminates this failure mode entirely.
-
-If the reference content is large, use sections within the file rather than splitting into separate files.
+Multiple reference files create ambiguity about which file's rules win — a single consolidated file with explicit tiers eliminates this entirely. If content is large, use sections within the file rather than splitting into separate files.
 
 ### Executor Behavior
 

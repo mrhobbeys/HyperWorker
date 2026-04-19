@@ -47,18 +47,20 @@ The mechanism is adaptive. The principle — separate planning from execution �
 
 ## Routing Table
 
-When performing an operation, read the files listed. This prevents wasting tokens on irrelevant content.
+When performing an operation, read only the files listed for your role. This prevents wasting tokens on irrelevant content.
 
-| Operation | Read These Files |
-|---|---|
-| **Scaffolding a new project** | HARNESS.md → templates/config-skeleton.yaml, templates/project.md, templates/task.md, templates/rules.md |
-| **Executing a task** | Project's 00-REFERENCE-rules.md → the specific task file → templates/executor-prompt.md (for behavioral rules) |
-| **Reviewing work** | HARNESS.md → project's TASK-STATE.yaml → completed task files in done/ |
-| **Managing memory** | core/MEMORY.md → memory/DISCOVERIES.md → memory/LEARNINGS.md |
-| **Resolving rule conflicts** | core/PRECEDENCE.md → project's 00-REFERENCE-rules.md |
-| **Verifying completion** | core/VERIFICATION.md → task's verification checklist → evidence trail |
-| **Understanding a mechanism** | The specific core/*.md file for that mechanism |
-| **Validating in a new domain** | reference/VALIDATION.md → templates/ → case-studies/ |
+| Operation | Role | Read These Files |
+|---|---|---|
+| **Scaffolding a new project** | Planner | HARNESS.md → templates/config-skeleton.yaml, templates/project.md, templates/task.md, templates/rules.md |
+| **Executing a task** | Executor | Project's 00-REFERENCE-rules.md → the specific task file → templates/executor-prompt.md |
+| **Reviewing completed work** | Planner | TASK-STATE.yaml → completed task files in done/ → core/VERIFICATION.md (criteria only) |
+| **Resuming a project (context recovery)** | Planner | active_project.md → PROJECT.md → TASK-STATE.yaml → 00-REFERENCE-rules.md |
+| **Resolving a blocked task** | Planner | task file → TASK-STATE.yaml → relevant core/*.md |
+| **Managing memory** | Planner | core/MEMORY.md → memory/DISCOVERIES.md → memory/LEARNINGS.md |
+| **Resolving rule conflicts** | Planner | core/PRECEDENCE.md → project's 00-REFERENCE-rules.md |
+| **Verifying completion** | Executor | Task's verification checklist → evidence trail (both within the task file) |
+| **Understanding a mechanism** | Either | The specific core/*.md file for that mechanism |
+| **Validating in a new domain** | Planner | reference/VALIDATION.md → templates/ → case-studies/ |
 
 ---
 

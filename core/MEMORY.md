@@ -112,12 +112,12 @@ On a configurable cadence (default: quarterly):
 
 ### Integration with Platform-Native Memory
 
-If the AI platform has its own memory system (e.g., profile preferences, workflow corrections, session context), the harness memory is complementary, not a replacement.
+If the AI platform has its own memory system, the harness memory is complementary, not a replacement.
 
-- **Platform memory** = How the operator works (preferences, corrections, personal context)
-- **Harness memory** = What the business has learned (domain knowledge, platform limits, compliance rules, failure patterns)
-
-The two systems have different purposes and different lifecycles. The harness memory compounds across projects and persists across platform sessions.
+| System | Purpose | Lifecycle |
+|---|---|---|
+| **Platform memory** | How the operator works (preferences, corrections) | Platform-managed |
+| **Harness memory** | What the business has learned (domain knowledge, failures) | File-managed, cross-project |
 
 ## Relationship to Other Mechanisms
 
