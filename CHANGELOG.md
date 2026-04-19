@@ -1,4 +1,41 @@
-# Changelog — Focus & Execution Harness
+# Changelog — HyperWorker
+
+## v4.0 (2026-04-18) — Agent-agnostic refactor
+
+### Philosophy
+HyperWorker v4 is a ground-up refactor informed by research into Anvil's verification ledger, Karpathy's ratchet pattern, the folder-as-workspace architecture, Goose/OpenClaw agent systems, and the emerging harness engineering discipline. The five proven mechanisms are preserved and sharpened. A sixth mechanism (Verification) is added to address the documented failure mode of unproven completion claims.
+
+### Added
+- **HARNESS.md** — Self-bootstrapping entry point replacing HARNESS.manifest and core/SYSTEM.md. An AI agent reads one file and knows: what the system is, how to bootstrap a project, where every file lives, and what the six mechanisms enforce. Includes Routing Table, Truth Layer vs Mutable Surface boundary declaration, adaptive execution model, Bootstrap Protocol, and twelve Core Principles.
+- **core/VERIFICATION.md** — Sixth core mechanism. Seven components: (1) Verification Checklist (sharpened: observable, specific items), (2) Evidence Trail (structured table recording what was checked and what happened), (3) Baseline-After Pattern (capture state before modification for regression detection), (4) Verification Checkpoint (promoted from SYSTEM.md, extended for mid-project use), (5) Ratchet Principle (from Karpathy: improvements kept, regressions discard the completion claim), (6) Risk Classification (standard/elevated/critical determining evidence requirements), (7) Pushback Protocol (executor flags concerns before executing rather than blindly proceeding).
+- **Principle 12: "Prove completion, don't claim it."** — Evidence over assertion. Baseline-after comparison over "looks good."
+- **Agent capabilities declaration** in config-skeleton.yaml — Operators declare what their AI agent supports (subagents, platform memory, hooks, MCP tools). The harness adapts its execution model accordingly.
+- **"Works with" section** in README.md — Explicit agent-agnostic positioning listing Claude Code, Cursor, Goose, Copilot, and any capable LLM.
+
+### Changed
+- **Execution model: Worker → Executor, Orchestrator → Planner.** Platform-neutral terminology. The two roles (planning vs execution) are described by function, not by platform mechanism. Works with subagents, single-agent mode switching, or two separate models.
+- **Core structure flattened.** `core/lock/LOCK.md` → `core/LOCK.md`, `core/atomicity/ATOMICITY.md` → `core/ATOMICITY.md`, etc. Five single-file subdirectories eliminated.
+- **core/MEMORY-PIPELINE.md → core/MEMORY.md.** Simplified name. Strengthened platform-native memory integration section.
+- **templates/worker-prompt-template.md → templates/executor-prompt.md.** Added Rule 14 (Pushback Protocol), evidence recording in Rule 10, risk_level awareness in dependency check.
+- **templates/task-template.md** — Added `risk_level` field in YAML frontmatter, `## Baseline` section (optional), `## Evidence Trail` table. Verification checklist items now require observable, specific phrasing.
+- **templates/config-skeleton.yaml** — Version 4.0. `platform` → `agent`. Added `capabilities` section. `worker` section → `executor` section. `orchestrator_model` → `planner_model`, `worker_model` → `executor_model`.
+- **README.md** — Complete rewrite. Agent-agnostic positioning, six mechanisms, simplified getting-started (two steps), planner/executor terminology, new structure diagram.
+- **VISION.md** — Six mechanisms, agent-agnostic philosophy, adaptive execution model principle, "prove completion" principle.
+- **All case studies** — Updated terminology (Worker→Executor, orchestrator→planner, five→six mechanisms).
+- **reference/FAILURE-MODES.md** — Updated for adaptive execution model, planner/executor terminology.
+- **reference/VALIDATION.md** — Updated for HARNESS.md entry point, executor terminology.
+- **reference/RESEARCH-PROTOCOL.md** — Updated SYSTEM.md reference to HARNESS.md.
+- **starter/README.md** — Simplified to two-step quick start.
+- **CONTRIBUTING.md** — Six mechanisms, executor terminology.
+
+### Removed
+- **HARNESS.manifest** — Absorbed into HARNESS.md "Truth Layer vs Mutable Surface" section.
+- **core/SYSTEM.md** — Absorbed into HARNESS.md.
+- **core/lock/, core/atomicity/, core/dependency/, core/memory-pipeline/, core/precedence/** — Empty subdirectories removed after flattening.
+- **All Cowork-specific references** — Platform badge, tagline, and "Built for Claude Cowork" branding removed.
+- **"v4 only if..."** language in VISION.md — v4 happened. The failure mode that the five mechanisms couldn't address was unproven completion claims.
+
+---
 
 ## v3.1.1 (2026-04-15) — Memory scope default hardening
 
