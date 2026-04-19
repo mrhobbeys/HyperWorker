@@ -28,7 +28,7 @@ Every task file includes a verification checklist. This is not new — v3 had ch
 
 The rule: if an executor cannot determine pass/fail without judgment, the item is too vague. Rewrite it.
 
-The checklist lives in the task file, in the `## Verification Checklist` section. See `templates/task.md` for the format.
+The checklist lives in the task file, in the `## Verification Checklist` section. See `templates/task-template.md` for the format.
 
 ---
 

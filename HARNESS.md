@@ -51,7 +51,7 @@ When performing an operation, read only the files listed for your role. This pre
 
 | Operation | Role | Read These Files |
 |---|---|---|
-| **Scaffolding a new project** | Planner | HARNESS.md → templates/config-skeleton.yaml, templates/project.md, templates/task.md, templates/rules.md |
+| **Scaffolding a new project** | Planner | HARNESS.md → templates/config-skeleton.yaml, templates/project-template.md, templates/task-template.md, templates/rules-template.md |
 | **Executing a task** | Executor | Project's 00-REFERENCE-rules.md → the specific task file → templates/executor-prompt.md |
 | **Reviewing completed work** | Planner | TASK-STATE.yaml → completed task files in done/ → core/VERIFICATION.md (criteria only) |
 | **Resuming a project (context recovery)** | Planner | active_project.md → PROJECT.md → TASK-STATE.yaml → 00-REFERENCE-rules.md |
@@ -84,10 +84,10 @@ core/
 templates/
 ├── config-skeleton.yaml     # Configurable system parameters
 ├── executor-prompt.md       # Behavioral rules for executor sessions
-├── task.md                  # Task file starting point
-├── project.md               # Project definition starting point
-├── rules.md                 # Precedence rules starting point
-└── post-mortem.md           # Post-task review starting point
+├── task-template.md         # Task file starting point
+├── project-template.md      # Project definition starting point
+├── rules-template.md        # Precedence rules starting point
+└── post-mortem-template.md  # Post-task review starting point
 
 reference/
 ├── VALIDATION.md            # Domain validation guide
@@ -151,10 +151,10 @@ Optional: If the operator wants domain research before scaffolding, see `referen
 ### 2. Scaffold Project Files
 Using the templates, create:
 - `config.yaml` from `templates/config-skeleton.yaml` — fill in based on answers
-- `projects/[project-name]/PROJECT.md` from `templates/project.md`
-- `projects/[project-name]/00-REFERENCE-rules.md` from `templates/rules.md`
+- `projects/[project-name]/PROJECT.md` from `templates/project-template.md`
+- `projects/[project-name]/00-REFERENCE-rules.md` from `templates/rules-template.md`
 - `projects/[project-name]/TASK-STATE.yaml` — decompose goal into tasks with dependencies
-- `projects/[project-name]/tasks/*.md` from `templates/task.md` — one file per task
+- `projects/[project-name]/tasks/*.md` from `templates/task-template.md` — one file per task
 - `projects/[project-name]/EXECUTOR-PROMPT.md` from `templates/executor-prompt.md`
 - `projects/active_project.md` — pointer to the new project
 - `memory/DISCOVERIES.md`, `memory/LEARNINGS.md` — empty files ready for use
