@@ -7,6 +7,7 @@ assumptions:
   - "[Assumption 2]"
 phase: 1
 status: pending
+risk_level: standard  # standard | elevated | critical — see core/VERIFICATION.md
 ---
 
 # Task XX: [Descriptive Task Name]
@@ -34,13 +35,23 @@ status: pending
 - [Explicit item 2 — e.g., "Do not change any configuration outside this scope"]
 - [Explicit item 3 — e.g., "Do not edit any harness infrastructure files"]
 
+## Baseline
+[OPTIONAL — include for tasks that modify existing state. Capture current state before changes.]
+[Remove this section for net-new creation tasks.]
+
 ## Verification Checklist
-- [ ] [Specific deliverable confirmed]
-- [ ] [Specific deliverable confirmed]
+- [ ] [Specific, observable deliverable — e.g., "Subject line under 50 characters"]
+- [ ] [Specific, observable deliverable — e.g., "Run npm test — all tests pass, exit code 0"]
 - [ ] Zero violations of reference rules (Tier 1 checked first)
 - [ ] No unintended changes to out-of-scope areas
 - [ ] [CONDITIONAL: "All content saved as DRAFT (not published)" — if draft_only is true]
 - [ ] STOP HERE — do not proceed to next task
+
+## Evidence Trail
+
+| Check | Method | Result | Pass |
+|---|---|---|---|
+| [Checklist item] | [How you verified it] | [What you found] | [Yes/No] |
 
 ## Post-Task Discovery Capture
 If you encountered anything unexpected — a failed assumption, a platform behavior
