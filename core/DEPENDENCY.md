@@ -16,7 +16,7 @@ A lightweight dependency graph and status tracker that lives in each project fol
 # TASK-STATE.yaml — [Project Name]
 # Updated: YYYY-MM-DD
 #
-# The orchestrator updates this file. Workers reference it (read-only).
+# The planner updates this file. Executors reference it (read-only).
 # Status values: pending | in_progress | complete | blocked | failed
 
 project: "[project-name]"
@@ -68,10 +68,10 @@ Five states cover the full lifecycle:
 | Status | Meaning |
 |---|---|
 | `pending` | Not yet started. Dependencies may or may not be met. |
-| `in_progress` | Currently being executed by a worker. |
+| `in_progress` | Currently being executed by an executor. |
 | `complete` | Finished and verified. Output is stable. |
 | `blocked` | Cannot proceed — missing dependency, failed assumption, or conflicting instructions. |
-| `failed` | Attempted and did not produce valid output. Requires orchestrator intervention. |
+| `failed` | Attempted and did not produce valid output. Requires planner intervention. |
 
 ### The State Engine Protocol
 
@@ -110,7 +110,7 @@ status: pending
 ---
 ```
 
-Workers check this frontmatter before executing. If a dependency isn't met or an assumption appears false, the worker STOPS and reports.
+Executors check this frontmatter before executing. If a dependency isn't met or an assumption appears false, the executor STOPS and reports.
 
 ### Phase Checkpoints
 
@@ -122,7 +122,7 @@ The frequency of checkpoints is configurable. Regulated domains may need a gate 
 
 ### Output Hashes
 
-An optional lightweight integrity mechanism. When a task completes, the orchestrator records a short hash of its key output. If that output is later modified, downstream tasks that depend on it can be flagged for re-review.
+An optional lightweight integrity mechanism. When a task completes, the planner records a short hash of its key output. If that output is later modified, downstream tasks that depend on it can be flagged for re-review.
 
 Output hashes are recommended for projects with complex dependency chains where outputs are referenced by multiple downstream tasks. They can be omitted for simple linear projects.
 

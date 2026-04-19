@@ -38,7 +38,7 @@ Every unexpected finding, failed assumption, platform behavior, or domain insigh
 
 **Entry lifecycle:** Open → Validated (promoted to LEARNINGS.md) or Archived (not a pattern).
 
-Workers capture discoveries in the Post-Task Discovery Capture section of their task file. The orchestrator copies them to DISCOVERIES.md during the next planning session.
+Executors capture discoveries in the Post-Task Discovery Capture section of their task file. The planner copies them to DISCOVERIES.md during the next planning session.
 
 ### File 2: LEARNINGS.md — Validated Operating Knowledge
 
@@ -71,7 +71,7 @@ Knowledge decays. Rules that were true six months ago may not be true now. The l
 
 | Stage | Age Since Last Validation | Behavior |
 |---|---|---|
-| **ACTIVE** | 0–[review cadence] | Auto-included in orchestrator context. Workers see it through the reference file. |
+| **ACTIVE** | 0–[review cadence] | Auto-included in planner context. Executors see it through the reference file. |
 | **REFERENCE** | [review cadence]–[2× review cadence] | Still in the file but not auto-loaded. Must be explicitly cited in a task or reference doc. |
 | **DEPRECATED** | Beyond [2× review cadence] | Flagged for re-validation. If not re-validated within 30 days, moves to archive. |
 | **ARCHIVED** | Beyond [archive threshold] | Moved to LEARNINGS-ARCHIVE.md. Off the critical path. |

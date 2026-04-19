@@ -4,20 +4,20 @@
 
 ## The Problem It Solves
 
-Projects accumulate rules from multiple sources — legal constraints, regulatory scope, technical limits, style guidelines, external methodologies. When rules conflict, workers have to guess which one wins. Guessing produces silent failures. The Precedence mechanism establishes an explicit hierarchy: higher tiers override lower tiers, and the hierarchy is declared once in a single reference file.
+Projects accumulate rules from multiple sources — legal constraints, regulatory scope, technical limits, style guidelines, external methodologies. When rules conflict, executors have to guess which one wins. Guessing produces silent failures. The Precedence mechanism establishes an explicit hierarchy: higher tiers override lower tiers, and the hierarchy is declared once in a single reference file.
 
 ## How It Works
 
 ### The Reference File
 
-Each project gets a single `00-REFERENCE-rules.md` that contains all cross-cutting rules organized by precedence tier. Workers read this file before every task. When two rules conflict, the higher tier wins — no judgment call required.
+Each project gets a single `00-REFERENCE-rules.md` that contains all cross-cutting rules organized by precedence tier. Executors read this file before every task. When two rules conflict, the higher tier wins — no judgment call required.
 
 ```markdown
 # 00-REFERENCE-rules.md — [Project Name]
 
 ## Precedence Order
 When rules conflict, higher tiers override lower tiers.
-Workers must check Tier 1 first.
+Executors must check Tier 1 first.
 
 ### Tier 1: [NON-NEGOTIABLE] (absolute — never override)
 [Rules that cannot be broken under any circumstances]
@@ -55,7 +55,7 @@ For domains with prohibited language (regulated industries, brand guidelines), t
 | [prohibited phrase] | [approved alternative] | [tier] | [reason] |
 ```
 
-This table is optional. Not all domains need it. When present, workers check it before any output that includes language (copy, documentation, communications).
+This table is optional. Not all domains need it. When present, executors check it before any output that includes language (copy, documentation, communications).
 
 ### Framework Integration Pattern
 
@@ -63,22 +63,22 @@ External methodologies (copywriting frameworks, design systems, coding standards
 
 1. **As reference knowledge** — A standalone document in the project folder.
 2. **As rules in the reference file** — Codified as Tier 4: STYLE rules.
-3. **As constraints in the worker prompt** — A rule in WORKER-PROMPT.md: "Apply the methodology specified in the reference file."
+3. **As constraints in the executor prompt** — A rule in EXECUTOR-PROMPT.md: "Apply the methodology specified in the reference file."
 4. **As patterns in individual tasks** — Each task uses framework formulas explicitly in its instructions.
 
 Loading the methodology at every layer makes it impossible for the AI to forget or deprioritize it. The methodology itself is a configuration choice — the integration pattern is universal.
 
 ### Why a Single File
 
-Multiple reference files create ambiguity. If `legal-rules.md` says one thing and `style-guide.md` says another, the worker has to figure out which file wins. A single consolidated file with explicit tiers eliminates this failure mode entirely.
+Multiple reference files create ambiguity. If `legal-rules.md` says one thing and `style-guide.md` says another, the executor has to figure out which file wins. A single consolidated file with explicit tiers eliminates this failure mode entirely.
 
 If the reference content is large, use sections within the file rather than splitting into separate files.
 
-### Worker Behavior
+### Executor Behavior
 
-The worker prompt includes a rule: "Check Tier 1 rules before any output." This means even if a lower-tier rule (e.g., a style guideline) produces something that sounds good, the worker must verify it doesn't violate a higher-tier rule (e.g., a legal constraint).
+The executor prompt includes a rule: "Check Tier 1 rules before any output." This means even if a lower-tier rule (e.g., a style guideline) produces something that sounds good, the executor must verify it doesn't violate a higher-tier rule (e.g., a legal constraint).
 
-If tiers conflict and the worker can't determine which applies, the escalation protocol activates (see Atomicity — Escalation Protocol).
+If tiers conflict and the executor can't determine which applies, the escalation protocol activates (see Atomicity — Escalation Protocol).
 
 ## Relationship to Other Mechanisms
 

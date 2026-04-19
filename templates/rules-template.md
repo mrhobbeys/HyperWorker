@@ -1,11 +1,11 @@
 # 00-REFERENCE-rules.md — [Project Name]
 
-> **This is the single source of truth for all cross-cutting rules in this project.** Workers read this file before every task. When rules conflict, higher tiers win. Do not split rules across multiple files.
+> **This is the single source of truth for all cross-cutting rules in this project.** Executors read this file before every task. When rules conflict, higher tiers win. Do not split rules across multiple files.
 
 ## Precedence Order
 
 When rules conflict, higher tiers override lower tiers.
-Workers must check Tier 1 first. If a lower-tier rule produces output that violates Tier 1, Tier 1 wins.
+Executors must check Tier 1 first. If a lower-tier rule produces output that violates Tier 1, Tier 1 wins.
 
 ### Tier 1: [NON-NEGOTIABLE] (absolute — never override)
 - [Rule 1 — e.g., "No guarantees of specific outcomes"]
@@ -44,7 +44,7 @@ Workers must check Tier 1 first. If a lower-tier rule produces output that viola
 [Pre-approved language that can be used freely without additional review]
 
 ## Correct Links / URLs (if applicable)
-[Canonical list of URLs. Workers paste these exactly.]
+[Canonical list of URLs. Executors paste these exactly.]
 
 | Purpose | URL |
 |---|---|

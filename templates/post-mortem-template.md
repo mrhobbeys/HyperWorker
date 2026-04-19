@@ -1,7 +1,7 @@
 # Post-Mortem: Task [ID] — [Title]
 
 **Completed:** [YYYY-MM-DD]
-**Worker tier:** [Orchestrator / Worker — specify model if relevant]
+**Executor tier:** [Orchestrator / Executor — specify model if relevant]
 **Discoveries:** [Yes / No]
 
 ## What Happened

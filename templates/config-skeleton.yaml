@@ -1,18 +1,26 @@
 # config-skeleton.yaml — Harness Configuration
 #
-# All configurable parameters for the Focus & Execution Harness v3.1.
+# All configurable parameters for HyperWorker v4.0.
 # Copy this file to your harness root as config.yaml and fill in values.
 # Every parameter has a sensible default. Override only what differs.
 
 # --- Harness Identity ---
-harness_version: "3.1"
+harness_version: "4.0"
 
 # --- Execution Model ---
 execution:
-  orchestrator_model: "[Most capable available model — e.g., opus-class]"
-  worker_model: "[Fast, reliable model — e.g., sonnet-class]"
-  platform: "[AI platform — e.g., Cowork, API, CLI, custom]"
+  planner_model: "[Most capable available model — e.g., opus-class]"
+  executor_model: "[Fast, reliable model — e.g., sonnet-class]"
+  agent: "[AI agent — e.g., Claude Code, Cursor, Goose, Copilot, any capable agent]"
   operator_count: 1                    # Number of human operators. 1 = solo. >1 = see FAILURE-MODES.md
+
+# --- Agent Capabilities ---
+# Declare what your AI agent supports. The harness adapts its execution model accordingly.
+capabilities:
+  subagents: false                     # true = agent can spawn subagents for executor tasks
+  platform_memory: false               # true = agent has its own memory system (complement, don't replace)
+  hooks: false                         # true = agent supports lifecycle hooks
+  mcp_tools: false                     # true = agent supports MCP tool servers
 
 # --- Version Control ---
 version_control:
@@ -76,14 +84,14 @@ verification:
     - "precedence_tiers"               # Operator confirms tier names and example rules
     - "task_breakdown"                 # Operator confirms TASK-STATE.yaml structure
 
-# --- Worker Behavior ---
-worker:
+# --- Executor Behavior ---
+executor:
   draft_only: true                     # true = all content saved as drafts, never auto-published
   content_mode: "execute"              # "execute" = paste pre-authored content. "generate" = create within constraints. Can be overridden per task.
   output_hashing: true                 # Track output hashes for change detection. Set false for simple projects.
 
 # --- Domain Research (Optional) ---
-# If enabled, the orchestrator will research the user's domain before scaffolding.
+# If enabled, the planner will research the user's domain before scaffolding.
 # See reference/RESEARCH-PROTOCOL.md for details.
 research:
   enabled: false                       # Set true to activate domain research during onboarding

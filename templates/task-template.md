@@ -12,7 +12,7 @@ risk_level: standard  # standard | elevated | critical — see core/VERIFICATION
 
 # Task XX: [Descriptive Task Name]
 
-> **This is a project task file.** The worker executing this task should follow the instructions below and nothing else. Read `00-REFERENCE-rules.md` before starting.
+> **This is a project task file.** The executor executing this task should follow the instructions below and nothing else. Read `00-REFERENCE-rules.md` before starting.
 
 ## What To Do
 [One paragraph stating the exact objective. Be specific about the end state.]

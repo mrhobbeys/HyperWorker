@@ -40,7 +40,7 @@ status: pending
 [- Confirm output meets platform constraints]
 
 ## Do NOT Touch
-[Explicit list of things the worker must leave alone]
+[Explicit list of things the executor must leave alone]
 
 ## Verification Checklist
 - [ ] [Specific deliverable confirmed]
@@ -60,15 +60,15 @@ status: pending
 
 **Verification is mandatory.** The checklist at the end is the definition of "done." No task is complete until every checkbox is confirmed.
 
-**Discovery capture is baked in.** Every task includes a section for the worker to note unexpected findings. This feeds the Memory Pipeline without giving the worker permission to act autonomously on discoveries.
+**Discovery capture is baked in.** Every task includes a section for the executor to note unexpected findings. This feeds the Memory Pipeline without giving the executor permission to act autonomously on discoveries.
 
 ### Content Delivery Modes
 
 Tasks can operate in two modes depending on the project type:
 
-**Execute pre-authored** — The exact content to deliver is pre-written during planning. The worker pastes it, doesn't write it. Writing happened during the orchestrator planning phase. This is the default for regulated, legal-sensitive, or brand-critical work.
+**Execute pre-authored** — The exact content to deliver is pre-written during planning. The executor pastes it, doesn't write it. Writing happened during the planner planning phase. This is the default for regulated, legal-sensitive, or brand-critical work.
 
-**Generate within constraints** — The task specifies the objective, constraints, and style parameters, and the worker generates content within those boundaries. This mode is appropriate for creative, exploratory, or technical documentation work where the orchestrator cannot pre-author every deliverable.
+**Generate within constraints** — The task specifies the objective, constraints, and style parameters, and the executor generates content within those boundaries. This mode is appropriate for creative, exploratory, or technical documentation work where the planner cannot pre-author every deliverable.
 
 The mode is declared per task. Both are valid.
 
@@ -80,9 +80,9 @@ Completed task files are moved to `done/`. This serves three purposes:
 2. **Audit trail** — The original task file shows what was supposed to happen.
 3. **Post-mortem capture** — If a task produced a discovery, the Post-Task Discovery Capture section is filled in before the file moves to `done/`.
 
-### The Worker Prompt
+### The Executor Prompt
 
-Every worker session starts by loading a behavioral prompt that enforces atomicity. The core rules:
+Every executor session starts by loading a behavioral prompt that enforces atomicity. The core rules:
 
 1. Do ONLY what the task file says. Nothing more.
 2. Do NOT look ahead to other tasks or suggest next steps.
@@ -96,18 +96,18 @@ Additional rules enforce escalation (see Precedence) and discovery capture (see 
 
 ### The Escalation Protocol
 
-When a worker hits something it cannot resolve — conflicting constraints, blocked dependency, ambiguous instruction:
+When an executor hits something it cannot resolve — conflicting constraints, blocked dependency, ambiguous instruction:
 
 1. **STOP.** Do not attempt to resolve.
 2. **Document** the conflict in Post-Task Discovery Capture.
 3. **Set task status to `blocked`.**
 4. **Report** the specific conflict and the clashing rules/assumptions.
 
-Being blocked is a valid and expected outcome, not a failure. The orchestrator resolves the conflict and the worker resumes.
+Being blocked is a valid and expected outcome, not a failure. The planner resolves the conflict and the executor resumes.
 
 ## Relationship to Other Mechanisms
 
 - **Lock** determines which project is being decomposed.
 - **Dependency** tracks execution order between atomic tasks.
 - **Memory Pipeline** captures knowledge from completed tasks.
-- **Precedence** resolves rule conflicts the worker encounters during execution.
+- **Precedence** resolves rule conflicts the executor encounters during execution.

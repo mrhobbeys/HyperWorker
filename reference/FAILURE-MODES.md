@@ -23,19 +23,19 @@ The harness assumes sequential tasks, a single operator, and manual verification
 
 **Impact:** The harness proceeds confidently with projects that don't fit its model. The operator may not realize the mismatch until failures accumulate.
 
-**Mitigation:** During the Verification Checkpoint, the orchestrator should flag if the project description implies parallel workstreams, multiple operators, or non-sequential dependencies. The operator can then decide whether to adapt the project to fit the harness or use a different management approach.
+**Mitigation:** During the Verification Checkpoint, the planner should flag if the project description implies parallel workstreams, multiple operators, or non-sequential dependencies. The operator can then decide whether to adapt the project to fit the harness or use a different management approach.
 
 **Future direction:** Automated structural compatibility check during project scaffolding.
 
 ## Execution Limitations
 
 ### Manual Task Chaining
-The human currently starts each worker session manually. There is no automated task chaining. This means the system requires human presence at every task transition.
+The human currently starts each executor session manually. There is no automated task chaining. This means the system requires human presence at every task transition.
 
 **Future direction:** Automated chaining with human checkpoints at phase boundaries.
 
 ### Manual Verification
-Task verification is manual (the worker checks a list, the orchestrator reviews). There are no automated checks (e.g., scraping a deployed page to verify banned phrases are gone, running tests, or validating API responses).
+Task verification is manual (the executor checks a list, the planner reviews). There are no automated checks (e.g., scraping a deployed page to verify banned phrases are gone, running tests, or validating API responses).
 
 **Future direction:** Automated verification hooks per task that run after completion.
 
@@ -64,13 +64,13 @@ If multiple harness instances run in parallel (for parallel operators or paralle
 ## Dependency Engine Limitations
 
 ### No Circular Dependency Detection
-TASK-STATE.yaml does not automatically detect circular dependencies (A depends on B, B depends on A). The orchestrator must catch these manually during task decomposition.
+TASK-STATE.yaml does not automatically detect circular dependencies (A depends on B, B depends on A). The planner must catch these manually during task decomposition.
 
 ### Output Hash Limitations
 Output hashes provide lightweight change detection but don't track *what* changed. If a completed task's output is modified, the system flags downstream tasks but doesn't describe the modification.
 
 ### Assumption Invalidation Is Manual
-When a discovery invalidates an assumption, the orchestrator must manually scan TASK-STATE.yaml for all tasks sharing that assumption. There is no automated propagation.
+When a discovery invalidates an assumption, the planner must manually scan TASK-STATE.yaml for all tasks sharing that assumption. There is no automated propagation.
 
 ## Version Control Limitations
 
@@ -87,7 +87,7 @@ When the harness itself evolves (e.g., v3.1 → v4), existing projects created u
 ## Platform Dependencies
 
 ### AI Model Availability
-The two-tier model assumes access to both a capable orchestrator model and a fast worker model. If only one model tier is available, the separation of planning and execution collapses. The system still works but loses the cost/drift benefits.
+The two-tier model assumes access to both a capable planner model and a fast executor model. If only one model tier is available, the separation of planning and execution collapses. The system still works but loses the cost/drift benefits.
 
 ### Platform-Native Memory Interaction
 The relationship between harness memory (DISCOVERIES/LEARNINGS) and platform-native memory (if any) is documented but not enforced. Conflicts between the two systems must be resolved manually.

@@ -22,7 +22,7 @@ Pick a domain you (or a test user) know well that is NOT the domain the harness 
    - **Precedence tier names** — Do the default four tiers map to your domain? If not, rename or add tiers.
    - **Scope taxonomy** — Does the default hierarchy (Universal / [Vertical] / Client / Engagement) fit? If not, define your own.
    - **Memory cadence** — Is quarterly review appropriate, or do you need monthly?
-   - **Worker behavior** — Is draft-only appropriate, or does your domain auto-publish?
+   - **Executor behavior** — Is draft-only appropriate, or does your domain auto-publish?
    - **Verification checkpoint** — Leave enabled unless you have a specific reason to disable.
 
 **Pass criterion:** Every config field can be filled without referencing another domain's values.
@@ -62,12 +62,12 @@ Present the scaffolded project to the operator (or test user) and ask:
 
 ### Step 7: Execute One Task
 
-1. Load the worker prompt (`templates/worker-prompt-template.md`) into a worker session.
+1. Load the executor prompt (`templates/executor-prompt.md`) into an executor session.
 2. Attach the reference file and one task file.
-3. Let the worker execute the task fully.
+3. Let the executor execute the task fully.
 4. Review the completion report and any discoveries.
 
-**Pass criterion:** The worker stays in scope, follows precedence, and uses the escalation/discovery protocols appropriately. The worker does not confuse harness files with project files.
+**Pass criterion:** The executor stays in scope, follows precedence, and uses the escalation/discovery protocols appropriately. The executor does not confuse harness files with project files.
 
 ### Step 8: Test the Memory Pipeline
 
@@ -84,7 +84,7 @@ Present the scaffolded project to the operator (or test user) and ask:
 - **Precedence mismatch:** The four default tiers don't map (→ add guidance for custom tier hierarchies).
 - **Scope taxonomy mismatch:** The default scope levels don't fit (→ improve the taxonomy documentation).
 - **Memory categories mismatch:** The default learning categories don't cover the new domain's knowledge types (→ expand the category list).
-- **Boundary confusion:** The worker treated harness files as project files or vice versa (→ improve manifest clarity or worker prompt framing).
+- **Boundary confusion:** The executor treated harness files as project files or vice versa (→ improve manifest clarity or executor prompt framing).
 - **Checkpoint failure:** The verification checkpoint didn't catch an assumption mismatch that caused problems later (→ add more checkpoint criteria).
 - **Structural misfit:** The project requires parallel tasks, multiple operators, or non-sequential workflows that the harness can't accommodate (→ document in FAILURE-MODES.md).
 
@@ -111,7 +111,7 @@ Document the validation in a separate file:
 [What the verification checkpoint caught or confirmed]
 
 ## Boundary Clarity
-[Did the worker correctly distinguish harness files from project files?]
+[Did the executor correctly distinguish harness files from project files?]
 
 ## Overall Assessment
 [Pass / Pass with modifications / Fail]
