@@ -1,5 +1,53 @@
 # Changelog — HyperWorker
 
+## v4.1.1 (2026-04-19) — Cleanup patch
+
+### Philosophy
+Infrastructure hygiene. No mechanism changes, no rule changes, no behavior changes. Restores the "healthcare/vendor references removed from core" invariant first stated in v2 — v4.1 regressed against it by leaking domain-specific worked examples into the Truth Layer. v4.1.1 scrubs those examples, closes two small open ambiguities in the same patch, and rewrites git history so the leaked strings do not persist in the public log.
+
+### Fixed
+- **Domain-specific worked examples scrubbed from core** — `core/VERIFICATION.md` Read-Back example (§3), end-user audience list (§7), and Failure Scenario example (§7) replaced with domain-neutral SaaS equivalents. `templates/rules-template.md` Canonical Facts rows (vanity phone, date-anchored deadline) replaced with widely recognized neutral examples. The patterns those examples illustrate are unchanged; only the specific strings changed.
+- **`HARNESS.md` version header** — line 1 corrected from `v4.0` to `v4.1.1` (missed during the v4.1 bump).
+- **Task-completion actor named** — Rule 16 (`templates/executor-prompt.md`) and `core/ATOMICITY.md` §Session State previously described the completion write in passive voice. Rule 16 now mandates a final SESSION-STATE write by the executor before the Completion Report, and the ATOMICITY.md relationship paragraph now names the executor (end-of-task write) and planner (next-task assignment) as the two writers. Closes the risk of orphaned `in_progress` state when a task finishes.
+
+### Changed
+- **Git history rewritten.** The leaked strings above were present in an earlier commit on the `v4.0.2` branch. History was rewritten to replace them in-place. All collaborators with a local clone of this repo must delete the clone and re-clone from origin. Commit SHAs on `v4.0.2` have changed; references to prior SHAs are stale.
+- **Plan files excluded from version control.** `PLAN-*.md` added to `.gitignore`. Plan documents live outside the repo going forward.
+
+---
+
+## v4.1.0 (2026-04-19) — Execution enforcement gaps
+
+### Philosophy
+v4.1 closes a class of failure that v4.0's six mechanisms didn't structurally prevent: silent save failures, split-field instructions, creative iteration colliding with strict atomicity, missing scenario gates on end-user content, subtle-tell leakage in prescribed copy, and mid-task session loss. Each surfaced repeatedly in a meta-analysis of 30 production sessions. Fixes are additive inside the existing six-mechanism model — no new mechanisms.
+
+### Fixed
+- **Stale template path references** — Nine references in `HARNESS.md` (Routing Table, Truth Layer tree, Bootstrap Protocol scaffold list) and one in `core/VERIFICATION.md` still pointed at pre-v4.0 bare names (`templates/task.md`, etc.). Replaced with the `-template.md` equivalents. An agent following the Bootstrap Protocol literally would have hit file-not-found. Originally scoped as v4.0.2; rolled into v4.1 since the prior release was still unmerged.
+
+### Added
+- **Read-Back Verification (`core/VERIFICATION.md` §3)** — New contextual component. For tasks that modify external state (UI fields, API config, CMS updates), the executor must re-read the changed value from the source and record it in the Evidence Trail. A save is not complete until it has been read back. Subsequent components renumbered (§4 Baseline-After through §8 Pushback).
+- **Executor Rule 15: READ-BACK** in `templates/executor-prompt.md` — Enforces post-write read-back on any external state change.
+- **Field-Value Map section** in `templates/task-template.md` — Optional section for UI tasks. Every field appears in exactly one row with its exact target value. Step-by-step describes navigation; Field-Value Map describes destination state.
+- **One-field-one-row principle** in `core/ATOMICITY.md` Key Design Principles — Codifies the rule that a single field's value never appears in more than one row or step.
+- **Iterate-within-boundaries delivery mode** in `core/ATOMICITY.md` — Third Content Delivery Mode for visual assets, copy exploration, and design work where first-pass fidelity is impossible. Requires preview surface, version preservation, and explicit convergence criterion. Iteration is bounded, not open-ended.
+- **Delivery Mode declaration** + **Iteration Protocol section** in `templates/task-template.md` — Per-task mode selection and the protocol fields required when iterate-within-boundaries is chosen.
+- **Failure Scenario gate (`core/VERIFICATION.md` §7 Risk Classification)** — Tasks at `elevated` or `critical` risk that produce end-user-facing content require three realistic failure scenarios recorded in the Evidence Trail before completion. A single failed scenario blocks the task.
+- **Failure Scenarios section** in `templates/task-template.md` — Optional section structured for the three required scenarios.
+- **Banned Punctuation guidance** in `templates/rules-template.md` — Banned Phrases table now reads "Banned Token" and includes an em-dash example row. Em dashes in prescribed copy are an AI tell that breaks voice.
+- **Canonical Facts — Do Not Normalize section** in `templates/rules-template.md` — Table for facts (vanity phone numbers, date-anchored deadlines) that must be preserved exactly to prevent AI normalization.
+- **Step-Level Session State (`core/ATOMICITY.md` §Session State, `templates/session-state-template.md`)** — New file per project: `projects/[project-name]/SESSION-STATE.md`. Records active task, step number, last action, Evidence Trail pointer, next action, blockers. Overwritten on every numbered step completion. Closes the mid-task session-loss gap (TASK-STATE.yaml is task-level only). Layer 3 / action-level state tracking explicitly out of scope.
+- **Executor Rule 16: CHECKPOINT** in `templates/executor-prompt.md` — Write SESSION-STATE.md after every numbered step.
+- **Resume check (Dependency Check step 5)** in `templates/executor-prompt.md` — Read SESSION-STATE.md before starting; resume at first incomplete step if Status is `in_progress` for the requested task.
+
+### Changed
+- **`core/VERIFICATION.md`** — "Six components" → "eight components." Sections renumbered for Read-Back Verification insertion at §3.
+- **`HARNESS.md` Routing Table — "Resuming a project" row** — Load order updated from `active_project.md → PROJECT.md → TASK-STATE.yaml → 00-REFERENCE-rules.md` to `active_project.md → SESSION-STATE.md → TASK-STATE.yaml → active task file → 00-REFERENCE-rules.md`. SESSION-STATE.md (~150 tokens) is more specific than PROJECT.md (~500 tokens) for resume; the active task file is added because SESSION-STATE points to it.
+- **`HARNESS.md` Routing Table — "Scaffolding a new project" row** — Includes `templates/session-state-template.md`.
+- **`HARNESS.md` Bootstrap Protocol step 2** — Scaffold list includes `SESSION-STATE.md` initialized to `ready` / Active task `none`.
+- **`HARNESS.md` Truth Layer tree** — Adds `session-state-template.md` to the templates listing.
+
+---
+
 ## v4.0.2 (2026-04-19) — Context optimization
 
 ### Changed

@@ -22,6 +22,8 @@ Load this prompt before attaching the reference file and task file. Customize th
 12. **ESCALATION:** If you encounter a conflict between rules, constraints, or assumptions — STOP. Set the task to blocked. Document the conflict in the Post-Task Discovery Capture section. Do not attempt to resolve it yourself. The planner will handle it.
 13. **DISCOVERY:** If you discover something unexpected (platform behavior, missing data, wrong assumption, constraint you didn't expect), note it in Post-Task Discovery Capture. Do NOT act on it — just capture it. The planner decides what to do with discoveries.
 14. **PUSHBACK:** Before executing, evaluate whether the task instructions make sense. If the task would conflict with completed work, rest on a false assumption, introduce unnecessary complexity, or violate a precedence rule — STOP. Document the concern and set the task to blocked. Flagging a problem before execution is better than executing a problem.
+15. **READ-BACK:** After any state-changing operation on an external system (form save, API write, platform edit, file upload), re-read the changed value from the source and record it in the Evidence Trail. A save is not complete until it has been verified present. See `core/VERIFICATION.md` §3 for details.
+16. **CHECKPOINT:** After completing each numbered step in Step-by-Step Instructions, update `projects/[project-name]/SESSION-STATE.md` with the new step number, a one-sentence action summary, and a reference (not a copy) to the latest Evidence Trail row. Write on every step, not only at milestones. **When the task reaches completion (after the verification step and before returning the Completion Report), write SESSION-STATE.md one final time with Status `ready`, Active task `none`, Step `n/a`, and the Evidence reference cleared.** See `core/ATOMICITY.md` §Session State.
 
 ## Your Boundaries
 
@@ -47,6 +49,7 @@ Before executing the task, read the YAML frontmatter at the top of the task file
 2. Note the `depends_on` list. If you have reason to believe a dependency isn't met, STOP and report.
 3. Review the `assumptions` list. If any assumption is clearly false based on what you can see, STOP and report.
 4. Check `risk_level`. If `elevated` or `critical`, ensure you understand the additional verification requirements (see core/VERIFICATION.md).
+5. **Resume check.** Read `projects/[current-project]/SESSION-STATE.md`. If Status is `in_progress` and Active task matches this task, resume at the first incomplete step — do not redo completed steps. If the state file is absent, `ready`, or stale (no update in >24h), begin at step 1. If Status is `blocked`, STOP and report.
 
 If everything checks out, proceed with the task.
 

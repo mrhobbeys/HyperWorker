@@ -10,7 +10,7 @@ This is not a discipline problem. It is a structural one. If the system does not
 
 ## How It Works
 
-Verification has six components. The first two are foundational (every task uses them). The remaining four are contextual (used when applicable).
+Verification has eight components. The first two are foundational (every task uses them). The remaining six are contextual (used when applicable).
 
 ---
 
@@ -54,7 +54,23 @@ Evidence trails are mandatory for every task. The executor fills them in during 
 
 ---
 
-### 3. Baseline-After Pattern (Contextual)
+### 3. Read-Back Verification (Contextual)
+
+For tasks that modify external state (a live platform field, a remote config, a saved draft), the executor must read the changed value back from the source of truth after the write operation completes and record it in the Evidence Trail.
+
+**When to use:** Any task where the deliverable is a persisted change to an external system (web UI edits, API configuration, CMS updates, platform profile changes).
+
+**Rule:** A Save is not complete until it has been read back. The Evidence Trail must contain a post-save row showing the field's value *as read from the platform* after the write.
+
+```markdown
+| Field persisted correctly | Re-read headline field after Save | "Fast onboarding for growing teams" | Yes |
+```
+
+**Why this matters:** Silent save failures are among the most common platform-automation bugs. React state that doesn't commit, modals that dismiss without firing the submit handler, and permission errors that surface as visual confirmation without server persistence all produce false-positive completion claims. The cost of a read-back is low. The cost of an undetected silent failure is a task marked complete when nothing changed.
+
+---
+
+### 4. Baseline-After Pattern (Contextual)
 
 For tasks that **modify existing state** (editing a page, refactoring code, updating a configuration), capture the baseline before modification. After task completion, the evidence trail includes the before and after.
 
@@ -75,7 +91,7 @@ This section is optional in the task template. The planner adds it when authorin
 
 ---
 
-### 4. Verification Checkpoint (Contextual)
+### 5. Verification Checkpoint (Contextual)
 
 The Verification Checkpoint is the mandatory three-question gate for new projects. It is defined in HARNESS.md under "Bootstrap Protocol" and is the first place Verification appears in any project lifecycle.
 
@@ -88,7 +104,7 @@ The checkpoint is not a mechanism the executor uses. It is a planner-level gate.
 
 ---
 
-### 5. The Ratchet Principle (Contextual)
+### 6. The Ratchet Principle (Contextual)
 
 Improvements are kept. Regressions discard the completion claim.
 
@@ -107,7 +123,7 @@ This integrates with the Dependency mechanism — it is not a separate tracking 
 
 ---
 
-### 6. Risk Classification (Contextual)
+### 7. Risk Classification (Contextual)
 
 Not all tasks carry the same risk. A config tweak and an auth system change should not require the same verification rigor.
 
@@ -120,14 +136,28 @@ risk_level: standard | elevated | critical
 | Risk Level | When to Use | Verification Requirements |
 |---|---|---|
 | **standard** | Routine tasks, additive content, config changes | Verification checklist + evidence trail |
-| **elevated** | Tasks modifying existing deliverables, cross-task dependencies, tasks touching multiple outputs | Checklist + evidence trail + baseline-after pattern |
-| **critical** | Tasks involving compliance, security, legal, financial, or irreversible changes | Checklist + evidence trail + baseline-after + planner review before marking complete |
+| **elevated** | Tasks modifying existing deliverables, cross-task dependencies, tasks touching multiple outputs | Checklist + evidence trail + baseline-after pattern. **If output is end-user-facing content:** three failure scenarios generated and recorded. |
+| **critical** | Tasks involving compliance, security, legal, financial, or irreversible changes | Checklist + evidence trail + baseline-after + planner review before marking complete. **If output is end-user-facing content:** three failure scenarios generated and recorded. |
 
 **Default is `standard`** if not specified. The planner sets the risk level when authoring tasks. The executor follows the verification requirements for the assigned level.
 
+**Failure Scenario Generation (elevated/critical, end-user-facing content):**
+
+Before marking the task complete, the executor generates three realistic scenarios in which a real end-user follows the output verbatim. Each scenario is recorded in the Evidence Trail under a dedicated row. If any scenario produces an unsafe, non-compliant, or misleading outcome, the task is set to `blocked` with the failing scenario documented.
+
+**What counts as end-user-facing:** copy displayed to customers, partners, employees outside the project team, or any audience who will act on the output. Internal task files, planning documents, and infrastructure changes are not end-user-facing.
+
+**Example Evidence Trail row:**
+
+```markdown
+| Failure scenario 1 | User cancels during trial, sees "You will be charged on renewal" message | Copy implies a charge happens even after cancellation — triggers support contact and erodes trust | No |
+```
+
+A single failed scenario is sufficient to block the task. Passing all three does not guarantee safety — it means no obvious failure was found, not that none exists.
+
 ---
 
-### 7. Pushback Protocol (Contextual)
+### 8. Pushback Protocol (Contextual)
 
 Before executing a task, the executor evaluates whether the instructions make sense in the current context. If the task would:
 

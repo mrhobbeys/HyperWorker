@@ -30,11 +30,12 @@ Executors must check Tier 1 first. If a lower-tier rule produces output that vio
 - [Reading level target]
 - [Quality principles — e.g., "proof over promise"]
 
-## Banned Phrases / Safe Replacements (if applicable)
+## Banned Phrases / Punctuation / Safe Replacements (if applicable)
 
-| Banned Phrase | Safe Replacement | Tier | Why |
+| Banned Token | Safe Replacement | Tier | Why |
 |---|---|---|---|
 | [phrase] | [replacement] | [tier] | [reason] |
+| — (em dash) | , or . or ( ) | 4 | AI tell; reads as AI-generated. Not a compliance issue, but breaks voice. |
 | [phrase] | [replacement] | [tier] | [reason] |
 
 ## Target Audience
@@ -50,6 +51,16 @@ Executors must check Tier 1 first. If a lower-tier rule produces output that vio
 |---|---|
 | [Main website] | [URL] |
 | [Booking / CTA] | [URL] |
+
+## Canonical Facts — Do Not Normalize
+
+Facts that must be preserved exactly as written, even when a more conventional
+form is available. List them here to prevent AI normalization.
+
+| Fact | Canonical Form | Do NOT Normalize To |
+|---|---|---|
+| [e.g., vanity phone] | [e.g., "1-800-FLOWERS"] | [e.g., "1-800-356-9377"] |
+| [e.g., launch deadline] | [e.g., "by end of Q1 2026"] | [e.g., "in about 3 months" — the target is date-anchored, not duration-anchored] |
 
 ## Platform Specifications (if applicable)
 

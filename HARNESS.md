@@ -1,4 +1,4 @@
-# HyperWorker v4.0
+# HyperWorker v4.1.1
 
 A project management harness for AI agents. Six mechanisms enforced through markdown and YAML files make long-running projects survive agent context loss, scope drift, skipped steps, rule conflicts, knowledge decay, and unverified claims of completion.
 
@@ -51,10 +51,10 @@ When performing an operation, read only the files listed for your role. This pre
 
 | Operation | Role | Read These Files |
 |---|---|---|
-| **Scaffolding a new project** | Planner | HARNESS.md → templates/config-skeleton.yaml, templates/project-template.md, templates/task-template.md, templates/rules-template.md |
+| **Scaffolding a new project** | Planner | HARNESS.md → templates/config-skeleton.yaml, templates/project-template.md, templates/task-template.md, templates/rules-template.md, templates/session-state-template.md |
 | **Executing a task** | Executor | Project's 00-REFERENCE-rules.md → the specific task file → templates/executor-prompt.md |
 | **Reviewing completed work** | Planner | TASK-STATE.yaml → completed task files in done/ → core/VERIFICATION.md (criteria only) |
-| **Resuming a project (context recovery)** | Planner | active_project.md → PROJECT.md → TASK-STATE.yaml → 00-REFERENCE-rules.md |
+| **Resuming a project (context recovery)** | Planner | active_project.md → SESSION-STATE.md → TASK-STATE.yaml → active task file → 00-REFERENCE-rules.md |
 | **Resolving a blocked task** | Planner | task file → TASK-STATE.yaml → relevant core/*.md |
 | **Managing memory** | Planner | core/MEMORY.md → memory/DISCOVERIES.md → memory/LEARNINGS.md |
 | **Resolving rule conflicts** | Planner | core/PRECEDENCE.md → project's 00-REFERENCE-rules.md |
@@ -84,10 +84,11 @@ core/
 templates/
 ├── config-skeleton.yaml     # Configurable system parameters
 ├── executor-prompt.md       # Behavioral rules for executor sessions
-├── task-template.md         # Task file starting point
-├── project-template.md      # Project definition starting point
-├── rules-template.md        # Precedence rules starting point
-└── post-mortem-template.md  # Post-task review starting point
+├── task-template.md          # Task file starting point
+├── project-template.md       # Project definition starting point
+├── rules-template.md         # Precedence rules starting point
+├── session-state-template.md # Step-level session state starting point
+└── post-mortem-template.md   # Post-task review starting point
 
 reference/
 ├── VALIDATION.md            # Domain validation guide
@@ -156,6 +157,7 @@ Using the templates, create:
 - `projects/[project-name]/TASK-STATE.yaml` — decompose goal into tasks with dependencies
 - `projects/[project-name]/tasks/*.md` from `templates/task-template.md` — one file per task
 - `projects/[project-name]/EXECUTOR-PROMPT.md` from `templates/executor-prompt.md`
+- `projects/[project-name]/SESSION-STATE.md` from `templates/session-state-template.md` — initial status `ready`, Active task `none`
 - `projects/active_project.md` — pointer to the new project
 - `memory/DISCOVERIES.md`, `memory/LEARNINGS.md` — empty files ready for use
 
