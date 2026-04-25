@@ -1,0 +1,33 @@
+# schemas/projects/marketing-campaign/capability-gates.yaml
+# Per-task-kind tool requirements for marketing-campaign projects.
+# `hw bootstrap` populates each task template's `required_tools:` from the matching kind here.
+
+task_kinds:
+  copy-generation:
+    description: "Tasks producing draft copy: headlines, body, emails, ad text, CTA blocks."
+    required_tools: [file_write]
+    optional_tools: [readability_check]
+    delivery_modes: [prescribed, constrained]
+
+  copy-iteration:
+    description: "Tasks where the operator selects from multiple drafts (banner copy, subject-line variants)."
+    required_tools: [file_write]
+    optional_tools: [preview_render]
+    delivery_modes: [bounded-iteration]
+
+  platform-publish-draft:
+    description: "Tasks that save drafts to a CMS or email platform without publishing."
+    required_tools: [file_write, web_browse, web_fetch]
+    optional_tools: [headless_browser]
+    delivery_modes: [prescribed]
+
+  research:
+    description: "Audience research, competitor scan, channel benchmark gathering."
+    required_tools: [web_browse, web_fetch, file_write]
+    delivery_modes: [constrained]
+
+  measurement:
+    description: "Reading PageSpeed scores, character counts, readability scores."
+    required_tools: [web_fetch, file_write]
+    optional_tools: [pagespeed_api]
+    delivery_modes: [constrained]

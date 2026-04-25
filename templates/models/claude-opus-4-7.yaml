@@ -1,0 +1,42 @@
+# templates/models/claude-opus-4-7.yaml
+# Profile for Anthropic Claude Opus 4.7 (1M context).
+
+profile_id: claude-opus-4-7
+model_family: claude
+generation: "4.7"
+
+verbose_cot: true
+suppress_concise_directives: true        # see notes
+auto_summarize_after_phase: false        # 4.7 self-summarizes; an additional summary task is redundant
+prefer_explicit_acceptance_criteria: true
+parallelism_must_be_explicit: true
+
+context_fill_thresholds:
+  warn_at: 0.55                          # 4.7 tokenizer encodes more for the same input
+  compact_at: 0.70
+
+council_default_size: 2
+recitation_overlap_threshold: 0.65       # slightly looser; verbose paraphrase may stem-overlap less
+
+notes: |
+  Anthropic's 2026-04-23 postmortem documented that 4.7 underperforms when
+  given "be concise" / forced-verbosity-down directives in the system prompt.
+  The model's verbose-CoT pattern is part of how it produces correct output;
+  suppressing it surfaces as quality regression. v5.0 honors this by setting
+  `suppress_concise_directives: true` (the harness will not inject concision
+  instructions, and project rules that demand concision are kept at Tier 4
+  STYLE — they apply to *output*, not to chain-of-thought).
+
+  The 4.7 tokenizer encodes 1.0–1.35× more tokens for the same input than
+  earlier Claude generations (per Anthropic's tokenizer-comparison docs).
+  v5.0 lowers warn / compact thresholds accordingly so the operator gets a
+  warning before runtime degradation, not after.
+
+  4.7 self-summarizes between phases; the earlier-version "auto-summarize
+  task between phases" pattern is unnecessary here. Setting
+  `auto_summarize_after_phase: false` removes the redundant task.
+
+  Parallelism: 4.7 under-parallelizes branch/fold subtasks unless the
+  decomposition is stated explicitly in the parent task's instruction.
+  `parallelism_must_be_explicit: true` instructs the harness to prefer
+  enumerated sub-task lists over open-ended "explore alternatives" prompts.

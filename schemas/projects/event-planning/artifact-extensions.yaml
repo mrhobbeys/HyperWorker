@@ -1,0 +1,45 @@
+# schemas/projects/event-planning/artifact-extensions.yaml
+
+decision:
+  additional_fields:
+    - name: vendor
+      type: string|null
+      required: false
+    - name: deposit_amount
+      type: number|null
+      required: false
+    - name: cancellation_deadline
+      type: iso8601-date|null
+      required: false
+
+finding:
+  additional_fields:
+    - name: venue
+      type: string|null
+      required: false
+    - name: vendor
+      type: string|null
+      required: false
+
+anti-pattern:
+  additional_fields:
+    - name: venue
+      type: string|null
+      required: false
+      description: "If this anti-pattern is venue-specific, name the venue."
+    - name: vendor
+      type: string|null
+      required: false
+
+operating-reality:
+  additional_fields:
+    - name: event_date
+      type: iso8601-date
+      required: true
+    - name: target_headcount
+      type: number
+      required: true
+    - name: format
+      type: enum
+      values: [in-person, hybrid, virtual]
+      required: true

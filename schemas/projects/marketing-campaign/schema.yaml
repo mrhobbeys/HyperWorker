@@ -1,0 +1,70 @@
+# schemas/projects/marketing-campaign/schema.yaml
+# Project schema metadata. Used by `hw bootstrap --schema marketing-campaign`.
+
+schema_id: marketing-campaign
+schema_version: 1.0
+harness_version: "5.0"
+description: |
+  Lead-generation funnels, email sequences, landing pages, paid-ad creative,
+  and similar campaign work where brand rules and platform limits dominate.
+
+bootstrap_questions:
+  - id: project_name
+    prompt: "What is this campaign called?"
+    type: string
+    required: true
+  - id: objective
+    prompt: "One sentence: what does done look like?"
+    type: string
+    required: true
+  - id: included_channels
+    prompt: "Which channels are in scope? (e.g., landing page, email, paid social)"
+    type: list[string]
+    required: true
+  - id: excluded_channels
+    prompt: "Which channels are explicitly excluded?"
+    type: list[string]
+    required: false
+  - id: brand_voice_artifact
+    prompt: "Is there an existing brand voice / tone document? (path or null)"
+    type: string|null
+    required: true
+  - id: hard_deadline
+    prompt: "Is there a hard deadline? (YYYY-MM-DD or null)"
+    type: iso8601-date|null
+    required: true
+  - id: budget
+    prompt: "Operating budget for this campaign — amount, currency, frequency."
+    type: object
+    required: true
+  - id: draft_only
+    prompt: "Should all output be saved as drafts (operator publishes manually)? (yes/no)"
+    type: bool
+    required: true
+    default: true
+
+includes:
+  - precedence-tiers.yaml
+  - artifact-extensions.yaml
+  - capability-gates.yaml
+  - verification.yaml
+  - council.yaml
+  - project-template.md
+  - rules-template.md
+  - task-templates/
+  - README.md
+
+default_tasks:
+  description: |
+    A canonical lead-generation funnel decomposes into roughly 8 tasks across 3 phases.
+    Bootstrapping clones these templates into projects/<id>/tasks/ in numerical order.
+  templates:
+    - "00-discovery-call.md"
+    - "01-headline-and-subhead.md"
+    - "02-landing-body-and-social-proof.md"
+    - "03-email-1-welcome.md"
+    - "04-email-2-problem-agitation.md"
+    - "05-email-3-proof.md"
+    - "06-email-4-objections.md"
+    - "07-email-5-cta.md"
+    - "08-booking-page-and-confirmation.md"

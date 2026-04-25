@@ -1,0 +1,29 @@
+# General
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.swp
+
+# OS
+*.bak
+~$*
+
+# Editors
+.vscode/
+*.sublime-workspace
+*.sublime-project
+
+# Backup
+*~
+
+# Operator sandboxes / local test runs (NOT the example schemas)
+/test-runs/
+/sandbox/
+/_scratch/
+
+# Plan documents live outside the repo
+/PLAN-*.md
+
+# Agent-specific files (per-instance, not per-repo)
+.claude/

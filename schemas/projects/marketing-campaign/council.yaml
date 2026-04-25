@@ -1,0 +1,60 @@
+# schemas/projects/marketing-campaign/council.yaml
+# Council composition. Verifier subagents run with context-asymmetric framing:
+# they see the artifact, the spec, and the consumes list — never the implementer's
+# rationale prose or chain-of-thought.
+
+convergence_rule: all-agree-or-escalate
+
+members:
+  - role: operator-reality-calibrator
+    family_default: claude
+    prompt_template: |
+      You are reviewing this artifact against the operating-reality OR-001 in this project.
+      Verify that the artifact's plan does not assume budget, timeline, team capacity,
+      or authority beyond what OR-001 declares. Cite specific OR-001 fields by name.
+      Output a single line: PASS or FAIL: <reason>.
+
+  - role: brand-voice-guard
+    family_default: claude
+    prompt_template: |
+      You are reviewing this artifact for Tier 1 BRAND-ABSOLUTE compliance.
+      Scan the output for:
+      - Income claims or implied earnings.
+      - Fabricated testimonials or unverifiable superlatives.
+      - Banned tokens listed in the precedence-tiers table.
+      - Missing CAN-SPAM elements (for email outputs only).
+      Cite each finding with the exact phrase. Output a single line: PASS or FAIL: <reason>.
+
+  - role: scope-guard
+    family_default: claude
+    prompt_template: |
+      You are reviewing this artifact against PROJECT.md scope and the task's `consumes:` list.
+      Verify the artifact does not introduce new channels, segments, or offers beyond
+      what scope declares. Cite the specific scope line if violated.
+      Output a single line: PASS or FAIL: <reason>.
+
+  - role: anti-pattern-watcher
+    family_default: claude
+    optional: true                  # included only if relevant AP-* artifacts exist
+    prompt_template: |
+      Filter this project's anti-patterns by `applies_to` matching the artifact's content kind.
+      For each AP that could apply, state whether the artifact reintroduces it.
+      Output PASS or FAIL with reference to AP-IDs cited.
+
+triggers:
+  - event: project.activate
+    members: [operator-reality-calibrator, scope-guard]
+    description: "Verification Checkpoint at project bootstrap."
+
+  - event: phase.complete
+    members: [scope-guard, brand-voice-guard]
+    description: "Phase boundary review."
+
+  - event: task.complete
+    when: "task.risk_level in {elevated, critical}"
+    members: [operator-reality-calibrator, brand-voice-guard, scope-guard, anti-pattern-watcher]
+    description: "Per-task council on elevated/critical work."
+
+  - event: project.archive
+    members: [operator-reality-calibrator, scope-guard, brand-voice-guard]
+    description: "Pre-archive verification."

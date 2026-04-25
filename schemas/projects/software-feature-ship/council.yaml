@@ -1,0 +1,52 @@
+# schemas/projects/software-feature-ship/council.yaml
+
+convergence_rule: all-agree-or-escalate
+
+members:
+  - role: contract-stability-reviewer
+    family_default: claude
+    prompt_template: |
+      Review this artifact against the project's existing API contracts and database schema.
+      State whether this change is backwards-compatible, requires versioning, or breaks an existing contract.
+      Cite specific files and lines from the consumes list. Do not infer beyond what the consumes list shows.
+      Output: PASS or FAIL: <reason>.
+
+  - role: test-coverage-reviewer
+    family_default: claude
+    prompt_template: |
+      Review this artifact against the test suite. Determine whether the changed surface area is
+      covered by unit and integration tests included in this PR.
+      Output: PASS or FAIL: <reason — name the uncovered code path if FAIL>.
+
+  - role: security-reviewer
+    family_default: claude
+    optional: true
+    prompt_template: |
+      Review this artifact for the Tier 1 SECURITY rules: secrets, input validation, auth boundaries.
+      Cite the specific line if a violation is suspected.
+      Output: PASS or FAIL: <reason>.
+
+  - role: rollback-reviewer
+    family_default: claude
+    prompt_template: |
+      For the proposed change, state how it can be rolled back. If the change is a forward-only
+      migration without a documented down-migration or feature flag, FAIL.
+      Output: PASS or FAIL: <reason>.
+
+triggers:
+  - event: project.activate
+    members: [contract-stability-reviewer]
+    description: "Verification Checkpoint: confirm spec is consistent with existing contracts."
+
+  - event: phase.complete
+    members: [test-coverage-reviewer, contract-stability-reviewer]
+    description: "Phase boundary review: tests + contracts consistent before next phase."
+
+  - event: task.complete
+    when: "task.risk_level in {elevated, critical}"
+    members: [contract-stability-reviewer, test-coverage-reviewer, security-reviewer, rollback-reviewer]
+    description: "Per-task council on elevated/critical work."
+
+  - event: pre.deploy.production
+    members: [contract-stability-reviewer, test-coverage-reviewer, security-reviewer, rollback-reviewer]
+    description: "Mandatory council before production deploy."

@@ -1,0 +1,28 @@
+# templates/models/default.yaml
+# Conservative defaults for unknown models or family-mixed setups.
+
+profile_id: default
+model_family: default
+generation: null
+
+verbose_cot: false
+suppress_concise_directives: false
+auto_summarize_after_phase: true
+prefer_explicit_acceptance_criteria: true
+parallelism_must_be_explicit: false
+
+context_fill_thresholds:
+  warn_at: 0.65
+  compact_at: 0.80
+
+council_default_size: 2
+recitation_overlap_threshold: 0.70
+
+notes: |
+  This profile makes no claims about the operating model. It enables every
+  attention-restoration primitive (recitation, SCAN, compression) at standard
+  thresholds and asks the harness to summarize between phases.
+
+  When the operator knows the model, switching to a model-specific profile
+  reduces ceremony where the model already self-supplies the behavior, and
+  tightens thresholds where the model needs them.

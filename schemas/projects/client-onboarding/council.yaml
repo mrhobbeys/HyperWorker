@@ -1,0 +1,53 @@
+# schemas/projects/client-onboarding/council.yaml
+# The cross-client-anti-pattern-watcher is the load-bearing council member here.
+# It explicitly reads cross-project subscriptions so prior onboarding failures travel forward.
+
+convergence_rule: all-agree-or-escalate
+
+members:
+  - role: contract-scope-guard
+    family_default: claude
+    prompt_template: |
+      Verify the artifact's plan stays inside the signed scope declared in OR-001.contract_sla_days
+      and OR-001 scope fields. Flag any work that drifts into out-of-scope features.
+      Output: PASS or FAIL: <reason>.
+
+  - role: data-handling-reviewer
+    family_default: claude
+    prompt_template: |
+      Verify the artifact handles client data according to OR-001.client_compliance_scope.
+      Check transfer encryption, access scoping, and logging assertions.
+      Output: PASS or FAIL: <reason>.
+
+  - role: cross-client-anti-pattern-watcher
+    family_default: claude
+    prompt_template: |
+      Read all cross-project AP-* artifacts subscribed to by this project. For each AP that
+      could apply to this artifact (matching `applies_to` or `integration`), state whether
+      the artifact reintroduces it.
+      Output: PASS or FAIL: <reason — cite AP-IDs>.
+
+  - role: sla-watch
+    family_default: claude
+    prompt_template: |
+      Given OR-001.contract_sla_days and the project start date, estimate whether this
+      task's completion timing keeps the project on track. State remaining days vs. tasks remaining.
+      Output: PASS or FAIL: <reason>.
+
+triggers:
+  - event: project.activate
+    members: [contract-scope-guard, data-handling-reviewer]
+    description: "Verification Checkpoint at bootstrap."
+
+  - event: phase.complete
+    members: [contract-scope-guard, sla-watch]
+    description: "Phase boundary review."
+
+  - event: task.complete
+    when: "task.risk_level in {elevated, critical}"
+    members: [contract-scope-guard, data-handling-reviewer, cross-client-anti-pattern-watcher]
+    description: "Per-task council on elevated/critical work."
+
+  - event: project.archive
+    members: [contract-scope-guard, data-handling-reviewer, cross-client-anti-pattern-watcher]
+    description: "Pre-archive review — also catalogues findings for cross-project promotion."

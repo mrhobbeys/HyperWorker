@@ -1,0 +1,63 @@
+# schemas/projects/compliance-audit/schema.yaml
+# Schema for preparing a compliance audit (SOC 2, ISO 27001, PCI DSS, HIPAA,
+# industry-specific, or internal quality audit).
+
+schema_id: compliance-audit
+schema_version: 1.0
+harness_version: "5.0"
+description: |
+  Audit preparation: gap assessment → remediation → evidence assembly → submission.
+  Cyclical projects where memory compounds year-over-year. The Tier 1 REGULATORY
+  rules dominate; council includes a regulator-perspective member.
+
+bootstrap_questions:
+  - id: framework
+    prompt: "Which framework is being audited against? (SOC2 / ISO27001 / HIPAA / PCI-DSS / industry-specific / internal)"
+    type: string
+    required: true
+  - id: audit_date
+    prompt: "Audit fieldwork start date (YYYY-MM-DD)."
+    type: iso8601-date
+    required: true
+  - id: audit_scope
+    prompt: "Which control families are in scope? (list)"
+    type: list[string]
+    required: true
+  - id: cycle_year
+    prompt: "Audit cycle year (used for cross-project tagging)."
+    type: number
+    required: true
+  - id: prior_findings
+    prompt: "Any open prior-audit findings to remediate? (path to list, or null)"
+    type: string|null
+    required: true
+
+includes:
+  - precedence-tiers.yaml
+  - artifact-extensions.yaml
+  - capability-gates.yaml
+  - verification.yaml
+  - council.yaml
+  - project-template.md
+  - rules-template.md
+  - task-templates/
+  - README.md
+
+default_tasks:
+  templates:
+    - "00-scope-confirmation.md"
+    - "01-control-mapping.md"
+    - "02-gap-assessment.md"
+    - "03-prioritize-gaps.md"
+    - "04-policy-remediation.md"
+    - "05-technical-remediation.md"
+    - "06-evidence-gathering.md"
+    - "07-internal-review.md"
+    - "08-evidence-package.md"
+    - "09-management-assertion.md"
+    - "10-mock-audit-walkthrough.md"
+    - "11-final-submission.md"
+
+cross_project_default_subscriptions:
+  - "cross-project:framework-<framework>"
+  - "cross-project:audit-universal"

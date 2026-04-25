@@ -1,0 +1,52 @@
+# schemas/projects/event-planning/verification.yaml
+
+standard:
+  layers: [1, 2]
+  retry_budget: 3
+  layer2_checks:
+    - acceptance_criteria
+    - scan_compliance
+    - recitation_completeness
+    - output_presence
+
+elevated:
+  layers: [1, 2, 3]
+  retry_budget: 2
+  council_size: 2
+  failure_scenarios_required: 3
+  layer2_checks:
+    - acceptance_criteria
+    - scan_compliance
+    - recitation_completeness
+    - output_presence
+    - failure_scenario_evaluation
+
+critical:
+  layers: [1, 2, 3]
+  retry_budget: 1
+  council_size: 3
+  cross_family: false
+  operator_review_required: true
+  failure_scenarios_required: 3
+  layer2_checks:
+    - acceptance_criteria
+    - scan_compliance
+    - recitation_completeness
+    - output_presence
+    - failure_scenario_evaluation
+
+default_risk_by_kind:
+  vendor-coordination: elevated
+  budget-tracking: standard
+  registration-platform: elevated
+  promotion: standard
+  attendee-comms: standard
+  day-of-coordination: critical
+
+auto_escalation_rules:
+  - condition: "Task triggers a non-refundable deposit (Tier 2 BUDGET)."
+    risk_level: critical
+  - condition: "Task is venue or catering booking."
+    risk_level: elevated
+  - condition: "Task is any day-of coordination task within 24 hours of event."
+    risk_level: critical

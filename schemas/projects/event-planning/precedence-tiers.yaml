@@ -1,0 +1,46 @@
+# schemas/projects/event-planning/precedence-tiers.yaml
+
+tiers:
+  1:
+    name: SAFETY-LEGAL
+    purpose: "Real-world safety, regulatory, and contractual constraints. Cannot be overridden."
+    examples:
+      - "Fire-code occupancy limits at the venue."
+      - "Insurance requirements (certificate of insurance lead time)."
+      - "Alcohol service regulations if applicable."
+      - "Accessibility compliance (ADA / equivalent)."
+      - "Vendor contracts (cancellation policies, deposit forfeit dates)."
+    scan_markers:
+      - "@@SCAN_1_1: List the SAFETY-LEGAL constraints that bear on this task."
+      - "@@SCAN_1_2: Confirm any vendor deposit deadlines this task affects (yes / not-applicable)."
+
+  2:
+    name: BUDGET
+    purpose: "Total spend cannot exceed approved budget."
+    examples:
+      - "No new vendor commitment without a budget line item."
+      - "Vendor deposit deadlines tracked; deposits forfeit if not paid."
+      - "Refundable vs. non-refundable spend categorized in OR-001 budget."
+    scan_markers:
+      - "@@SCAN_2_1: State the budget line item this task draws from and the remaining balance."
+
+  3:
+    name: VENUE-CONSTRAINTS
+    purpose: "Physical limits of the venue."
+    examples:
+      - "Room capacity."
+      - "AV capabilities (HDMI vs. USB-C; check anti-pattern AP-VENUE-* for known quirks)."
+      - "Catering kitchen limitations."
+      - "Load-in / load-out windows."
+    scan_markers:
+      - "@@SCAN_3_1: Name any venue constraint that affects this task's plan."
+
+  4:
+    name: EXPERIENCE
+    purpose: "How attendees experience the event."
+    examples:
+      - "Networking time exceeds presentation time."
+      - "Name badges, not table tents."
+      - "Music during registration."
+
+banned_tokens: []

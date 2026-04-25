@@ -1,0 +1,61 @@
+# schemas/projects/software-feature-ship/verification.yaml
+
+standard:
+  layers: [1, 2]
+  retry_budget: 3
+  layer2_checks:
+    - acceptance_criteria
+    - scan_compliance
+    - recitation_completeness
+    - test_pass                  # custom check: test_run output exit code 0
+    - output_presence
+
+elevated:
+  layers: [1, 2, 3]
+  retry_budget: 2
+  council_size: 2
+  failure_scenarios_required: 3
+  layer2_checks:
+    - acceptance_criteria
+    - scan_compliance
+    - recitation_completeness
+    - test_pass
+    - output_presence
+    - failure_scenario_evaluation
+
+critical:
+  layers: [1, 2, 3]
+  retry_budget: 1
+  council_size: 3
+  cross_family: false
+  operator_review_required: true
+  failure_scenarios_required: 3
+  layer2_checks:
+    - acceptance_criteria
+    - scan_compliance
+    - recitation_completeness
+    - test_pass
+    - output_presence
+    - failure_scenario_evaluation
+    - rollback_plan_present
+
+default_risk_by_kind:
+  spec-write: standard
+  schema-migration: elevated
+  code-edit: standard
+  test-write: standard
+  test-run: standard
+  deploy:
+    staging: elevated
+    production: critical
+  smoke-test:
+    staging: standard
+    production: elevated
+
+auto_escalation_rules:
+  - condition: "Task touches an API contract used by another service."
+    risk_level: elevated
+  - condition: "Task is a production deploy."
+    risk_level: critical
+  - condition: "Task touches authentication, authorization, or session-handling code."
+    risk_level: critical

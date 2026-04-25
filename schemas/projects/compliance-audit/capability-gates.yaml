@@ -1,0 +1,33 @@
+# schemas/projects/compliance-audit/capability-gates.yaml
+
+task_kinds:
+  scope-and-mapping:
+    description: "Confirming scope and mapping audit requirements to existing controls."
+    required_tools: [file_write, file_read]
+    delivery_modes: [constrained]
+
+  policy-write:
+    description: "Authoring or revising policies and procedures."
+    required_tools: [file_write]
+    delivery_modes: [constrained, prescribed]
+
+  technical-remediation:
+    description: "Implementing or modifying technical controls."
+    required_tools: [admin_console, code_lint, file_write]
+    delivery_modes: [prescribed, constrained]
+
+  evidence-gathering:
+    description: "Collecting evidence: system reports, logs, access lists."
+    required_tools: [file_read, file_write, http_fetch]
+    optional_tools: [report_export]
+    delivery_modes: [prescribed]
+
+  internal-review:
+    description: "Internal mock-audit walkthrough."
+    required_tools: [file_read, file_write]
+    delivery_modes: [constrained]
+
+  package-assembly:
+    description: "Assembling the evidence package for submission."
+    required_tools: [file_read, file_write]
+    delivery_modes: [prescribed]

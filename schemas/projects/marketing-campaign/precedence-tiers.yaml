@@ -1,0 +1,70 @@
+# schemas/projects/marketing-campaign/precedence-tiers.yaml
+
+tiers:
+  1:
+    name: BRAND-ABSOLUTE
+    purpose: "Legal, regulatory, and brand-absolute rules. Cannot be overridden."
+    examples:
+      - "No income guarantees or implied earnings claims."
+      - "No fabricated testimonials. All social proof from real clients with permission."
+      - "Include CAN-SPAM unsubscribe link in every email."
+      - "Physical mailing address must appear in email footer."
+      - "No disparaging competitors by name."
+    scan_markers:
+      - "@@SCAN_1_1: List the Tier 1 banned phrase categories that apply to this task's output."
+      - "@@SCAN_1_2: Confirm the unsubscribe link and physical mailing address requirements (yes / no / not-applicable)."
+
+  2:
+    name: OFFER-SCOPE
+    purpose: "What this campaign actually sells; rules that bound the offer."
+    examples:
+      - "This funnel sells the declared offer only — do not mention products, courses, or retainers outside scope."
+      - "Pricing is discussed only on calls — no pricing on landing page or in emails."
+      - "Draft-only: all content saved as drafts; never published without operator review."
+    scan_markers:
+      - "@@SCAN_2_1: Restate the single offer this campaign sells, in one sentence."
+
+  3:
+    name: PLATFORM-LIMITS
+    purpose: "Channel-specific size, format, and tooling constraints."
+    examples:
+      - "Landing page headline ≤ 12 words."
+      - "Email subject line ≤ 50 characters."
+      - "Email body 150–300 words."
+      - "Landing page mobile PageSpeed ≥ 90."
+      - "Form fields: name and email only."
+    scan_markers:
+      - "@@SCAN_3_1: State the body word-count window for this content kind."
+
+  4:
+    name: COPY-METHOD
+    purpose: "Methodology and voice."
+    examples:
+      - "Lead with the reader's problem; one CTA per page or email."
+      - "Second person throughout; no third person."
+      - "Reading level Flesch-Kincaid ≤ 8."
+      - "Proof over promise — show results, do not claim them."
+    scan_markers:
+      - "@@SCAN_4_1: Name the methodology rule that governs CTAs for this content kind."
+
+banned_tokens:
+  - banned: "guaranteed results"
+    replacement: "proven approach"
+    tier: 1
+    why: "Income claim."
+  - banned: "you'll make $X"
+    replacement: "clients have seen [specific metric]"
+    tier: 1
+    why: "Earnings claim."
+  - banned: "risk-free"
+    replacement: "no-pressure conversation"
+    tier: 1
+    why: "Implied guarantee."
+  - banned: "act now or miss out"
+    replacement: "spots are limited this month"
+    tier: 2
+    why: "False scarcity."
+  - banned: "—"
+    replacement: ", or . or ()"
+    tier: 4
+    why: "Em-dash AI tell; breaks voice."

@@ -1,0 +1,33 @@
+# templates/models/claude-haiku-4-5.yaml
+# Profile for Anthropic Claude Haiku 4.5.
+
+profile_id: claude-haiku-4-5
+model_family: claude
+generation: "4.5"
+
+verbose_cot: false
+suppress_concise_directives: false
+auto_summarize_after_phase: true         # Haiku's smaller effective context window benefits from summaries
+prefer_explicit_acceptance_criteria: true
+parallelism_must_be_explicit: false
+
+context_fill_thresholds:
+  warn_at: 0.55                          # smaller usable context; warn earlier
+  compact_at: 0.70
+
+council_default_size: 2
+recitation_overlap_threshold: 0.72
+
+notes: |
+  Haiku 4.5 has a smaller usable context window than the Opus / Sonnet line.
+  Aggressive `warn_at` and `compact_at` thresholds reduce the chance of
+  silent context-window-exhaustion failures.
+
+  Haiku's terse style produces tighter paraphrases; the recitation threshold
+  is set higher than the harness default for the same reason as Sonnet 4.6:
+  a low-overlap Haiku paraphrase is more often genuinely shallow.
+
+  Haiku is well-suited as a router or fast-path executor in cost-sensitive
+  setups. Phase-boundary summaries are recommended because Haiku's context
+  budget is smaller; bridging across phases without a summary task is more
+  likely to lose constraint state.

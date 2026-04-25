@@ -1,0 +1,36 @@
+# templates/models/github-copilot.yaml
+# Profile for GitHub Copilot CLI agent mode (and Copilot in IDE-agent contexts).
+
+profile_id: github-copilot
+model_family: copilot
+generation: null
+
+verbose_cot: false                       # Copilot CLI returns terse output by default
+suppress_concise_directives: false
+auto_summarize_after_phase: true
+prefer_explicit_acceptance_criteria: true
+parallelism_must_be_explicit: true       # Copilot CLI does not parallelize subtasks unless told to
+
+context_fill_thresholds:
+  warn_at: 0.60
+  compact_at: 0.75
+
+council_default_size: 2
+recitation_overlap_threshold: 0.72
+
+notes: |
+  Copilot CLI agent mode is a coding-specialist profile. It is well-suited to
+  the `software-feature-ship` schema's `code-edit`, `test-write`, and
+  `test-run` task kinds. It is less well-suited to free-form copywriting
+  (the marketing-campaign schema) without operator review at every step.
+
+  Copilot CLI does not parallelize without explicit decomposition. The
+  branch/fold protocol still applies, but the parent-task instruction must
+  enumerate the branches; "explore alternatives" is read literally as
+  exploration, not as decomposition.
+
+  In cross-family verification setups (e.g., Claude Opus 4.7 implementer +
+  Copilot CLI verifier), Copilot's terse style produces concise PASS / FAIL
+  outputs that integrate cleanly with the council convergence rules. This is
+  the most useful cross-family setup observed; document it as opt-in in
+  the project's council.yaml.

@@ -1,0 +1,60 @@
+# schemas/projects/event-planning/schema.yaml
+# Schema for planning and executing a real-world event with a hard date.
+
+schema_id: event-planning
+schema_version: 1.0
+harness_version: "5.0"
+description: |
+  In-person or hybrid event with a fixed date and physical dependencies.
+  Tasks have real-world done states: a venue is booked or it isn't, catering
+  is confirmed at a headcount or it isn't. Hard-deadline pressure makes the
+  Lock and capability-gate work load-bearing.
+
+bootstrap_questions:
+  - id: event_name
+    prompt: "Event name."
+    type: string
+    required: true
+  - id: event_date
+    prompt: "Event date (YYYY-MM-DD)."
+    type: iso8601-date
+    required: true
+  - id: target_headcount
+    prompt: "Target headcount."
+    type: number
+    required: true
+  - id: format
+    prompt: "Format: in-person / hybrid / virtual."
+    type: enum
+    values: [in-person, hybrid, virtual]
+    required: true
+  - id: budget_total
+    prompt: "Total event budget (amount, currency)."
+    type: object
+    required: true
+
+includes:
+  - precedence-tiers.yaml
+  - artifact-extensions.yaml
+  - capability-gates.yaml
+  - verification.yaml
+  - council.yaml
+  - project-template.md
+  - rules-template.md
+  - task-templates/
+  - README.md
+
+default_tasks:
+  templates:
+    - "00-concept-and-success-metrics.md"
+    - "01-venue-booking.md"
+    - "02-budget-allocation.md"
+    - "03-speakers.md"
+    - "04-catering.md"
+    - "05-registration-page.md"
+    - "06-promotion-campaign.md"
+    - "07-headcount-finalize.md"
+    - "08-runsheet-and-roles.md"
+    - "09-attendee-confirmations.md"
+    - "10-day-of.md"
+    - "11-followup-and-postmortem.md"

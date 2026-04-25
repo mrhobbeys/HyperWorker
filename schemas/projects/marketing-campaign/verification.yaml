@@ -1,0 +1,66 @@
+# schemas/projects/marketing-campaign/verification.yaml
+# Risk-level → verification routing for marketing-campaign projects.
+
+standard:
+  layers: [1, 2]
+  retry_budget: 3
+  layer2_checks:
+    - acceptance_criteria
+    - scan_compliance
+    - recitation_completeness
+    - banned_token_scan
+    - canonical_facts_scan
+    - output_presence
+
+elevated:
+  layers: [1, 2, 3]
+  retry_budget: 2
+  council_size: 2
+  failure_scenarios_required: 3
+  layer2_checks:
+    - acceptance_criteria
+    - scan_compliance
+    - recitation_completeness
+    - banned_token_scan
+    - canonical_facts_scan
+    - output_presence
+    - failure_scenario_evaluation
+  layer3_triggers:
+    - "Risk level elevated."
+    - "Output is end-user-facing copy."
+
+critical:
+  layers: [1, 2, 3]
+  retry_budget: 1
+  council_size: 3
+  failure_scenarios_required: 3
+  cross_family: false
+  operator_review_required: true
+  layer2_checks:
+    - acceptance_criteria
+    - scan_compliance
+    - recitation_completeness
+    - banned_token_scan
+    - canonical_facts_scan
+    - output_presence
+    - failure_scenario_evaluation
+  layer3_triggers:
+    - "Risk level critical."
+    - "Output cited in a Tier 1 NON-NEGOTIABLE rule."
+
+# Default risk-level assignment by task kind. Planner may override per-task.
+default_risk_by_kind:
+  copy-generation: standard
+  copy-iteration: standard
+  platform-publish-draft: elevated
+  research: standard
+  measurement: standard
+
+# Tasks producing copy referenced in Tier 1 rules are auto-elevated by the
+# planner; tasks producing legal-bearing language (compliance footers, opt-in
+# language, claims) are auto-critical.
+auto_escalation_rules:
+  - condition: "Output is the unsubscribe link or physical-address footer."
+    risk_level: critical
+  - condition: "Output references safe_claims table from rules file."
+    risk_level: elevated

@@ -1,0 +1,49 @@
+# schemas/projects/software-feature-ship/precedence-tiers.yaml
+
+tiers:
+  1:
+    name: SECURITY
+    purpose: "Security and data-handling rules. Cannot be overridden."
+    examples:
+      - "No secrets in code or commit history."
+      - "All auth tokens encrypted at rest."
+      - "Input validation on all user-facing endpoints."
+      - "PII handled per project's compliance scope only."
+    scan_markers:
+      - "@@SCAN_1_1: For this change, name any user-facing input that crosses a trust boundary."
+      - "@@SCAN_1_2: Confirm no secrets are written to code, logs, or commits (yes / not-applicable)."
+
+  2:
+    name: ARCHITECTURE
+    purpose: "Architectural and contract constraints."
+    examples:
+      - "Database migrations must be reversible (down migration provided)."
+      - "API contract changes are versioned, not edited in place."
+      - "No new external dependencies without an explicit DEC-XXX decision artifact."
+    scan_markers:
+      - "@@SCAN_2_1: Does this change alter an existing API contract? If yes, name the version bump and migration path."
+
+  3:
+    name: TESTING
+    purpose: "Test-quality rules. Overrides style; never overrides security or architecture."
+    examples:
+      - "All new code paths require unit tests."
+      - "Integration tests cover cross-service calls."
+      - "No deploy without passing CI on the target branch."
+    scan_markers:
+      - "@@SCAN_3_1: Name the test command and the expected exit code for this task."
+
+  4:
+    name: STYLE
+    purpose: "Code-style preferences."
+    examples:
+      - "Follow team code style guide."
+      - "Comments explain why, not what."
+      - "Descriptive variable names."
+
+banned_tokens: []
+
+canonical_facts:
+  - fact: "Production base URL"
+    canonical_form: "<https://api.example.com>"
+    do_not_normalize_to: "<api.example.com>"     # protocol must be explicit

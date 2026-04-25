@@ -1,0 +1,35 @@
+# templates/models/claude-sonnet-4-6.yaml
+# Profile for Anthropic Claude Sonnet 4.6.
+
+profile_id: claude-sonnet-4-6
+model_family: claude
+generation: "4.6"
+
+verbose_cot: false
+suppress_concise_directives: false
+auto_summarize_after_phase: true
+prefer_explicit_acceptance_criteria: true
+parallelism_must_be_explicit: false
+
+context_fill_thresholds:
+  warn_at: 0.70
+  compact_at: 0.85
+
+council_default_size: 2
+recitation_overlap_threshold: 0.72       # tighter — Sonnet's terse style means lower-overlap paraphrases are more often actually-wrong
+
+notes: |
+  Sonnet 4.6 is a faster, more terse executor model. Its terseness changes
+  recitation overlap statistics: a Sonnet paraphrase that comes out at 0.65
+  Jaccard against the source is more often a genuinely shallow paraphrase
+  than the same score from Opus 4.7 (which can produce verbose-but-on-topic
+  recitation that drifts in lexicon). The recitation threshold is therefore
+  set tighter (0.72 vs. the harness default 0.70).
+
+  Context fill thresholds are looser than Opus 4.7 because the Sonnet 4.6
+  tokenizer is the pre-4.7 family compatible. Sonnet handles compaction
+  more gracefully; pushing `warn_at` up to 0.70 reduces unnecessary alerts.
+
+  Sonnet works well as the executor in two-model setups (Opus plans, Sonnet
+  executes). The execution-mode adaptations remain agent-agnostic; this
+  profile only affects threshold defaults.

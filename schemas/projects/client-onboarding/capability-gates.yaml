@@ -1,0 +1,29 @@
+# schemas/projects/client-onboarding/capability-gates.yaml
+
+task_kinds:
+  client-meeting:
+    description: "Kickoff calls, training sessions, handoff calls."
+    required_tools: [file_write]
+    optional_tools: [calendar, video_record]
+    delivery_modes: [constrained]
+
+  account-provision:
+    description: "Create accounts, configure SSO, set up base permissions."
+    required_tools: [admin_console, file_write]
+    delivery_modes: [prescribed]
+
+  data-migration:
+    description: "Import client data into the platform."
+    required_tools: [import_tool, file_read, file_write]
+    optional_tools: [data_validate]
+    delivery_modes: [prescribed]
+
+  configuration:
+    description: "Configure integrations and platform settings."
+    required_tools: [admin_console, file_write]
+    delivery_modes: [prescribed, constrained]
+
+  documentation:
+    description: "Author runbooks, training materials, handoff docs."
+    required_tools: [file_write]
+    delivery_modes: [constrained]

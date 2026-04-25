@@ -1,0 +1,52 @@
+# schemas/projects/client-onboarding/artifact-extensions.yaml
+
+decision:
+  additional_fields:
+    - name: integration
+      type: enum
+      values: [sso, payments, crm, billing, data-import, support-tooling, cross-integration]
+      required: false
+    - name: requires_client_action
+      type: bool
+      required: false
+      default: false
+
+finding:
+  additional_fields:
+    - name: integration
+      type: string|null
+      required: false
+    - name: client_specific
+      type: bool
+      required: true
+      description: "If true, default scope is this client only. If false, candidate for cross-project promotion."
+
+anti-pattern:
+  additional_fields:
+    - name: integration
+      type: string|null
+      required: false
+    - name: vendor_quirk
+      type: string|null
+      required: false
+      description: "If this anti-pattern is specific to a vendor's behavior, name the vendor."
+
+operating-reality:
+  additional_fields:
+    - name: client_compliance_scope
+      type: list[string]
+      required: true
+      description: "Compliance frameworks that govern this onboarding."
+    - name: contract_sla_days
+      type: number
+      required: true
+    - name: client_designated_contact
+      type: object
+      required: true
+      fields:
+        - name: name
+          type: string
+          required: true
+        - name: email
+          type: string
+          required: true

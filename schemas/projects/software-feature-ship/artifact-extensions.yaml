@@ -1,0 +1,56 @@
+# schemas/projects/software-feature-ship/artifact-extensions.yaml
+
+decision:
+  additional_fields:
+    - name: surface
+      type: enum
+      values: [database, backend, frontend, mobile, infra, cross-surface]
+      required: false
+    - name: api_contract_version
+      type: string|null
+      required: false
+      description: "Semver string if this decision touches an API contract."
+    - name: rollback_plan
+      type: string|null
+      required: false
+      description: "How to revert this decision if downstream surfaces break."
+
+finding:
+  additional_fields:
+    - name: surface
+      type: enum
+      values: [database, backend, frontend, mobile, infra, cross-surface]
+      required: false
+    - name: replication_steps
+      type: string
+      required: false
+      description: "Repro steps; the operator should be able to follow these to reproduce the finding."
+    - name: failing_test
+      type: string|null
+      required: false
+
+anti-pattern:
+  additional_fields:
+    - name: surface
+      type: enum
+      values: [database, backend, frontend, mobile, infra, cross-surface]
+      required: false
+    - name: language_or_framework
+      type: string|null
+      required: false
+
+operating-reality:
+  additional_fields:
+    - name: ci_cd
+      type: object
+      required: true
+      fields:
+        - name: provider
+          type: string
+          required: true
+        - name: required_status_checks
+          type: list[string]
+          required: true
+    - name: code_owners
+      type: list[string]
+      required: false

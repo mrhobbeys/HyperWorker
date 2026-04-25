@@ -1,0 +1,45 @@
+# schemas/projects/event-planning/council.yaml
+
+convergence_rule: all-agree-or-escalate
+
+members:
+  - role: deadline-watcher
+    family_default: claude
+    prompt_template: |
+      Compare this artifact's plan against OR-001.event_date and OR-001.timeline.hard_deadline.
+      Verify no critical-path task is at risk of slipping the event date. Cite specific
+      lead-time anti-patterns (vendor deposit deadlines, insurance certificate windows).
+      Output: PASS or FAIL: <reason>.
+
+  - role: budget-guard
+    family_default: claude
+    prompt_template: |
+      Read the current spend ledger and OR-001.budget. State whether this artifact's
+      commitments fit within remaining budget. Flag any spend that triggers
+      non-refundable deposits. Output: PASS or FAIL: <reason>.
+
+  - role: venue-constraint-reviewer
+    family_default: claude
+    prompt_template: |
+      Read venue-related anti-patterns (AP-* with `venue` field matching the active venue).
+      Verify the artifact does not reintroduce a known venue quirk. State applicable APs.
+      Output: PASS or FAIL: <reason>.
+
+  - role: cascade-reviewer
+    family_default: claude
+    prompt_template: |
+      The event has a single fixed date. If this artifact changes a foundational
+      assumption (venue, date, capacity), state which downstream tasks must be re-done.
+      Output: PASS or FAIL: <reason — list cascade>.
+
+triggers:
+  - event: project.activate
+    members: [deadline-watcher, budget-guard]
+  - event: phase.complete
+    members: [deadline-watcher, budget-guard, venue-constraint-reviewer]
+  - event: task.complete
+    when: "task.risk_level in {elevated, critical}"
+    members: [deadline-watcher, budget-guard, venue-constraint-reviewer, cascade-reviewer]
+  - event: pre.event.day
+    members: [deadline-watcher, budget-guard, venue-constraint-reviewer, cascade-reviewer]
+    description: "Mandatory council 48 hours before event date."

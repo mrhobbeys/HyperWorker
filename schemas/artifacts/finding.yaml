@@ -1,0 +1,82 @@
+# schemas/artifacts/finding.yaml
+# Default schema for the finding kind.
+
+kind: finding
+id_prefix: F
+
+structural_minimum:
+  - name: id
+    type: string
+    pattern: "^F-\\d{3,}$"
+    required: true
+  - name: kind
+    type: const
+    value: finding
+    required: true
+  - name: created_at
+    type: iso8601
+    required: true
+  - name: hash
+    type: string
+    pattern: "^sha256:[0-9a-f]{12,64}$"
+    required: true
+  - name: confidence
+    type: enum
+    values: [provisional, validated]
+    default: provisional
+    required: true
+  - name: reverses
+    type: string|null
+    pattern: "^F-\\d{3,}$|^null$"
+    required: true
+  - name: tags
+    type: list[string]
+    required: true
+    default: []
+  - name: superseded_by
+    type: string|null
+    required: false
+
+finding_fields:
+  - name: title
+    type: string
+    required: true
+    max_length: 140
+  - name: evidence
+    type: string
+    required: true
+    description: "What was measured, by whom, on what date. Cite committed data files where applicable."
+  - name: applies_to
+    type: string
+    required: true
+    description: "Scope expression (paths, projects, contexts; supports globs)."
+  - name: implications
+    type: list[string]
+    required: false
+    default: []
+
+body:
+  required_sections:
+    - "## What was found"
+    - "## How it was found"
+    - "## What it implies"
+
+render_order:
+  - id
+  - kind
+  - created_at
+  - hash
+  - confidence
+  - reverses
+  - superseded_by
+  - tags
+  - title
+  - evidence
+  - applies_to
+  - implications
+
+promotion_rule:
+  description: "`hw promote F-<id>` writes a finding.promote event upgrading confidence to validated."
+  preconditions:
+    - "Current finding must be confidence: provisional."
+    - "All citations in evidence must resolve at Layer 1."

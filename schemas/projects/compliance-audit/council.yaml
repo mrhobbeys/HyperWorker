@@ -1,0 +1,57 @@
+# schemas/projects/compliance-audit/council.yaml
+# Compliance council is the largest of the five default schemas. The
+# regulator-perspective member is the load-bearing one — it reads framework
+# clauses by exact text, not paraphrase.
+
+convergence_rule: all-agree-or-escalate
+
+members:
+  - role: regulator-perspective
+    family_default: claude
+    prompt_template: |
+      You are reviewing this artifact as the auditor would. Read OR-001.framework and
+      the framework_clause field in the artifact. State whether the artifact's
+      output would satisfy that clause's evidence requirements as a real auditor reads them.
+      Cite the clause's exact text from the framework's published criteria.
+      Output: PASS or FAIL: <reason>.
+
+  - role: scope-guard
+    family_default: claude
+    prompt_template: |
+      Verify the artifact stays within OR-001.audit_period and the confirmed audit scope.
+      Flag any out-of-scope work or out-of-period evidence.
+      Output: PASS or FAIL: <reason>.
+
+  - role: evidence-traceability-reviewer
+    family_default: claude
+    prompt_template: |
+      For every claim in the artifact, identify the supporting evidence file and
+      verify it exists. Flag any claim without traceable evidence.
+      Output: PASS or FAIL: <reason — list untraceable claims>.
+
+  - role: prior-finding-reviewer
+    family_default: claude
+    prompt_template: |
+      Read prior-audit findings (artifacts with from_prior_audit: true). Verify this
+      artifact does not reintroduce a prior finding's failure mode.
+      Output: PASS or FAIL: <reason — cite prior finding IDs>.
+
+  - role: cross-cycle-anti-pattern-watcher
+    family_default: claude
+    optional: true
+    prompt_template: |
+      Read AP-* with framework field matching this audit's framework, and any with
+      auditor_observation field set. State whether this artifact reintroduces any.
+      Output: PASS or FAIL: <reason>.
+
+triggers:
+  - event: project.activate
+    members: [regulator-perspective, scope-guard, prior-finding-reviewer]
+  - event: phase.complete
+    members: [regulator-perspective, scope-guard, evidence-traceability-reviewer]
+  - event: task.complete
+    when: "task.risk_level in {elevated, critical}"
+    members: [regulator-perspective, scope-guard, evidence-traceability-reviewer, prior-finding-reviewer, cross-cycle-anti-pattern-watcher]
+  - event: pre.submission
+    members: [regulator-perspective, scope-guard, evidence-traceability-reviewer, prior-finding-reviewer, cross-cycle-anti-pattern-watcher]
+    description: "Mandatory full council before final submission."

@@ -1,0 +1,51 @@
+# schemas/projects/client-onboarding/verification.yaml
+
+standard:
+  layers: [1, 2]
+  retry_budget: 3
+  layer2_checks:
+    - acceptance_criteria
+    - scan_compliance
+    - recitation_completeness
+    - output_presence
+
+elevated:
+  layers: [1, 2, 3]
+  retry_budget: 2
+  council_size: 2
+  failure_scenarios_required: 3
+  layer2_checks:
+    - acceptance_criteria
+    - scan_compliance
+    - recitation_completeness
+    - output_presence
+    - failure_scenario_evaluation
+
+critical:
+  layers: [1, 2, 3]
+  retry_budget: 1
+  council_size: 3
+  cross_family: false
+  operator_review_required: true
+  failure_scenarios_required: 3
+  layer2_checks:
+    - acceptance_criteria
+    - scan_compliance
+    - recitation_completeness
+    - output_presence
+    - failure_scenario_evaluation
+
+default_risk_by_kind:
+  client-meeting: standard
+  account-provision: elevated
+  data-migration: elevated
+  configuration: standard
+  documentation: standard
+
+auto_escalation_rules:
+  - condition: "Task touches PII / PHI / financial data."
+    risk_level: critical
+  - condition: "Task is data-migration AND client_compliance_scope includes HIPAA."
+    risk_level: critical
+  - condition: "Task is account-provision for a client with SSO."
+    risk_level: elevated

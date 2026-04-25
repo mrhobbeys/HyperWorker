@@ -1,0 +1,56 @@
+# schemas/projects/marketing-campaign/artifact-extensions.yaml
+# Domain-specific fields that extend the default artifact schemas for marketing-campaign projects.
+
+decision:
+  additional_fields:
+    - name: channel
+      type: enum
+      values: [landing-page, email, social, paid-ad, sms, cross-channel]
+      required: false
+      description: "Which channel this decision applies to. Cross-channel decisions affect multiple."
+    - name: target_segment
+      type: string
+      required: false
+      description: "Audience segment (or 'all') the decision targets."
+
+finding:
+  additional_fields:
+    - name: channel
+      type: enum
+      values: [landing-page, email, social, paid-ad, sms, cross-channel]
+      required: false
+    - name: replication_steps
+      type: string
+      required: false
+      description: "How another agent could reproduce this finding (e.g., re-run the survey, re-measure CTR)."
+    - name: sample_size
+      type: number|null
+      required: false
+
+anti-pattern:
+  additional_fields:
+    - name: channel
+      type: enum
+      values: [landing-page, email, social, paid-ad, sms, cross-channel]
+      required: false
+
+operating-reality:
+  additional_fields:
+    - name: brand_voice_anchor
+      type: string|null
+      required: false
+      description: "Path to a brand voice document, or [F-XXX#hash] to a finding-encoded voice description."
+    - name: contact_info
+      type: object
+      required: true
+      fields:
+        - name: physical_address
+          type: string
+          required: true
+          description: "Required for CAN-SPAM compliance in email."
+        - name: company_legal_name
+          type: string
+          required: true
+        - name: email
+          type: string
+          required: true

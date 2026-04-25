@@ -1,0 +1,64 @@
+# schemas/projects/compliance-audit/artifact-extensions.yaml
+
+decision:
+  additional_fields:
+    - name: control_family
+      type: string|null
+      required: false
+    - name: framework_clause
+      type: string|null
+      required: false
+      description: "e.g., 'SOC 2 CC6.1' or 'ISO 27001 A.9.2.3'."
+
+finding:
+  additional_fields:
+    - name: control_family
+      type: string|null
+      required: false
+    - name: framework_clause
+      type: string|null
+      required: false
+    - name: from_prior_audit
+      type: bool
+      required: true
+      default: false
+      description: "Is this carried over from a prior audit cycle?"
+
+anti-pattern:
+  additional_fields:
+    - name: framework
+      type: string|null
+      required: false
+    - name: auditor_observation
+      type: string|null
+      required: false
+      description: "If captured during a real audit, the auditor's exact observation."
+
+operating-reality:
+  additional_fields:
+    - name: framework
+      type: string
+      required: true
+    - name: audit_period
+      type: object
+      required: true
+      fields:
+        - name: start
+          type: iso8601-date
+          required: true
+        - name: end
+          type: iso8601-date
+          required: true
+    - name: auditor_contact
+      type: object
+      required: true
+      fields:
+        - name: name
+          type: string
+          required: true
+        - name: email
+          type: string
+          required: true
+        - name: firm
+          type: string
+          required: true

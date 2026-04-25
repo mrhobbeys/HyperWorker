@@ -1,0 +1,111 @@
+# schemas/artifacts/operating-reality.yaml
+# Default schema for the operating-reality kind.
+
+kind: operating-reality
+id_prefix: OR
+
+structural_minimum:
+  - name: id
+    type: string
+    pattern: "^OR-\\d{3,}$"
+    required: true
+  - name: kind
+    type: const
+    value: operating-reality
+    required: true
+  - name: created_at
+    type: iso8601
+    required: true
+  - name: hash
+    type: string
+    pattern: "^sha256:[0-9a-f]{12,64}$"
+    required: true
+  - name: confidence
+    type: const
+    value: validated
+    required: true
+  - name: reverses
+    type: string|null
+    pattern: "^OR-\\d{3,}$|^null$"
+    required: true
+  - name: tags
+    type: list[string]
+    required: true
+    default: [foundation]
+  - name: superseded_by
+    type: string|null
+    required: false
+
+operating_reality_fields:
+  - name: budget
+    type: object
+    required: true
+    fields:
+      - name: amount
+        type: number
+        required: true
+      - name: currency
+        type: string
+        pattern: "^[A-Z]{3}$"
+        required: true
+      - name: frequency
+        type: enum
+        values: [one-time, weekly, monthly, quarterly, annual]
+        required: true
+  - name: timeline
+    type: object
+    required: true
+    fields:
+      - name: hard_deadline
+        type: iso8601-date|null
+        required: true
+      - name: soft_target
+        type: iso8601-date|null
+        required: false
+  - name: team
+    type: object
+    required: true
+    fields:
+      - name: operator
+        type: string
+        required: true
+      - name: role
+        type: enum
+        values: [solo, lead, contributor]
+        required: true
+      - name: others
+        type: list[string]
+        required: false
+        default: []
+  - name: authority
+    type: object
+    required: true
+    fields:
+      - name: can_decide
+        type: list[string]
+        required: true
+      - name: requires_approval
+        type: list[string]
+        required: true
+  - name: operator_profile
+    type: string
+    required: true
+
+body:
+  required_sections:
+    - "## Why this exists"
+
+render_order:
+  - id
+  - kind
+  - created_at
+  - hash
+  - confidence
+  - reverses
+  - superseded_by
+  - tags
+  - budget
+  - timeline
+  - team
+  - authority
+  - operator_profile

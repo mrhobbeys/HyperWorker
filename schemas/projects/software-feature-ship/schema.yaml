@@ -1,0 +1,59 @@
+# schemas/projects/software-feature-ship/schema.yaml
+# Schema for shipping a software feature: schema → API → frontend → tests → deploy.
+
+schema_id: software-feature-ship
+schema_version: 1.0
+harness_version: "5.0"
+description: |
+  Shipping a software feature where strict dependency chains and structural
+  enforcement of test-before-deploy matter. The dependency edge cases come
+  from API contracts and database migrations cascading through downstream tests.
+
+bootstrap_questions:
+  - id: project_name
+    prompt: "What is this feature called?"
+    type: string
+    required: true
+  - id: feature_summary
+    prompt: "One sentence: what does this feature let a user do that they cannot today?"
+    type: string
+    required: true
+  - id: surfaces_touched
+    prompt: "Which surfaces does this touch? (database / backend / frontend / mobile / infra)"
+    type: list[string]
+    required: true
+  - id: deployment_targets
+    prompt: "Where does this ship? (staging / production / specific environments)"
+    type: list[string]
+    required: true
+  - id: test_baseline
+    prompt: "Current test status — exit code, count, framework. (e.g., 'go test ./... 412 passing, exit 0')"
+    type: string
+    required: true
+  - id: hard_deadline
+    prompt: "Is there a hard deadline?"
+    type: iso8601-date|null
+    required: true
+
+includes:
+  - precedence-tiers.yaml
+  - artifact-extensions.yaml
+  - capability-gates.yaml
+  - verification.yaml
+  - council.yaml
+  - project-template.md
+  - rules-template.md
+  - task-templates/
+  - README.md
+
+default_tasks:
+  templates:
+    - "00-spec-and-acceptance-criteria.md"
+    - "01-database-migration.md"
+    - "02-backend-api.md"
+    - "03-backend-tests.md"
+    - "04-frontend.md"
+    - "05-frontend-tests.md"
+    - "06-integration-tests.md"
+    - "07-staging-deploy-and-smoke.md"
+    - "08-production-deploy.md"

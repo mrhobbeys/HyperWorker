@@ -1,0 +1,33 @@
+# schemas/projects/event-planning/capability-gates.yaml
+
+task_kinds:
+  vendor-coordination:
+    description: "Booking and coordinating with venue, catering, AV, etc."
+    required_tools: [file_write, email_send]
+    delivery_modes: [constrained]
+
+  budget-tracking:
+    description: "Tracking spend against budget."
+    required_tools: [file_write, file_read]
+    optional_tools: [spreadsheet]
+    delivery_modes: [constrained]
+
+  registration-platform:
+    description: "Building and configuring the registration page."
+    required_tools: [file_write, web_browse, web_fetch]
+    delivery_modes: [prescribed, constrained]
+
+  promotion:
+    description: "Promotion campaign across email, social, paid."
+    required_tools: [file_write, email_send]
+    delivery_modes: [constrained]
+
+  attendee-comms:
+    description: "Confirmations, reminders, follow-up."
+    required_tools: [file_write, email_send]
+    delivery_modes: [prescribed]
+
+  day-of-coordination:
+    description: "Run sheet, role assignments, on-the-day adjustments."
+    required_tools: [file_write]
+    delivery_modes: [constrained]

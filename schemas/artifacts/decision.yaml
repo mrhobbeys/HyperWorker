@@ -1,0 +1,79 @@
+# schemas/artifacts/decision.yaml
+# Default schema for the decision kind. Projects extend via
+# schemas/projects/<name>/artifact-extensions.yaml.
+#
+# Validation order: structural minimum (this file) → project extensions.
+
+kind: decision
+id_prefix: DEC
+
+structural_minimum:
+  - name: id
+    type: string
+    pattern: "^DEC-\\d{3,}$"
+    required: true
+  - name: kind
+    type: const
+    value: decision
+    required: true
+  - name: created_at
+    type: iso8601
+    required: true
+  - name: hash
+    type: string
+    pattern: "^sha256:[0-9a-f]{12,64}$"
+    required: true                 # filled by harness on render
+  - name: confidence
+    type: enum
+    values: [provisional, validated]
+    default: validated
+    required: true
+  - name: reverses
+    type: string|null
+    pattern: "^DEC-\\d{3,}$|^null$"
+    required: true
+  - name: tags
+    type: list[string]
+    required: true
+    default: []
+  - name: superseded_by         # filled by harness when a successor reverses this
+    type: string|null
+    required: false
+
+decision_fields:
+  - name: title
+    type: string
+    required: true
+    max_length: 120
+  - name: alternatives_considered
+    type: list[string]
+    required: true
+    min_length: 1
+  - name: rationale
+    type: string
+    required: true
+    description: "One paragraph; cite supporting artifacts by [KIND-ID#hash]."
+  - name: constraints_imposed
+    type: list[string]
+    required: false
+    default: []
+
+body:
+  required_sections:
+    - "## Context"
+    - "## The Choice"
+    - "## Implications"
+
+render_order:
+  - id
+  - kind
+  - created_at
+  - hash
+  - confidence
+  - reverses
+  - superseded_by
+  - tags
+  - title
+  - alternatives_considered
+  - rationale
+  - constraints_imposed

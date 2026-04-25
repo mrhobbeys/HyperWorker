@@ -1,0 +1,33 @@
+# templates/models/claude-opus-4-6.yaml
+# Profile for Anthropic Claude Opus 4.6.
+
+profile_id: claude-opus-4-6
+model_family: claude
+generation: "4.6"
+
+verbose_cot: false                       # less verbose than 4.7
+suppress_concise_directives: false       # concision directives do not degrade 4.6 output
+auto_summarize_after_phase: true         # benefits from explicit phase summaries
+prefer_explicit_acceptance_criteria: true
+parallelism_must_be_explicit: false      # parallelizes adequately without explicit instruction
+
+context_fill_thresholds:
+  warn_at: 0.65
+  compact_at: 0.80
+
+council_default_size: 2
+recitation_overlap_threshold: 0.70
+
+notes: |
+  4.6 differs from 4.7 along three documented axes (per Anthropic
+  release notes and 2026-04-23 postmortem):
+
+  - Less verbose chain-of-thought. Concision directives can be applied
+    without quality regression; Tier 4 STYLE rules apply normally.
+  - Tokenizer compatibility with 4.5 — context thresholds match the
+    pre-4.7 family defaults.
+  - Self-summarization is less consistent than 4.7's; an explicit
+    auto-summarize task at phase boundaries materially improves
+    cross-phase carry-forward.
+
+  Council size and recitation threshold inherit the harness defaults.

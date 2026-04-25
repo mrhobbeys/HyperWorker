@@ -1,0 +1,59 @@
+# schemas/projects/compliance-audit/verification.yaml
+# Compliance has the most aggressive default risk levels: scope-and-mapping is
+# elevated, evidence-gathering is critical (because fabricated evidence is a
+# Tier 1 violation that ends the audit), and the final submission is critical.
+
+standard:
+  layers: [1, 2]
+  retry_budget: 3
+  layer2_checks:
+    - acceptance_criteria
+    - scan_compliance
+    - recitation_completeness
+    - banned_token_scan
+    - output_presence
+
+elevated:
+  layers: [1, 2, 3]
+  retry_budget: 2
+  council_size: 2
+  failure_scenarios_required: 3
+  layer2_checks:
+    - acceptance_criteria
+    - scan_compliance
+    - recitation_completeness
+    - banned_token_scan
+    - output_presence
+    - failure_scenario_evaluation
+
+critical:
+  layers: [1, 2, 3]
+  retry_budget: 1
+  council_size: 4                  # larger council for compliance criticals
+  cross_family: false
+  operator_review_required: true
+  failure_scenarios_required: 3
+  layer2_checks:
+    - acceptance_criteria
+    - scan_compliance
+    - recitation_completeness
+    - banned_token_scan
+    - output_presence
+    - failure_scenario_evaluation
+    - evidence_traceability
+
+default_risk_by_kind:
+  scope-and-mapping: elevated
+  policy-write: elevated
+  technical-remediation: critical
+  evidence-gathering: critical
+  internal-review: elevated
+  package-assembly: critical
+
+auto_escalation_rules:
+  - condition: "Task touches Tier 1 REGULATORY evidence claim."
+    risk_level: critical
+  - condition: "Framework is HIPAA AND task touches PHI handling."
+    risk_level: critical
+  - condition: "Task is final submission."
+    risk_level: critical

@@ -1,0 +1,37 @@
+# schemas/projects/software-feature-ship/capability-gates.yaml
+
+task_kinds:
+  spec-write:
+    description: "Write a feature spec, acceptance criteria, or design decision."
+    required_tools: [file_write]
+    delivery_modes: [constrained]
+
+  schema-migration:
+    description: "Database schema migration (forward + reverse)."
+    required_tools: [file_write, file_read, sql_validate]
+    delivery_modes: [prescribed, constrained]
+
+  code-edit:
+    description: "Edit application code (backend or frontend)."
+    required_tools: [file_write, file_read, code_lint]
+    delivery_modes: [constrained]
+
+  test-write:
+    description: "Author unit, integration, or end-to-end tests."
+    required_tools: [file_write, file_read, test_run]
+    delivery_modes: [constrained]
+
+  test-run:
+    description: "Execute tests and record results."
+    required_tools: [test_run]
+    delivery_modes: [prescribed]
+
+  deploy:
+    description: "Trigger a deployment (staging or production)."
+    required_tools: [deploy_trigger, monitoring_read]
+    delivery_modes: [prescribed]
+
+  smoke-test:
+    description: "Post-deploy verification: endpoint health, log inspection, monitoring readout."
+    required_tools: [http_fetch, monitoring_read, file_write]
+    delivery_modes: [prescribed]

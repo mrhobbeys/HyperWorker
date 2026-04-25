@@ -1,0 +1,57 @@
+# schemas/projects/client-onboarding/schema.yaml
+# Schema for onboarding a new client onto a service platform.
+
+schema_id: client-onboarding
+schema_version: 1.0
+harness_version: "5.0"
+description: |
+  Repeatable onboarding flow: kickoff → provisioning → data migration →
+  configuration → training → handoff. The schema's value is in cross-client
+  knowledge compounding — anti-patterns from prior onboardings travel forward.
+
+bootstrap_questions:
+  - id: client_name
+    prompt: "Client name."
+    type: string
+    required: true
+  - id: contract_sla
+    prompt: "Onboarding SLA (days from contract signing to handoff)."
+    type: number
+    required: true
+  - id: integrations_in_scope
+    prompt: "Which integrations are in scope? (SSO / payments / CRM / etc.)"
+    type: list[string]
+    required: true
+  - id: data_volume
+    prompt: "Approximate data migration volume (records / GB / null if no migration)."
+    type: string|null
+    required: true
+  - id: client_compliance_scope
+    prompt: "Client's compliance scope (SOC2 / HIPAA / GDPR / none)."
+    type: list[string]
+    required: true
+
+includes:
+  - precedence-tiers.yaml
+  - artifact-extensions.yaml
+  - capability-gates.yaml
+  - verification.yaml
+  - council.yaml
+  - project-template.md
+  - rules-template.md
+  - task-templates/
+  - README.md
+
+default_tasks:
+  templates:
+    - "00-kickoff.md"
+    - "01-provision-account-and-sso.md"
+    - "02-migrate-historical-data.md"
+    - "03-configure-integrations.md"
+    - "04-build-client-dashboard.md"
+    - "05-training-session.md"
+    - "06-handoff-and-docs.md"
+
+cross_project_default_subscriptions:
+  - "cross-project:client-onboarding-universal"
+  - "cross-project:integration-<integration_type>"

@@ -1,0 +1,88 @@
+# schemas/artifacts/anti-pattern.yaml
+# Default schema for the anti-pattern kind. Anti-patterns are high-retention;
+# they are never archived and rarely superseded.
+
+kind: anti-pattern
+id_prefix: AP
+
+structural_minimum:
+  - name: id
+    type: string
+    pattern: "^AP-\\d{3,}$"
+    required: true
+  - name: kind
+    type: const
+    value: anti-pattern
+    required: true
+  - name: created_at
+    type: iso8601
+    required: true
+  - name: hash
+    type: string
+    pattern: "^sha256:[0-9a-f]{12,64}$"
+    required: true
+  - name: confidence
+    type: const
+    value: validated
+    required: true
+    description: "Anti-patterns are observed failures; provisional anti-patterns are not useful."
+  - name: reverses
+    type: string|null
+    pattern: "^AP-\\d{3,}$|^null$"
+    required: true
+  - name: tags
+    type: list[string]
+    required: true
+    default: []
+  - name: superseded_by
+    type: string|null
+    required: false
+
+anti_pattern_fields:
+  - name: title
+    type: string
+    required: true
+    max_length: 140
+  - name: triggers
+    type: list[string]
+    required: true
+    min_length: 1
+    description: "Plan conditions an agent could detect to recognize this anti-pattern is about to apply."
+  - name: applies_to
+    type: string
+    required: true
+  - name: why_it_fails
+    type: string
+    required: true
+    description: "The mechanism, not the symptom."
+  - name: alternatives
+    type: list[string]
+    required: true
+    min_length: 1
+    description: "Each alternative is a complete approach, not a hint."
+  - name: regression_test
+    type: string|null
+    required: false
+
+body:
+  required_sections:
+    - "## What does not work"
+    - "## When it applies"
+    - "## Why it fails"
+    - "## What to do instead"
+
+render_order:
+  - id
+  - kind
+  - created_at
+  - hash
+  - confidence
+  - reverses
+  - superseded_by
+  - tags
+  - title
+  - triggers
+  - applies_to
+  - why_it_fails
+  - alternatives
+  - regression_test

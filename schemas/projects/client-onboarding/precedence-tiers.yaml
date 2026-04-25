@@ -1,0 +1,44 @@
+# schemas/projects/client-onboarding/precedence-tiers.yaml
+
+tiers:
+  1:
+    name: DATA-SECURITY
+    purpose: "Client-data handling. Cannot be overridden."
+    examples:
+      - "No client data in unencrypted channels."
+      - "Access provisioned on least-privilege basis."
+      - "All data transfers logged."
+      - "Client compliance scope (e.g., SOC2/HIPAA) inherited from OR-001."
+    scan_markers:
+      - "@@SCAN_1_1: List the data classes this task touches (PII / PHI / financial / public-only)."
+      - "@@SCAN_1_2: Confirm all data transfers in this task are over encrypted channels (yes / not-applicable)."
+
+  2:
+    name: CLIENT-CONTRACT
+    purpose: "What the contract actually obligates."
+    examples:
+      - "Onboarding completes within the contractual SLA from OR-001."
+      - "Only deliver features included in the signed scope."
+      - "Auditor / client communications go through the designated contact only."
+    scan_markers:
+      - "@@SCAN_2_1: Is this task in the signed scope? Cite the OR-001 line that confirms."
+
+  3:
+    name: PLATFORM
+    purpose: "Platform constraints."
+    examples:
+      - "SSO supports SAML 2.0 and OIDC only."
+      - "Data import max file size: 500MB."
+      - "Account provisioning requires admin access."
+    scan_markers:
+      - "@@SCAN_3_1: Name any platform constraint that affects this task's approach."
+
+  4:
+    name: PROCESS
+    purpose: "Onboarding hygiene."
+    examples:
+      - "Document configuration decisions as DEC-XXX."
+      - "Training sessions recorded with client consent."
+      - "Handoff includes a written runbook."
+
+banned_tokens: []
