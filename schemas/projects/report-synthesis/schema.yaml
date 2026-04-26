@@ -66,14 +66,23 @@ includes:
 
 default_tasks:
   description: |
-    Synthesis decomposes into roughly 10 tasks across 4 phases:
-    Phase A (Setup): inventory + charter
+    Synthesis decomposes into 9 tasks across 4 phases:
+    Phase A (Setup): inventory + charter (merged into T-000)
     Phase B (Extraction): claim extraction + anti-pattern capture
     Phase C (Reconciliation): contradiction scan + resolution
     Phase D (Synthesis): structure + draft + audit + final
+
+    The T-001 slot is intentionally skipped. v5.0 split inventory (T-000) and
+    "synthesis charter" (T-001), but bootstrap already populates OR-001 fields
+    and runs the project.activate council, leaving T-001 with no substantive
+    work to do (see friction-log entry C-1). v5.0.1 merges T-001's residual
+    responsibilities (Tier 4 STYLE, banned tokens, canonical facts) into T-000
+    and deletes the T-001 template. Numbering is preserved (T-002 onward keep
+    their IDs) so existing case-study references remain stable; the gap is
+    documented, not accidental.
   templates:
     - "00-source-inventory.md"
-    - "01-synthesis-charter.md"
+    # T-001 intentionally omitted — merged into T-000 in v5.0.1.
     - "02-claim-extraction.md"
     - "03-anti-pattern-capture.md"
     - "04-contradiction-scan.md"
