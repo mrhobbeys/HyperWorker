@@ -114,6 +114,28 @@ convergence_rule: all-agree-or-escalate
 | Critical-risk task completion | `risk_level: critical` in task frontmatter. |
 | Operator command | `hw council <task-id>`. |
 
+**Trigger-aware prompts.** A council role that fires at multiple triggers (e.g., `project.activate` at bootstrap and `task.complete` later) often needs different prompts at each trigger. At `project.activate` no deliverable exists; the role can only evaluate metadata. At `task.complete` the deliverable does exist; the role evaluates the output. A single prompt written for one trigger applied at the other forces the council member to interpret around it (e.g., "sample the output" when no output exists).
+
+The schema MAY declare trigger-specific prompts on a council member by replacing `prompt_template:` with a pair (or set) of trigger-keyed templates:
+
+```yaml
+members:
+  - role: operator-goal-aligner
+    prompt_template_on_activate: |
+      <metadata-only review prompt for project.activate>
+    prompt_template_on_output: |
+      <output-review prompt for task.complete / phase.complete / project.archive>
+```
+
+The harness selects the prompt by trigger event:
+
+| Trigger event | Selected prompt |
+|---|---|
+| `project.activate` | `prompt_template_on_activate` |
+| `task.complete`, `phase.complete`, `project.archive`, `hw council` | `prompt_template_on_output` |
+
+If a role declares only the legacy `prompt_template:`, the harness falls back to it for all triggers (backwards-compatible). Schemas adopting trigger-aware prompts should set both keys; falling through `on_activate → prompt_template` is allowed but produces the bootstrap-time-vs-output-time mismatch this pattern was added to fix (see report-synthesis council.yaml `operator-goal-aligner`).
+
 **Convergence rules** (declared per schema):
 
 - `all-agree-or-escalate` — every member must vote `pass`. One `fail` escalates to operator.
