@@ -27,10 +27,24 @@ Audit the draft for source coverage, citation integrity, and internal consistenc
 
 This task is read-only on the synthesis draft. It does not modify the draft. It produces an audit report; if the audit fails, T-007 is reopened.
 
+## The 7-Check Methodology (canonical)
+
+The audit runs seven checks in this order. The Session 3 agent on the brand-foundation-synthesis run invented this methodology because T-008 said "audit for completeness" without specifying what; the methodology caught five real issues and is now ship-canonical for T-008.
+
+1. **Section completeness.** Every section declared in the structure Decision (T-006) is present in the draft and contains content (not a placeholder). Empty sections fail.
+2. **Citation integrity.** Every assertion in the draft has at least one `[KIND-NNN#hash]` citation. No floating prose. (Layer 1 caught most of this on event write; this is the document-level re-confirmation.)
+3. **Source coverage.** Every registered SRC has terminal status: incorporated (cited at least once) | contradicted-and-resolved (linked to a CTR resolved by DEC) | discarded-with-reason (Decision artifact stating why). No orphan sources.
+4. **OR constraint compliance.** Excluded topics from OR-001 do not appear in the draft. Output_format matches the structure. If OR declared a confidence_floor of validated, no provisional findings are cited.
+5. **Anti-pattern consistency.** Where the draft takes a direction the supersede chain captured as an AP, the AP is cited and the supersession noted. AP citations are not silently dropped.
+6. **Internal consistency.** Pairwise scan across sections for contradictions. Two sections cannot make conflicting assertions without an internal note. (Layer 2 `synthesis_internal_consistency` check supports this.)
+7. **Decision coverage.** Every resolved contradiction's Decision is cited at least once in the draft, OR an explicit note in the audit report explains why a particular resolution was not surface-relevant for the draft.
+
+Each check is recorded individually in the audit report (`tasks/08-completeness-audit-completion.md`) with PASS/FAIL and findings. Overall verdict is FAIL if any of checks 1-6 fails; check 7 failures are warnings unless the schema's `confidence_floor` is `validated` (in which case decision coverage becomes blocking).
+
 ## Step-by-Step Instructions
 
 1. Read OR-001, the structure Decision, all source artifacts, and the draft.
-2. **Coverage audit:** for each registered source artifact, classify its status by examining the draft:
+2. **Coverage audit (Check 3):** for each registered source artifact, classify its status by examining the draft:
    - **Incorporated:** the source's claims are cited in the draft (one or more times).
    - **Contradicted-and-resolved:** the source's claims appear in a resolved contradiction artifact and the resolution Decision is cited in the draft.
    - **Discarded-with-reason:** the source has an explicit Decision artifact stating why it was discarded.

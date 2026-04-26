@@ -8,9 +8,13 @@ Cross-cutting rules with explicit precedence. Lower tier ordinal wins on conflic
 
 Every claim in the synthesis output cites at least one [SRC-NNN#hash] or [CLM-NNN#hash]. Synthesis cannot contradict a source without explicitly noting and resolving via Decision. Synthesis cannot make claims that no source supports.
 
+**Verbatim quotation principle.** When an artifact summarizes operator intent or source content, quote verbatim where possible. Paraphrase only when the original is too long to embed (typically: more than 3 sentences); flag the paraphrase explicitly with `[paraphrase: ...]` markers and ensure the paraphrase preserves the original's qualifiers (numbers, sample sizes, conditional clauses). Loose paraphrase of operator directives or source claims is a Tier 1 violation. The Session 1 brand-foundation-synthesis run had a DEC-002 → DEC-003 supersede driven entirely by an agent paraphrasing operator intent incorrectly; verbatim quotation would have prevented it.
+
 @@SCAN_1_1: Does every claim in your last output cite at least one source by hash?
 
 @@SCAN_1_2: Did you contradict any source without resolving via a Decision artifact?
+
+@@SCAN_1_3: For every operator directive or source assertion you summarized, did you quote verbatim or use an explicit `[paraphrase: ...]` marker?
 
 ---
 
