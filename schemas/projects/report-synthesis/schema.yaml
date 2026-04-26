@@ -66,23 +66,26 @@ includes:
 
 default_tasks:
   description: |
-    Synthesis decomposes into 9 tasks across 4 phases:
-    Phase A (Setup): inventory + charter (merged into T-000)
+    Synthesis decomposes into 10 tasks across 4 phases:
+    Phase A (Setup): source inventory + charter merge (T-000), purpose-fit corpus scan (T-001)
     Phase B (Extraction): claim extraction + anti-pattern capture
     Phase C (Reconciliation): contradiction scan + resolution
     Phase D (Synthesis): structure + draft + audit + final
 
-    The T-001 slot is intentionally skipped. v5.0 split inventory (T-000) and
-    "synthesis charter" (T-001), but bootstrap already populates OR-001 fields
-    and runs the project.activate council, leaving T-001 with no substantive
-    work to do (see friction-log entry C-1). v5.0.1 merges T-001's residual
-    responsibilities (Tier 4 STYLE, banned tokens, canonical facts) into T-000
-    and deletes the T-001 template. Numbering is preserved (T-002 onward keep
-    their IDs) so existing case-study references remain stable; the gap is
-    documented, not accidental.
+    v5.0.1 merged T-001's original "synthesis charter" responsibilities into
+    T-000 (Tier 4 STYLE, banned tokens, canonical facts) and left the T-001 slot
+    intentionally skipped. v5.1 reuses the T-001 slot for a different purpose:
+    a purpose-fit corpus scan that surfaces 2-3 plausible synthesis purposes
+    against the actual corpus before T-002 begins. The v5.0 brand-foundation-
+    synthesis run's highest-leverage operator intervention was refusing to lock
+    OR-002 without seeing what the corpus contained; v5.1 makes that step
+    structural so the harness surfaces purpose-vs-corpus mismatches instead of
+    requiring the operator to know to push back. T-002's depends_on is updated
+    from [T-000] to [T-001] so the corpus scan completes (with operator
+    confirmation or supersede) before extraction begins.
   templates:
     - "00-source-inventory.md"
-    # T-001 intentionally omitted — merged into T-000 in v5.0.1.
+    - "01-corpus-scan.md"
     - "02-claim-extraction.md"
     - "03-anti-pattern-capture.md"
     - "04-contradiction-scan.md"

@@ -6,7 +6,7 @@ phase: B
 risk_level: standard
 required_tools: [file_read, file_write]
 delivery_mode: constrained
-depends_on: [T-000]
+depends_on: [T-001]
 consumes:
   - "[OR-001#<short-hash>]"
   - "[SRC-NNN#<short-hash>]"  # ONE source per branch — see Branching note below
