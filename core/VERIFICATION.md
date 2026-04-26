@@ -60,6 +60,8 @@ A task moves up the pyramid only when triggered. Standard-risk routine work runs
 
 The agent does not "decide" whether to honor a Layer 1 failure. The substrate enforces; the agent retries or escalates.
 
+**Friction prompt signal.** If the same Layer 1 check fails ≥3 times within a single task on the same `target_id`, the harness emits a `friction.log.prompt` event with `trigger: layer1_repeat`. The agent decides whether to follow with a `friction.log` event. See `core/SUBSTRATE.md` §Friction Log Event Kind for the full heuristic table.
+
 ---
 
 ## Layer 2 — Behavioral Checks
@@ -79,6 +81,8 @@ The agent does not "decide" whether to honor a Layer 1 failure. The substrate en
 **Acceptance criteria evaluation.** Each criterion is a string; the agent records, in the completion-report, *how it evaluated it* and *what result it found*. Criteria like "Word count ≤ 300" are mechanically checkable; criteria like "Tone matches brand voice schema X" require judgment. Criteria that require judgment in standard-risk tasks pass on the agent's recorded evaluation; in elevated/critical they additionally trigger Layer 3.
 
 **On failure.** The task transitions to `blocked` with `reason: layer2_fail <check>`. The completion report records which criteria failed. The planner reviews and decides whether to re-task or unblock.
+
+**Friction prompt signal.** Any `verify.layer2.fail` event triggers a `friction.log.prompt` with `trigger: layer2_fail`. Layer 2 failures almost always indicate a substrate or schema gap, not just an agent error. See `core/SUBSTRATE.md` §Friction Log Event Kind.
 
 ---
 
@@ -143,6 +147,10 @@ If a role declares only the legacy `prompt_template:`, the harness falls back to
 - `any-fail-blocks` — any `fail` blocks; identical to all-agree but framed for high-stakes work.
 
 The harness writes `council.invoke` at trigger, `council.report` for each member's finding, and either `council.converged` (proceed) or `council.escalated` (operator decides).
+
+**Council projection.** Per fire, the harness regenerates `projects/<id>/council/<fire_id>-<trigger>.md` from the council events grouped by `fire_id`. An aggregate `projects/<id>/council/INDEX.md` lists fires chronologically. See `core/SUBSTRATE.md` §Council Report Projection.
+
+**Friction prompt signal.** A `council.escalated` event whose subject task has `risk_level: critical` emits a `friction.log.prompt` with `trigger: council_non_convergence_critical`. Critical-risk non-convergence is a strong signal that the schema's council composition or convergence rule mis-specifies the task's review needs.
 
 ### Cross-Family Verification (Opt-In)
 

@@ -32,6 +32,40 @@ ARTIFACT_DIRS = ("decisions", "findings", "anti-patterns", "operating-reality",
 ZERO_HASH = "0" * 64
 ZERO_HASH_PREFIXED = "sha256:" + ZERO_HASH
 
+# v5.1 event kinds. The validator confirms each event's `kind` is in the closed
+# set the harness recognizes. Unknown kinds are reported as untracked but do not
+# block PASS — schemas may extend the set legitimately (e.g., `claim.add`).
+KNOWN_EVENT_KINDS = {
+    "project.activate", "project.archive", "project.park",
+    "backlog.add", "backlog.remove",
+    "decision.add", "decision.supersede", "decision.promote",
+    "finding.add", "finding.supersede", "finding.promote",
+    "anti-pattern.add", "anti-pattern.supersede",
+    "operating-reality.add", "operating-reality.supersede",
+    "task.create", "task.status", "task.recite", "task.scan", "task.complete",
+    "branch.open", "branch.event", "branch.fold",
+    "verify.layer1.pass", "verify.layer1.fail",
+    "verify.layer2.pass", "verify.layer2.fail",
+    "council.invoke", "council.report",
+    "council.converged", "council.escalated",
+    "capability.gap",
+    "friction.log", "friction.log.prompt",
+    "session.handoff",
+}
+
+# Required payload fields per v5.1 event kind. None means no per-kind structural
+# check beyond schema validation (which is out of scope for hw verify; it lives
+# in the schema-validation step at hw add time).
+REQUIRED_PAYLOAD_FIELDS = {
+    "friction.log": ("type", "description", "surfaced_by", "severity"),
+    "friction.log.prompt": ("trigger", "signal_summary"),
+    "session.handoff": ("project_id", "closing_actor", "recommended_first_action"),
+    "council.invoke": ("trigger", "fire_id"),
+    "council.report": ("fire_id", "member", "role", "convergence_vote"),
+    "council.converged": ("fire_id",),
+    "council.escalated": ("fire_id",),
+}
+
 
 def canonical_serialize(obj) -> bytes:
     """Canonical JSON serialization for hashing. See SUBSTRATE.md §Canonical Serialization."""
@@ -115,6 +149,8 @@ def verify(workspace: Path, since: str | None) -> dict:
         "untracked_projections": [],
         "broken_citations": [],
         "stale_citations": [],
+        "unknown_event_kinds": [],
+        "malformed_payloads": [],
         "result": "PASS",
     }
 
@@ -157,6 +193,19 @@ def verify(workspace: Path, since: str | None) -> dict:
                 result["chain_breaks"].append(event["id"])
 
         prev_recorded_hash = recorded
+
+        kind = event.get("kind")
+        if kind not in KNOWN_EVENT_KINDS:
+            result["unknown_event_kinds"].append(f"{event['id']}:{kind}")
+        else:
+            required = REQUIRED_PAYLOAD_FIELDS.get(kind)
+            if required:
+                payload = event.get("payload") or {}
+                missing = [f for f in required if f not in payload]
+                if missing:
+                    result["malformed_payloads"].append(
+                        f"{event['id']}:{kind} missing {missing}"
+                    )
 
     hashes_index = {}
     if hashes_path.exists():
@@ -220,6 +269,7 @@ def verify(workspace: Path, since: str | None) -> dict:
         or result["projection_drift"]
         or result["missing_projections"]
         or result["broken_citations"]
+        or result["malformed_payloads"]
     )
     result["result"] = "FAIL" if blocking else "PASS"
     return result
@@ -236,6 +286,8 @@ def render(result: dict) -> str:
         f"  untracked_projections: {len(result['untracked_projections'])} {result['untracked_projections']}",
         f"  broken_citations:      {len(result['broken_citations'])} {result['broken_citations']}",
         f"  stale_citations:       {len(result['stale_citations'])} {result['stale_citations']}",
+        f"  unknown_event_kinds:   {len(result['unknown_event_kinds'])} {result['unknown_event_kinds']}",
+        f"  malformed_payloads:    {len(result['malformed_payloads'])} {result['malformed_payloads']}",
         f"  result:                {result['result']}",
     ]
     if "error" in result:

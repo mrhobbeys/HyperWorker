@@ -151,16 +151,20 @@ If unsure, check `core/SUBSTRATE.md` §Boundary Rule.
 
 ## Friction Logs
 
-Operators and agents may keep a friction log capturing what was unclear, what required training-derived gap-filling, what felt ceremonial, and what worked well. Friction logs are working artifacts (not event-sourced); they feed the next harness patch cycle.
+Friction logs capture what was unclear, what required training-derived gap-filling, what felt ceremonial, what surprised the operator, and what worked well. v5.1 makes friction logging a substrate event kind (`friction.log`) so capture is structural rather than operator-instructed.
 
 | Default location | Path | Use |
 |---|---|---|
-| Workspace | `bootstrap-friction-log.md` at workspace root | One log per workspace covering bootstrap and cross-project friction. The default. |
-| Per-project | `projects/<id>/friction-log.md` | Per-project log when friction is project-scoped (e.g., a long synthesis spanning multiple sessions). |
+| Workspace | `friction-log.md` at workspace root | Default. Projection of `friction.log` events scoped to the workspace. |
+| Per-project | `projects/<id>/friction-log.md` | Per-project log when the project's `config.yaml` declares `friction_log_scope: project`. |
 
-Use the workspace-root log unless the project explicitly opts into per-project scoping. Friction logs are file-canonical (Mutable Surface), versioned via git when available; they are not regenerable from events. See `core/SUBSTRATE.md` §File Locations.
+The projection is regenerated from `friction.log` events on every new entry. Hand-edits are overwritten on next regeneration; new entries are recorded by appending `friction.log` events (`hw add friction-log < draft.md`-style protocol; see `core/SUBSTRATE.md` §Friction Log Event Kind for the payload schema).
 
-The structure is open; recommended categories from prior runs: (A) harness unclear/incomplete, (B) agent drew on training to fill a gap, (C) steps that felt ceremonial, (D) operator confused or asked for clarification, (E) things that worked well.
+**Substrate auto-prompts.** The harness emits `friction.log.prompt` informational events when observable signals fire: Layer 1 verification failing on the same check ≥3 times in a task, Layer 2 verification failing, agent output containing training-fill markers, an operator mid-flow directive captured as a Decision, or council non-convergence on a critical-risk task. The agent reads the prompt and decides whether to follow with an actual `friction.log` event. See `core/SUBSTRATE.md` §Friction Log Event Kind for the heuristic table.
+
+**Categories.** Recommended `type` values used in payloads: `REGRESSION` (something that worked before broke), `CONFIRMATION` (a previously-logged friction was resolved by a patch), `NEW-SCHEMA` (the friction is schema-specific), `NEW-CROSS` (cross-schema; affects multiple schemas), `TRAINING-FILL` (the agent filled a gap from training rather than the harness), `OPERATOR-CONFUSION` (the operator was unsure what the harness expected).
+
+The pre-v5.1 working-artifact form (`bootstrap-friction-log.md`) is retained for projects that started under v5.0 / v5.0.1 and have not yet emitted any `friction.log` events; on the first event, the projection switches to `friction-log.md`.
 
 ---
 

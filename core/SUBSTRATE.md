@@ -79,7 +79,7 @@ The location convention is easy to misread when a project subdirectory feels lik
 | `hashes.json` | `.hyperworker/hashes.json` at **workspace root** | Same scope as the event log. |
 | `config.yaml` | `.hyperworker/config.yaml` at **workspace root** | Active model profile + schema source. |
 | Per-project artifacts | `projects/<project-id>/decisions/`, `findings/`, etc. | Project-scoped projections. |
-| Friction logs (working artifact, not event-sourced) | `bootstrap-friction-log.md` at **workspace root** by default; `projects/<project-id>/friction-log.md` if explicitly project-scoped | See HARNESS.md §Friction Logs. |
+| Friction log (projection of `friction.log` events; v5.1+) | `friction-log.md` at **workspace root** by default; `projects/<project-id>/friction-log.md` if `friction_log_scope: project` in project config. The v5.0.1 working-artifact form (`bootstrap-friction-log.md`) is retained for pre-v5.1 projects but new projects emit events. | See §Friction Log Event Kind below and HARNESS.md §Friction Logs. |
 
 If an agent reads from `projects/<id>/.hyperworker/events.jsonl`, that path is wrong. The event log is one level up.
 
@@ -199,15 +199,28 @@ The harness defines a closed set. Schema extensions must add kinds via the proje
 |---|---|
 | `verify.layer1.pass` / `verify.layer1.fail` | `{check_name, target_id, details}` |
 | `verify.layer2.pass` / `verify.layer2.fail` | `{task_id, check_name, details}` |
-| `council.invoke` | `{trigger, scope, members[]}` |
-| `council.report` | `{member, role, finding, convergence_vote}` |
-| `council.converged` / `council.escalated` | `{outcome, summary}` |
+| `council.invoke` | `{trigger, scope, members[], fire_id}` — `fire_id` is the `EV-NNNN` of the `council.invoke` event itself, used to group all `council.report` events for one fire. |
+| `council.report` | `{fire_id, member, role, model_family, finding, convergence_vote}` — `fire_id` references the originating `council.invoke`; projection groups by it. See §Council Report Projection. |
+| `council.converged` / `council.escalated` | `{fire_id, outcome, summary}` |
 
 ### Capability events
 
 | Kind | Payload |
 |---|---|
 | `capability.gap` | `{task_id, agent_id, missing_tools[], gap_file_path}` |
+
+### Friction events
+
+| Kind | Payload |
+|---|---|
+| `friction.log` | `{type, patch_id, description, surfaced_by, severity, suggested_target}` — see §Friction Log Event Kind below for field semantics. |
+| `friction.log.prompt` | `{trigger, task_id, signal_summary}` — informational; the harness emits this when an auto-prompt heuristic fires. The agent reads the prompt event and decides whether to follow it with an actual `friction.log` entry. |
+
+### Session events
+
+| Kind | Payload |
+|---|---|
+| `session.handoff` | `{project_id, closing_actor, last_completed_task, next_pending_task, active_artifact_state, open_operator_questions[], recommended_first_action, context_compaction_summary}` — see §Session Handoff Event Kind. One event per closing-session boundary; not chained. |
 
 ---
 
@@ -235,6 +248,10 @@ A projection is a regenerable file derived from events. Projections are **never 
 | Backlog | `backlog.add`, `backlog.remove` | `backlog.md` |
 | Consumed inputs | `task.recite` events for one task | `projects/<id>/tasks/<task-id>/consumed-inputs.md` |
 | Branch result | `branch.fold` | `projects/<id>/tasks/<task-id>/branches/<branch>/result.md` |
+| Friction log | `friction.log` | `friction-log.md` at workspace root by default; `projects/<id>/friction-log.md` if `friction_log_scope: project` in project config. See §Friction Log Projection. |
+| Council report (per fire) | `council.invoke`, `council.report`, `council.converged` / `council.escalated` (grouped by `fire_id`) | `projects/<id>/council/<fire_id>-<trigger>.md` |
+| Council index | All council events for the project | `projects/<id>/council/INDEX.md` |
+| Session handoff | `session.handoff` (most recent only) | `projects/<id>/SESSION-HANDOFF.md` |
 
 ### Projection rendering
 
@@ -512,7 +529,7 @@ Three categories of file:
 | Category | Example | Authority |
 |---|---|---|
 | **Event-sourced (canonical)** | `events.jsonl` | Authoritative. Append-only. Never hand-edited. |
-| **Projection (regenerable)** | `decisions/DEC-007.md`, `TASK-STATE.yaml`, `hashes.json` | Derived. Always regenerable from events. Never authoritative. |
+| **Projection (regenerable)** | `decisions/DEC-007.md`, `TASK-STATE.yaml`, `hashes.json`, `friction-log.md`, `SESSION-HANDOFF.md`, `council/<fire>-<trigger>.md` | Derived. Always regenerable from events. Never authoritative. |
 | **Mutable Surface (file-canonical)** | `PROJECT.md`, `00-REFERENCE-rules.md`, `task.md` instructions, post-mortem prose | Authoritative as files. Versioned via git. Not event-sourced. |
 
 A file is in exactly one category. If unsure, refer to the table in §File Layout. Editing across the boundary (writing to a projection, attempting to append narrative to `events.jsonl`) is operator error; the harness will overwrite or reject.
@@ -562,6 +579,152 @@ The flag is locked at task authoring; an executor cannot opt into a lightweight 
 
 ---
 
+## Friction Log Event Kind
+
+`friction.log` makes friction capture a substrate event, not an operator-instructed prose habit. The closing v5.0 lead-magnet run lost real-time friction signal because the agent did not follow a verbal prompt to capture it. v5.1 makes the harness do the prompting and the recording.
+
+**Payload schema.**
+
+| Field | Type | Meaning |
+|---|---|---|
+| `type` | enum | `REGRESSION`, `CONFIRMATION`, `NEW-SCHEMA`, `NEW-CROSS`, `TRAINING-FILL`, `OPERATOR-CONFUSION`. The category the friction maps to in the patch-cycle vocabulary. |
+| `patch_id` | string \| null | The harness patch ID this friction targets if known (e.g., `B-1`); otherwise `null`. |
+| `description` | string | 1-3 sentences. Specific enough that a future patch author can decide whether the friction has been addressed. |
+| `surfaced_by` | string | `operator`, `executor:T-NNN`, `council:<role>`, or `harness` (substrate auto-detected). |
+| `severity` | enum | `blocking`, `non-blocking`. Blocking means the agent could not proceed without the operator resolving the friction; non-blocking means it was visible but did not stop work. |
+| `suggested_target` | enum \| null | `v5.x-doc-patch`, `v5.x-substrate`, `schema-specific`, or `unclear`. The agent's best guess at what kind of fix this needs. |
+
+**Auto-prompt heuristics.** The harness emits a `friction.log.prompt` event (informational; agent decides whether to follow it with an actual `friction.log`) when any of the following observable signals fire:
+
+| Signal | Detection |
+|---|---|
+| Layer 1 verification fails on the same check ≥3 times within a single task | Count `verify.layer1.fail` events with the same `check_name` and `target_id` since the most recent `task.create` of the active task. |
+| Layer 2 verification fails | Any `verify.layer2.fail` event. |
+| Agent output contains training-fill markers | Substring match in the most recent state-changing event's payload string fields against the marker set: `"I'm assuming"`, `"Based on common practice"`, `"The harness doesn't specify so"`, `"Typically..."`, `"In most cases..."`. Heuristic; agent decides if it actually crossed the bar. |
+| Operator emits a mid-flow directive captured as a Decision artifact | A `decision.add` event with `actor: operator` and a `synthesis_role` (or schema-equivalent) that maps to mid-flow directive (e.g., `scope-decision`, `weighting-rule`, `inclusion-exclusion`) within an active project. |
+| Council non-convergence on a critical-risk task | A `council.escalated` event whose triggering task has `risk_level: critical`. |
+
+The auto-prompt heuristics above are starting points. The false-positive rate is unknown until v5.1 sees real use. Operators tune by observing how often `friction.log.prompt` events lead to genuine `friction.log` entries vs. agent-rejected noise; if the false-positive rate is high, the heuristic that produces the noise is the candidate for revision.
+
+**`friction.log.prompt` payload.** `{trigger, task_id, signal_summary}` where `trigger` is the heuristic name from the table above, `task_id` is the active task at the time of the signal (or `null` for between-task signals), and `signal_summary` is a one-line description of what the heuristic observed.
+
+**Agent response to a prompt.** When a `friction.log.prompt` lands, the agent reads it on its next turn and decides:
+
+1. The signal was a real friction → the agent appends a `friction.log` event with the appropriate payload.
+2. The signal was a false positive → the agent does nothing (no event); the `friction.log.prompt` remains in the log as evidence the heuristic fired but was rejected, which itself is signal for tuning.
+3. The signal is ambiguous → the agent surfaces a one-sentence question to the operator at the next natural pause.
+
+**Friction Log Projection.** The projection at `friction-log.md` (workspace root by default; `projects/<id>/friction-log.md` if the project's `config.yaml` declares `friction_log_scope: project`) regenerates from `friction.log` events on each new event. Format:
+
+```markdown
+# Friction Log — <workspace-or-project-name>
+
+> Regenerable from `friction.log` events. Operator and agent observations of harness friction. Hand-edits are overwritten on next regeneration; capture additions via `friction.log` events.
+
+## Active
+
+### F-NNN — <type>: <description first line>
+
+- **Patch ID:** <patch_id or "unclassified">
+- **Severity:** <blocking | non-blocking>
+- **Surfaced by:** <surfaced_by>
+- **Suggested target:** <suggested_target>
+- **Event:** EV-NNNN
+- **Description:** <full description>
+
+## Resolved
+
+(Friction entries whose `suggested_target` patch landed in a later harness version, marked resolved by a follow-up `friction.log` event with `type: CONFIRMATION` and `patch_id` referencing the original.)
+```
+
+Friction entries are append-only; resolution is a new entry, not an edit. The projection groups Active entries (no resolution) and Resolved entries (a CONFIRMATION entry exists referencing this entry's `patch_id`).
+
+---
+
+## Council Report Projection
+
+A council fire is a logical group: one `council.invoke` event, N `council.report` events (one per member), and one terminal `council.converged` or `council.escalated`. `council.invoke.fire_id` is `EV-NNNN` of the invoke event itself — every report and the terminal event reference it via the `fire_id` payload field.
+
+**Per-fire projection.** For each `council.invoke` event, the harness regenerates `projects/<id>/council/<fire_id>-<trigger>.md`. The `<trigger>` token in the filename is the trigger event kind (e.g., `project.activate`, `phase.complete`, `task.complete`, `hw_council`). One file per fire; the file is overwritten when any of its constituent events change (rare; events are append-only, so the file changes only on supersedes).
+
+Format:
+
+```markdown
+# Council Fire — <fire_id> (<trigger>)
+
+- **Trigger event:** <event-id-of-the-event-that-fired-the-council> (<kind>)
+- **Invoked at:** <ts of council.invoke>
+- **Subject under review:** <artifact-id, task-id, or phase-id>
+- **Convergence rule:** <all-agree-or-escalate | majority-or-escalate | any-fail-blocks>
+
+## Members
+
+| Role | Model family | Verdict | One-line summary |
+|---|---|---|---|
+| <role-1> | <model_family> | PASS \| FAIL | <one-line summary from finding> |
+| <role-2> | <model_family> | ... | ... |
+
+## Outcome
+
+- **Result:** converged \| escalated
+- **Outcome event:** EV-NNNN
+- **Operator action taken:** <if any operator-recorded follow-up exists> | none
+
+## Detail
+
+For each member, the full finding text is included verbatim from the `council.report` payload, in case the one-liner does not capture the basis for the verdict.
+```
+
+The full chain-of-thought of a council member is **not** included in the projection by design; council members run with context-asymmetric framing and their reasoning is not operator-readable in real time. The `finding` text in the report is the member's externalized output; that is what the projection surfaces.
+
+**Aggregate projection (`INDEX.md`).** `projects/<id>/council/INDEX.md` lists all fires chronologically:
+
+```markdown
+# Council Fires — <project-id>
+
+| Fire | Trigger | Subject | Outcome | Date |
+|---|---|---|---|---|
+| [EV-0042](EV-0042-project.activate.md) | project.activate | OR-001 | converged | 2026-04-26T10:14Z |
+| [EV-0117](EV-0117-phase.complete.md) | phase.complete (B) | claims-corpus | escalated | 2026-04-26T15:32Z |
+| ... | ... | ... | ... | ... |
+```
+
+Both projections are regenerated on every council event. `hashes.json` tracks each per-fire file plus `INDEX.md`.
+
+**Why both per-fire and aggregate.** The per-fire file is the one an operator opens when reviewing what a specific council found. The aggregate is the one an operator opens when answering "did council fire on this project at all, and where." The two together let the operator answer both questions without grepping `events.jsonl`.
+
+---
+
+## Session Handoff Event Kind
+
+Long projects span sessions; v5.0/v5.0.1 used informal `SESSION-HANDOFF.md` prose authored by the closing agent. The next agent might or might not read it. v5.1 makes handoff a substrate event so the resuming agent has a structural anchor that survives session boundaries by replay.
+
+**Payload schema.**
+
+| Field | Type | Meaning |
+|---|---|---|
+| `project_id` | string | The active project at handoff. |
+| `closing_actor` | string | Closing agent identity (model name + session/turn count if known). |
+| `last_completed_task` | string \| null | `T-NNN` of the most recently `task.complete` task for this project. |
+| `next_pending_task` | string \| null | `T-NNN` `hw next-step` would select if run now. |
+| `active_artifact_state` | object | `{decisions_count, findings_count, anti_patterns_count, contradictions_open}`. `contradictions_open` is reported only for synthesis-schema projects; other schemas may emit `0` or omit. |
+| `open_operator_questions` | list[string] | Questions the closing agent did not resolve. The resuming agent MUST acknowledge each before its first state-changing event in the session. |
+| `recommended_first_action` | string | One concrete action the closing agent recommends the resuming agent take first. |
+| `context_compaction_summary` | string \| null | If the closing agent's context filled and compacted, a brief summary of what was compacted. `null` if no compaction occurred. |
+
+**Projection.** `projects/<id>/SESSION-HANDOFF.md` is overwritten on each `session.handoff` event. Handoffs are per-session; a new event entirely replaces the prior projection. The projection format follows `templates/session-handoff-template.md`. The hash sidecar tracks the file as usual.
+
+**Resume behavior.** A task template MAY declare `requires_handoff_acknowledge: true` in its frontmatter. When set, the executor MUST, before its first state-changing event:
+
+1. Read `projects/<id>/SESSION-HANDOFF.md` if present.
+2. For each entry in `open_operator_questions`, either resolve it (record the resolution in the task's working log and proceed) or surface it to the operator (record a `task.status → blocked` with `reason: handoff_open_question <question>`).
+
+The default for new task templates is unset (`false`); schemas that benefit from explicit handoff acknowledgement (long synthesis runs, multi-week projects) set it on the relevant T-* templates.
+
+**Why this is structural.** The projection isn't authoritative; the event is. If the resuming agent paraphrases the handoff incorrectly, replay reproduces the original handoff event and the divergence is visible. The acknowledgement requirement is enforced by the task template (frontmatter field), not by verbal request — Layer 1 inspects the requirement at task start and blocks if no acknowledgement appears in the task's events before the first state-changing event.
+
+---
+
 ## Relationship to Mechanisms
 
 | Mechanism | Substrate use |
@@ -569,5 +732,7 @@ The flag is locked at task authoring; an executor cannot opt into a lightweight 
 | `core/LOCK.md` | `project.activate`, `project.archive`, `backlog.*` events; `active_project.md` and `backlog.md` projections. |
 | `core/ATOMICITY.md` | `task.*`, `branch.*` events; `TASK-STATE.yaml`, branch result projections. |
 | `core/TYPED-ARTIFACTS.md` | `<kind>.add`, `<kind>.supersede`, `<kind>.promote`, `task.recite` events; artifact projections; citations. |
-| `core/VERIFICATION.md` | `verify.*`, `council.*` events; runs over the substrate, never bypasses it. |
+| `core/VERIFICATION.md` | `verify.*`, `council.*` events; council projections; runs over the substrate, never bypasses it. |
 | `core/PRECEDENCE.md` | Reads citations and substrate state to resolve rule conflicts; emits no events of its own. |
+| Friction logging | `friction.log`, `friction.log.prompt` events; `friction-log.md` projection. Spans mechanisms — any mechanism may surface a friction. |
+| Session continuity | `session.handoff` events; `SESSION-HANDOFF.md` projection. Read by Atomicity at task start when `requires_handoff_acknowledge: true`. |
