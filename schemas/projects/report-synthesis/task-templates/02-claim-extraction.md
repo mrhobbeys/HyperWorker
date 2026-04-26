@@ -11,10 +11,11 @@ consumes:
   - "[OR-001#<short-hash>]"
   - "[SRC-NNN#<short-hash>]"  # ONE source per branch — see Branching note below
 acceptance_criteria:
-  - "Every claim in the source is captured as a `claim` artifact OR explicitly noted as out-of-scope per OR-001.excluded_topics OR explicitly noted as discarded with reason (in completion report)."
-  - "Each claim cites its source by hash."
-  - "Each claim has claim_type and source_confidence populated."
-  - "No claim invents content the source does not support."
+  - "Every substantive assertion in the source is captured as a `claim` artifact OR explicitly noted in the completion report as out-of-scope (per OR-001.excluded_topics, with the topic) OR discarded with reason. Chrome content (TOC, methodology preamble, acknowledgments) is exempt and need not appear in the report."
+  - "Each claim cites its source by hash (Layer 1 will reject any claim event without a valid [SRC-NNN#hash])."
+  - "Claim-type distribution is recorded in the completion report (count per claim_type) so the operator can spot-check that 'observation' is not being used as a catch-all bucket."
+  - "Source-confidence distribution is recorded in the completion report. If 100% of claims are tagged stated-by-source, the executor is asked whether the source genuinely contained no inferred or contested content (often a sign of skim-extraction)."
+  - "No claim contains content the source does not support. Spot-check: the executor cites verbatim source text for at least one randomly chosen claim per 25 claims extracted, in the completion report."
 ---
 
 # Task T-002: Claim Extraction (per-source)

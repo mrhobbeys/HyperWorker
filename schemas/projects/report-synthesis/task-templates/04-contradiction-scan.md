@@ -11,10 +11,10 @@ consumes:
   - "[OR-001#<short-hash>]"
   - "ALL live [CLM-NNN#hash] (earlier-round-corrected claims excluded)"
 acceptance_criteria:
-  - "Pairwise scan completed across all live claims."
-  - "Every detected contradiction is registered as a `contradiction` artifact with status: open."
-  - "Contradiction artifacts cite the conflicting claims by hash."
-  - "Contradiction nature is classified (factual / methodological / recommendation-conflict / scope-conflict / temporal)."
+  - "Topic-cluster pre-step ran (see §Pre-step). Completion report records the cluster groups (G1..GN) and their claim counts so the scan coverage is auditable."
+  - "Within-group pairwise comparisons completed for each cluster; cross-group tension comparisons completed for each cluster pair. Completion report records both pair counts so coverage is countable."
+  - "Suspected contradictions ruled compatible (false positives from the heuristic check) are listed in the completion report with the reason each is compatible — not silently dropped."
+  - "Contradiction artifacts cite the conflicting claims by hash (Layer 1 enforces) and the completion report records the nature distribution (count per nature value) so the operator can spot-check that 'factual' is not being used as catch-all."
 ---
 
 # Task T-004: Contradiction Scan
