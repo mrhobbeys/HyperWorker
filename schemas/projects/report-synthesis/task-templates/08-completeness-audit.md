@@ -16,7 +16,7 @@ acceptance_criteria:
   - "Every claim in the draft cites at least one source by hash."
   - "No internal contradictions in the draft."
   - "Council pass: source-fidelity-watcher, coverage-auditor, contradiction-finder, operator-goal-aligner, weighting-checker (if applicable)."
-  - "Audit report written to `audit-report-T008.md` in project root."
+  - "Audit report written to `tasks/08-completeness-audit-completion.md` per harness completion-report convention."
 ---
 
 # Task T-008: Completeness Audit
@@ -40,7 +40,7 @@ This task is read-only on the synthesis draft. It does not modify the draft. It 
 5. **Operator-goal alignment:** confirm draft serves OR-001.synthesis_purpose. Sample the deliverable from the audience perspective.
 6. **Weighting check:** if sources had multi-round chains, confirm the weighting rule was applied. Earlier-round content should appear as anti-patterns or be discarded; not as live claims.
 7. Council fires. Each member runs context-asymmetric (sees draft + structure + sources, not the implementer's reasoning).
-8. Write audit report to `audit-report-T008.md`. Structure:
+8. Write audit report to `tasks/08-completeness-audit-completion.md` (the harness completion-report path for this task — T-009 consumes by this exact path). Structure:
    - Coverage summary (table of source ID → status).
    - Citation integrity result.
    - Internal consistency result.
@@ -66,6 +66,6 @@ Not the operator review. The operator review happens in T-009. This task is stru
 - **Weighting:** PASS | FAIL | NA
 - **Council verdicts:** <one line each>
 - **Overall verdict:** PASS | FAIL
-- **Audit report path:** audit-report-T008.md
+- **Audit report path:** tasks/08-completeness-audit-completion.md
 - **Failure scenarios documented (per critical risk):** 3
 - **SCAN markers answered:** <count>
