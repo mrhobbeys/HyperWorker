@@ -7,6 +7,7 @@ risk_level: standard
 required_tools: [file_read, file_write]
 delivery_mode: constrained
 depends_on: [T-002]
+lightweight_completion: true
 consumes:
   - "[OR-001#<short-hash>]"
   - "ALL [SRC-NNN#hash] with supersedes/superseded_by relationships"
