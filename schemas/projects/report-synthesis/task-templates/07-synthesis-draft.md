@@ -52,6 +52,19 @@ Fill the structure with cited content. This is where claims, decisions, findings
 
 **Anti-patterns visible.** Where the synthesis takes a different direction than an earlier-round AP, cite the AP and briefly note the supersession. This is the round-aware discipline making itself visible.
 
+## Prose Style
+
+The default voice for synthesis output is **dense analytical**:
+
+- Every assertion is citation-backed. No assertion is allowed to float without a `[KIND-NNN#hash]` reference.
+- No transitional filler ("It is important to note that…", "As we have seen…", "In conclusion…"). Every sentence should carry information; transitions should emerge from the content's own structure.
+- No executive-summary hedging ("Generally", "Typically", "In most cases" — when the cited source is specific, the synthesis is specific).
+- Match operator-declared voice from OR-001 if present. If OR-001 declares a voice anchor (e.g., "match the brand baseline tone of [F-NNN]"), apply it; if not, use the dense-analytical default.
+- Citation density is at the claim level, not the paragraph level. A paragraph with three claims has three citations, not one. (Layer 1 enforces existence of citations; this rule enforces *placement*.)
+- Sentences directly summarize specific source content; they do not paraphrase across multiple sources without explicit signaling. If a sentence draws from sources A and B, cite both at the sentence's end.
+
+If the operator has declared a non-default voice (e.g., "executive-brief" output_format may want short paragraphs and bullet-summaries), follow it; the dense-analytical default applies when no override exists. Tier 4 STYLE in `00-REFERENCE-rules.md` is the source of truth for voice; the structure decision (T-006) should reference Tier 4 if it overrides the default.
+
 ## Completion Report (filled by executor)
 
 - **Acceptance criteria:** <X/Y pass>

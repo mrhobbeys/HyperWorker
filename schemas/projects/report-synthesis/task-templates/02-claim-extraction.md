@@ -50,6 +50,29 @@ For projects with many sources, this task is a strong subagent fit. The substrat
 
 **Loose paraphrase is failure.** If a source says "users in our sample reported X happening N% of the time," the claim should preserve N and the sample qualifier. "Users often experience X" is too loose.
 
+## Granularity guidance
+
+A claim is one discrete testable assertion. Two heuristics determine when to split a source statement into multiple claims and when to keep it as one:
+
+**Split if** the source statement combines multiple independently verifiable assertions joined by `and`, `but`, semicolons, or parallel clauses. Each becomes its own claim.
+
+> Source: "The TAM is 150K-200K and saturation in our segment is 2 out of 5."
+> → CLM-A: "TAM is 150K-200K" (claim_type: statistic)
+> → CLM-B: "Saturation in segment is 2/5" (claim_type: observation)
+
+**Keep as one if** the source statement is a single assertion with internal qualifiers that scope or condition it. Qualifiers don't multiply claims.
+
+> Source: "The target buyer is the practice manager at behavioral-health groups of 5 to 25 clinicians."
+> → CLM-X: "Target buyer is practice-manager at BH groups, 5-25 clinicians" (claim_type: definition)
+
+The qualifiers ("at BH groups", "5 to 25 clinicians") scope the assertion; they are not separate claims.
+
+**Compound recommendations** typically split. "We recommend doing A, then B, then C" is three claims (or a single claim with sub-steps if the steps are inseparable from the recommendation's logic — judgment call; default to splitting).
+
+**Numeric assertions** stay together with their qualifier. "Sample N=432, response rate 67%" is one claim, not two — the response rate is meaningless without the sample size.
+
+The granularity target is 10-20 claims per substantive source page. Density much lower suggests skim-extraction; density much higher suggests over-splitting (the synthesis later has to recombine). Both are flagged in the completion report's claim-distribution check.
+
 ## Completion Report (filled by executor)
 
 - **Acceptance criteria:** <X/Y pass>

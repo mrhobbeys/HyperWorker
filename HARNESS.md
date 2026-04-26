@@ -149,6 +149,21 @@ If unsure, check `core/SUBSTRATE.md` §Boundary Rule.
 
 ---
 
+## Friction Logs
+
+Operators and agents may keep a friction log capturing what was unclear, what required training-derived gap-filling, what felt ceremonial, and what worked well. Friction logs are working artifacts (not event-sourced); they feed the next harness patch cycle.
+
+| Default location | Path | Use |
+|---|---|---|
+| Workspace | `bootstrap-friction-log.md` at workspace root | One log per workspace covering bootstrap and cross-project friction. The default. |
+| Per-project | `projects/<id>/friction-log.md` | Per-project log when friction is project-scoped (e.g., a long synthesis spanning multiple sessions). |
+
+Use the workspace-root log unless the project explicitly opts into per-project scoping. Friction logs are file-canonical (Mutable Surface), versioned via git when available; they are not regenerable from events. See `core/SUBSTRATE.md` §File Locations.
+
+The structure is open; recommended categories from prior runs: (A) harness unclear/incomplete, (B) agent drew on training to fill a gap, (C) steps that felt ceremonial, (D) operator confused or asked for clarification, (E) things that worked well.
+
+---
+
 ## Bootstrap Protocol
 
 When asked to build a harness for a goal, the agent:
@@ -159,6 +174,21 @@ When asked to build a harness for a goal, the agent:
 4. **Writes operating-reality.** Each schema-declared question maps to a field in `OR-001`. The agent runs `hw add operating-reality < draft.md` to append the event and render the projection.
 5. **Verification Checkpoint with council.** The schema's `council.yaml` declares a `project.activate` trigger. Council members run with context-asymmetric framing (see `core/VERIFICATION.md` §8.4). Each emits a `council.report`; convergence rule decides. Operator sees a single brief summary, not three free-form questions.
 6. **Executes.** Operator runs `hw next-step` or invokes the first task. The first task's `consumes:` list typically references `OR-001` only; downstream tasks consume artifacts produced by earlier ones.
+
+### Operator mid-flow directives
+
+If the operator issues an instruction during bootstrap (or mid-task) that does not fit the schema's `bootstrap_questions` — e.g., "use the browser when needed", "Example Corp IT and Example Corp are separate companies", "treat anything from the 2025 audit as primary" — capture it as a typed Decision artifact, not as loose conversation.
+
+The pattern:
+
+1. The agent recognizes a directive that affects project structure or scope.
+2. The agent drafts a Decision artifact body capturing the directive **verbatim** (or with explicit paraphrase markers — see Tier 1 verbatim quotation principle in `schemas/projects/<name>/rules-template.md`).
+3. `hw add decision < draft.md` with an appropriate `synthesis_role` or schema-specific role (typical values: `scope-decision`, `weighting-rule`, `inclusion-exclusion`).
+4. Subsequent tasks consume the new DEC by citation.
+
+Loose-prose directives that affect project structure are unverifiable: they don't appear in `consumes:` lists, can't be cited, and disappear when the conversation context turns over. Typed Decisions are citable, hash-verified, regenerable, and survive session boundaries. The cost is one event per directive — under 30 seconds — and well within the substrate's everyday workload.
+
+This applies during bootstrap (corrections to the first OR draft, web-research-policy directives, naming clarifications) and mid-execution (scope expansions, weight overrides, mid-flight constraint changes). The friction log entry A-12 motivates this convention.
 
 ---
 
