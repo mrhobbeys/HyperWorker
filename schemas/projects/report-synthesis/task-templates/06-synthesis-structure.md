@@ -11,10 +11,11 @@ consumes:
   - "[OR-001#<short-hash>]"
   - "ALL [DEC-NNN#hash] with synthesis_role: contradiction-resolution"
 acceptance_criteria:
-  - "A Decision artifact declares the synthesis output structure (sections, ordering, format) before drafting begins."
-  - "Decision references OR-001.output_format and shows how the structure realizes that format."
-  - "Decision lists which claims/decisions/findings each section will draw from (mapping)."
-  - "If output_format declared a specific shape (e.g., 'decision matrix with N rows'), the structure conforms."
+  - "Structure decision references OR-001.output_format verbatim and includes a one-sentence statement of how the chosen structure realizes that format (e.g., 'decision-matrix → N rows, one per pivot question')."
+  - "Each section in the structure declares which claims, decisions, findings, and anti-patterns it will draw from. Sections without declared content fail this criterion — 'we'll figure it out at drafting' is the failure mode."
+  - "Every live claim, decision, finding, and anti-pattern from Phase B/C is mapped to at least one section OR explicitly noted in the structure decision body as 'not used in synthesis: <reason>'. The mapping is auditable from the structure decision alone."
+  - "If output_format declared a specific shape (e.g., 'decision matrix with N rows', 'executive brief with exec summary + N key sections'), the structure's section count and arrangement match the declared shape; deviations are explained in the rationale."
+  - "Alternative structures considered (≥2) are listed in alternatives_considered with the reason each was rejected. A structure decision with one alternative or none is rejected as insufficiently considered for elevated risk."
 ---
 
 # Task T-006: Synthesis Structure Decision

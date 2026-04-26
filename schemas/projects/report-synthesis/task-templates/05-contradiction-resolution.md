@@ -11,10 +11,10 @@ consumes:
   - "[OR-001#<short-hash>]"
   - "ALL [CTR-NNN#hash] with status: open"
 acceptance_criteria:
-  - "Every open contradiction is resolved (resolved) OR explicitly deferred (deferred) with operator approval."
-  - "Each resolution is captured as a Decision artifact with synthesis_role: contradiction-resolution."
-  - "Each Decision cites the contradiction by hash, alternatives_considered enumerates each conflicting claim, rationale explains the resolution."
-  - "Deferred contradictions have an operator-approved reason in their note."
+  - "Every open contradiction has terminal status: resolved (with a Decision) OR deferred (with operator-approved reason). No open contradictions remain when the task completes."
+  - "For each Decision, alternatives_considered enumerates the original conflicting claims verbatim or with explicit paraphrase markers — not glossed. Loose paraphrase of the losing side is the failure mode (it erases the lost-decision signal); the completion report flags any decision whose alternatives_considered is shorter than 50% of the median for this task as a candidate for review."
+  - "Each Decision rationale cites OR-001.weighting_rule when the resolution depends on round/weight precedence, OR explicitly states 'weighting rule did not apply because <reason>' if not. Layer 1 enforces citation existence; this criterion enforces that the rule was actually consulted."
+  - "Deferred contradictions have an operator-approved reason recorded in the contradiction artifact's deferral note. Operator approval is captured as either an operator-actor task.status event or quoted in the completion report."
 ---
 
 # Task T-005: Contradiction Resolution
