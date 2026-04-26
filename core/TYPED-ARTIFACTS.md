@@ -147,6 +147,8 @@ tags: [foundation]
 
 Tasks consume `OR-001` when their plan could violate any of these constraints. The operator-reality-calibrator council member (see `core/VERIFICATION.md`) reads `OR-001` as primary input.
 
+**v5.1 optional fields.** OR-001 may declare `delegation_policy` and `model_selection_policy` to capture operator engagement and cost preferences once at bootstrap. Both are optional; omitted fields inherit harness defaults. See `templates/artifact-templates/operating-reality-template.md` for field semantics, and `core/ATOMICITY.md` for how `delegation_policy` is consulted at task dispatch (soft enforcement: the agent reads the field and decides; v5.1 does not block dispatch when the policy is violated). `model_selection_policy.prefer` resolves through the per-model profile rankings declared in `templates/models/*.yaml` and `templates/models/_ranking.yaml`.
+
 ---
 
 ## Schema Extensions

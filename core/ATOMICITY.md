@@ -98,6 +98,7 @@ This is the v5.0 form of "Do NOT Touch": positive scope by enumeration of `consu
 | `prescribed` | Planner authors content during planning; executor pastes it exactly. | Regulated, brand-critical, or legally sensitive content. |
 | `constrained` | Executor generates content within declared boundaries. | Most creative or technical work. |
 | `bounded-iteration` | Executor produces N candidates against a preview surface; operator selects or redirects; capped by max passes. | Visual / design / copy exploration where first-pass fidelity is impossible. |
+| `ab-variant` | Executor produces N differentiated variants in a single pass; each is its own artifact with its own hash. | Any case where multiple intentionally-differentiated outputs are the right answer (copy variants, design alternatives, prompt phrasings, deployment-strategy options). |
 
 `bounded-iteration` requires three additional fields:
 
@@ -109,6 +110,19 @@ max_passes: 3
 ```
 
 The agent STOPs on convergence or max-passes, whichever comes first. Iteration is bounded.
+
+`ab-variant` requires two additional fields:
+
+```yaml
+ab_variant_count: 3                # integer, range 2-5; default 3
+ab_variant_axis: "primary CTA framing"  # what dimension the variants differ on
+```
+
+The executor produces exactly `ab_variant_count` artifacts, each its own projection with its own hash. Each artifact's body identifies which variant it is (e.g., a `variant: A` frontmatter field or a `Variant A — <axis-position>` heading). Layer 1 citation rules apply per variant: the recitation projection cites the source artifacts each variant consumed, the schema validation runs on each variant independently. The completion report enumerates all N artifact IDs produced.
+
+`ab-variant` is for **intentional variation**, not **iteration toward a single winner**. Tasks that produce multiple drafts and then pick one are `bounded-iteration`. Tasks that produce multiple drafts that ship together (campaign A/B test, design alternatives presented to operator, deployment options for staged rollback) are `ab-variant`.
+
+An optional council role, `variant-comparison-watcher`, may be added to a schema's council when a task declares `ab-variant`. The role verifies that the variants meaningfully differ on the declared `ab_variant_axis` rather than being trivially paraphrased. See `core/VERIFICATION.md` §Council Role Library.
 
 ---
 
@@ -220,6 +234,21 @@ required_tools: [file_write, web_browse]
 3. Spawn a different agent with the required tools.
 
 The agent never silently degrades or attempts a tool not in its schema. The schema *is* the boundary; "did the agent comply" is not a question.
+
+### Delegation Policy (v5.1, optional OR field)
+
+When `OR-001.delegation_policy` is declared, the harness consults it before dispatch:
+
+| Field | Effect |
+|---|---|
+| `mode` | `step-by-step` — pause for confirmation between substantive moves; `run-to-completion` — proceed without pausing except on `pause_on` triggers; `hybrid` — confirm at phase boundaries only. |
+| `subagent_use` | `never` — execute every task on the parent agent; `when-helpful` — dispatch when the task fits a subagent profile cleanly; `aggressive` — dispatch any task whose `required_tools` are a clean subset of an available subagent. |
+| `pause_on` | List of triggers that force a pause regardless of `mode`. The harness emits a `task.status → blocked` with `reason: pause_on <trigger>` and waits for `resume_authority` to act. |
+| `resume_authority` | `operator-only` — only an operator-actor `task.status` event resumes; `agent-judgment` — the agent may resume itself after a brief pause; `both` — either suffices. |
+
+**Soft enforcement.** v5.1 ships `delegation_policy` as soft enforcement: the agent reads the field at dispatch time and is expected to comply. The harness does not block dispatch on violation. If the field is set and operator interventions still occur at the same rate as without it, the falsifier is met (see spec H-F5) and v5.1.x will revisit. Hard enforcement (e.g., refusing to dispatch a subagent when `subagent_use: never`) is deferred to v5.2 if needed.
+
+The active model profile may declare default delegation behaviors for fields the operator did not set; OR overrides profile defaults.
 
 ---
 

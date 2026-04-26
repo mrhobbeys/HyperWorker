@@ -5,7 +5,10 @@ schema: <project-schema>
 phase: 1
 risk_level: standard            # standard | elevated | critical (locked at authoring)
 required_tools: [file_write]    # see .hyperworker/agents/<agent>.yaml provides
-delivery_mode: constrained      # prescribed | constrained | bounded-iteration
+delivery_mode: constrained      # prescribed | constrained | bounded-iteration | ab-variant
+# ab_variant_count and ab_variant_axis are required iff delivery_mode is ab-variant.
+# ab_variant_count: 3                # integer, range 2-5; default 3
+# ab_variant_axis: "primary CTA framing"  # string; the dimension variants differ on
 depends_on: []
 # lightweight_completion: true       # optional — see SUBSTRATE.md §Lightweight Completion.
                                       # When true, completion report is a 3-line summary
@@ -23,6 +26,8 @@ acceptance_criteria:
   - "Zero Tier 1 violations from 00-REFERENCE-rules."
 # preview_surface, version_naming, convergence_criterion, max_passes:
 #   required iff delivery_mode is bounded-iteration
+# ab_variant_count, ab_variant_axis:
+#   required iff delivery_mode is ab-variant — see Atomicity §Delivery Modes
 ---
 
 # Task T-XXX: <Descriptive Title>

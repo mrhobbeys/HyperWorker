@@ -90,6 +90,60 @@ operating_reality_fields:
   - name: operator_profile
     type: string
     required: true
+  # v5.1 — both delegation_policy and model_selection_policy are optional. Omitted
+  # fields inherit harness defaults; set them to capture operator preferences once
+  # at bootstrap so they propagate across sessions. Backwards-compatible: a v5.0.1
+  # OR-001 with neither field validates unchanged under v5.1.
+  - name: delegation_policy
+    type: object
+    required: false
+    fields:
+      - name: mode
+        type: enum
+        values: [step-by-step, run-to-completion, hybrid]
+        required: true
+      - name: subagent_use
+        type: enum
+        values: [never, when-helpful, aggressive]
+        required: true
+      - name: pause_on
+        type: list[string]
+        required: true
+        # Allowed values (validated by schema): council-failures,
+        # layer1-failures-after-N-retries, operator-mid-flow-directives,
+        # phase-boundaries, critical-risk-task-completion. Empty list means
+        # the agent does not pause for any of these (run-to-completion posture).
+      - name: resume_authority
+        type: enum
+        values: [operator-only, agent-judgment, both]
+        required: true
+  - name: model_selection_policy
+    type: object
+    required: false
+    fields:
+      - name: prefer
+        type: enum
+        values: [cheapest-capable, fastest-capable, most-capable, manual-only]
+        required: true
+      - name: fallback_trigger
+        type: enum
+        values: [layer1-failure-after-N, layer2-failure, council-non-convergence, never]
+        required: true
+      - name: fallback_target
+        type: string|null
+        required: true
+      - name: per_task_overrides
+        type: list[object]
+        required: false
+        default: []
+        item_fields:
+          - name: task_kind
+            type: string
+            required: true
+          - name: prefer
+            type: enum
+            values: [cheapest-capable, fastest-capable, most-capable]
+            required: true
 
 body:
   required_sections:
@@ -109,3 +163,5 @@ render_order:
   - team
   - authority
   - operator_profile
+  - delegation_policy
+  - model_selection_policy

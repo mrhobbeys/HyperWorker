@@ -140,6 +140,22 @@ The harness selects the prompt by trigger event:
 
 If a role declares only the legacy `prompt_template:`, the harness falls back to it for all triggers (backwards-compatible). Schemas adopting trigger-aware prompts should set both keys; falling through `on_activate → prompt_template` is allowed but produces the bootstrap-time-vs-output-time mismatch this pattern was added to fix (see report-synthesis council.yaml `operator-goal-aligner`).
 
+### Council Role Library
+
+Reusable roles a schema may include in its `council.yaml`. Each role is opt-in; schemas declare which roles fire and at which triggers.
+
+| Role | When to include | Verifies |
+|---|---|---|
+| `operator-reality-calibrator` | Most schemas. | Plans, decisions, and outputs respect OR-001 budget, timeline, team, authority. |
+| `scope-guard` | Schemas where scope creep is a known risk. | Outputs do not introduce work outside PROJECT.md scope or the task's `consumes` list. |
+| `anti-pattern-watcher` | Most schemas. | Outputs do not reintroduce in-scope anti-patterns. |
+| `operator-goal-aligner` | Synthesis-style schemas. | Synthesis purpose / target audience match what is actually being produced. |
+| `variant-comparison-watcher` | Schemas with tasks declaring `delivery_mode: ab-variant`. Opt-in per task or per schema. | Variants produced under `ab-variant` differ meaningfully on the declared `ab_variant_axis` — pairwise diff exceeds a configurable threshold, no two variants are trivial paraphrases. Single-line PASS/FAIL: variants differ on `<axis>` per pairwise diff against threshold. |
+
+The `variant-comparison-watcher` reads the N variant artifacts produced by the task and computes, for each pair, the divergence on the declared axis (lexical diff, structural diff, or domain-specific comparator declared by the schema). PASS if divergence on every pair exceeds the configurable threshold; FAIL otherwise. Convergence rule applies as configured (typically `any-fail-blocks` for ab-variant — a single trivial pair invalidates the differentiated-output premise).
+
+The threshold is intentionally placeholder in v5.1; tuning happens empirically. Schemas may set a per-schema threshold; otherwise the harness uses a coarse default (Jaccard distance ≥ 0.4 between variant body tokens, after dropping the variant-identifier scaffolding).
+
 **Convergence rules** (declared per schema):
 
 - `all-agree-or-escalate` — every member must vote `pass`. One `fail` escalates to operator.
