@@ -1,0 +1,90 @@
+# schemas/projects/report-synthesis/council.yaml
+# Council composition. Verifier subagents run with context-asymmetric framing:
+# they see the artifact, the spec, and the consumes list — never the
+# implementer's reasoning prose or chain-of-thought.
+
+convergence_rule: all-agree-or-escalate
+
+members:
+  - role: source-fidelity-watcher
+    family_default: claude
+    prompt_template: |
+      You are reviewing this synthesis artifact for source-fidelity compliance (Tier 1).
+      For every claim or paragraph in the output:
+      - Confirm at least one [SRC-NNN#hash] or [CLM-NNN#hash] citation appears.
+      - Confirm cited claims actually appear in the source as the artifact paraphrases them.
+      - Flag any claim that lacks citation OR misrepresents its cited source.
+      Do not evaluate the synthesis's content quality, only its source fidelity.
+      Output a single line: PASS or FAIL: <comma-separated list of unfulfilled claims by paragraph index>.
+
+  - role: coverage-auditor
+    family_default: claude
+    prompt_template: |
+      You are reviewing whether every input source has been addressed.
+      For each [SRC-NNN] in the project's source inventory:
+      - Confirm it is incorporated (cited at least once in synthesis output), OR
+      - Contradicted-and-resolved (linked to a [CTR-NNN] resolved by [DEC-NNN]), OR
+      - Explicitly discarded with a reason in a Decision artifact.
+      A source with none of those statuses is a coverage gap.
+      Output a single line: PASS or FAIL: <list of orphan SRC-IDs>.
+
+  - role: contradiction-finder
+    family_default: claude
+    prompt_template: |
+      You are reviewing the synthesis output for internal contradictions.
+      Pairwise across sections of the deliverable:
+      - Find any two claims in the synthesis that disagree without an internal note.
+      - Find any claim in the synthesis that contradicts a [SRC-NNN] cited elsewhere.
+      Do not look for contradictions between sources; the contradiction-scan task
+      handles that. Look only at the synthesis output's internal consistency.
+      Output a single line: PASS or FAIL: <pairs that contradict>.
+
+  - role: operator-goal-aligner
+    family_default: claude
+    prompt_template: |
+      You are reviewing whether the synthesis serves the OR-001 declared purpose.
+      Read OR-001.synthesis_purpose, target_audience, output_format, and excluded_topics.
+      Sample the synthesis output and check:
+      - Does the output advance the declared purpose?
+      - Is anything in the output covering excluded_topics?
+      - Does the format match OR-001.output_format?
+      Output a single line: PASS or FAIL: <misalignments>.
+
+  - role: weighting-checker
+    family_default: claude
+    optional: true
+    prompt_template: |
+      You are reviewing whether the operator's weighting rule was applied
+      when sources have multiple rounds.
+      Read OR-001.weighting_rule. For sources with `supersedes` chains:
+      - Confirm the synthesis weights primary/final-round sources higher than
+        secondary/earlier-round sources.
+      - Confirm earlier-round content that was corrected appears as anti-pattern
+        artifacts, not as live claims.
+      Output a single line: PASS or FAIL: <weighting violations>.
+      This role is optional; included only when source artifacts include
+      `supersedes` relationships.
+
+triggers:
+  - event: project.activate
+    members: [operator-goal-aligner]
+    description: "Verification Checkpoint at synthesis bootstrap. Confirms OR-001 is sufficient before extraction begins."
+
+  - event: phase.complete
+    when: "phase == 'B'"
+    members: [coverage-auditor, weighting-checker]
+    description: "After claim extraction phase. Confirms every source was extracted from before reconciliation begins."
+
+  - event: phase.complete
+    when: "phase == 'C'"
+    members: [contradiction-finder, source-fidelity-watcher]
+    description: "After reconciliation phase. Confirms contradictions are surfaced and resolutions cite sources."
+
+  - event: task.complete
+    when: "task.risk_level == 'critical'"
+    members: [source-fidelity-watcher, coverage-auditor, contradiction-finder, operator-goal-aligner, weighting-checker]
+    description: "Per-task council on critical work (completeness-audit, final-synthesis)."
+
+  - event: project.archive
+    members: [source-fidelity-watcher, coverage-auditor, operator-goal-aligner]
+    description: "Pre-archive verification."

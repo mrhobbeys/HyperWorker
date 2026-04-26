@@ -1,0 +1,182 @@
+# schemas/projects/report-synthesis/artifact-extensions.yaml
+# Domain-specific artifact kinds and field extensions for synthesis projects.
+
+# New artifact kinds introduced by this schema.
+
+new_kinds:
+  - kind: source
+    description: |
+      Represents an input report registered for synthesis. One source artifact
+      per input file (or per logically distinct chunk of a file). Created during
+      00-source-inventory; immutable once registered. Hash-citable.
+    schema:
+      - name: id
+        type: string
+        pattern: "SRC-\\d{3,}"
+        required: true
+      - name: title
+        type: string
+        required: true
+      - name: file_path
+        type: string
+        required: true
+        description: "Path within the project, typically inputs/<filename>.md"
+      - name: source_type
+        type: enum
+        values: [audit, research, notes, draft, analysis, recommendation, calendar, blueprint, roadmap, interview, competitive-brief, other]
+        required: true
+      - name: round
+        type: enum
+        values: [initial, notes, draft, correction, final, single]
+        required: true
+        description: "Which round of work this source represents. 'single' if no rounds apply."
+      - name: supersedes
+        type: string|null
+        required: false
+        description: "[SRC-NNN#hash] of an earlier round this source corrects or supersedes."
+      - name: superseded_by
+        type: string|null
+        required: false
+        description: "[SRC-NNN#hash] of a later round, if any. Filled when a superseding source is registered."
+      - name: author
+        type: string|null
+        required: false
+        description: "Who or what produced the source (e.g., 'Spencer', 'Claude Deep Research', 'Gemini', 'auditor')."
+      - name: date
+        type: iso8601-date|null
+        required: false
+      - name: weight
+        type: enum
+        values: [primary, secondary, contextual]
+        required: true
+        default: secondary
+        description: "Operator-set weight applied during synthesis. Primary sources override secondary; contextual provides background only."
+      - name: hash
+        type: string
+        required: true
+        description: "Content hash of the source file at registration time. Citation freshness check uses this."
+      - name: tags
+        type: list[string]
+        required: false
+
+  - kind: claim
+    description: |
+      A discrete claim extracted from a source. One source produces many claims.
+      Claims are citable and become the building blocks of the synthesis.
+    schema:
+      - name: id
+        type: string
+        pattern: "CLM-\\d{3,}"
+        required: true
+      - name: from_source
+        type: string
+        required: true
+        description: "[SRC-NNN#hash] citing the source this claim was extracted from."
+      - name: text
+        type: string
+        required: true
+        description: "The claim itself, in the agent's words but tightly faithful to the source."
+      - name: claim_type
+        type: enum
+        values: [observation, statistic, recommendation, definition, hypothesis, methodology-note, finding-of-fact]
+        required: true
+      - name: source_confidence
+        type: enum
+        values: [stated-by-source, inferred-from-source, contested-in-source]
+        required: true
+        description: "Whether the source asserts this claim directly, the agent inferred it, or the source itself flags uncertainty."
+      - name: page_or_section
+        type: string|null
+        required: false
+        description: "Where in the source this claim appears. Helps with operator audit."
+      - name: tags
+        type: list[string]
+        required: false
+
+  - kind: contradiction
+    description: |
+      Surfaces when two or more claims disagree. Must be resolved via a Decision
+      artifact before either claim is used in the synthesis.
+    schema:
+      - name: id
+        type: string
+        pattern: "CTR-\\d{3,}"
+        required: true
+      - name: claims
+        type: list[string]
+        required: true
+        description: "List of [CLM-NNN#hash] citations that disagree."
+      - name: nature
+        type: enum
+        values: [factual, methodological, recommendation-conflict, scope-conflict, temporal]
+        required: true
+        description: "Why they disagree."
+      - name: resolved_by
+        type: string|null
+        required: false
+        description: "[DEC-NNN#hash] of the resolution decision. Null until resolved."
+      - name: status
+        type: enum
+        values: [open, resolved, deferred]
+        required: true
+        default: open
+
+# Extensions to default artifact kinds.
+
+decision:
+  additional_fields:
+    - name: synthesis_role
+      type: enum|null
+      values: [contradiction-resolution, output-structure, scope-decision, weighting-rule, inclusion-exclusion]
+      required: false
+      description: "What role this decision plays in the synthesis pipeline. Null if a general decision."
+    - name: resolves_contradiction
+      type: string|null
+      required: false
+      description: "[CTR-NNN#hash] if this decision resolves a contradiction artifact."
+
+finding:
+  additional_fields:
+    - name: from_source
+      type: string|null
+      required: false
+      description: "[SRC-NNN#hash] if this finding originated from a registered source."
+    - name: synthesis_role
+      type: enum|null
+      values: [evidence, methodology-note, edge-case, prior-art]
+      required: false
+
+anti-pattern:
+  additional_fields:
+    - name: from_source
+      type: string|null
+      required: false
+      description: "[SRC-NNN#hash] of the source where this wrong-direction was identified (typically an earlier round)."
+    - name: superseding_direction
+      type: string|null
+      required: false
+      description: "[CLM-NNN#hash] or [DEC-NNN#hash] indicating the correct direction that supersedes this anti-pattern."
+
+operating-reality:
+  additional_fields:
+    - name: synthesis_purpose
+      type: string
+      required: true
+      description: "One sentence: what is this synthesis FOR?"
+    - name: target_audience
+      type: string
+      required: true
+    - name: output_format
+      type: string
+      required: true
+      description: "Shape of the deliverable (structured-doc, decision-matrix, etc.)."
+    - name: weighting_rule
+      type: string
+      required: true
+      description: "How to weight sources with multiple rounds."
+    - name: excluded_topics
+      type: list[string]|null
+      required: false
+    - name: deliverable_path
+      type: string
+      required: true

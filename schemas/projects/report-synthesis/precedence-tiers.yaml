@@ -1,0 +1,75 @@
+# schemas/projects/report-synthesis/precedence-tiers.yaml
+# Tiered rules for synthesis projects. Tier ordinal wins on conflict.
+# Renaming a tier does not change ordinal precedence.
+
+tiers:
+  - tier: 1
+    name: SOURCE-FIDELITY
+    purpose: |
+      Every claim in the synthesis output MUST cite a source by content hash.
+      The synthesis cannot make claims that no source supports. The synthesis
+      cannot contradict a source without explicitly noting and resolving the
+      contradiction. Source confidence levels are honored.
+    examples:
+      - "Every paragraph in the synthesis output cites at least one [SRC-NNN#hash]."
+      - "When two sources disagree, surface as a contradiction artifact and resolve via Decision before incorporating either."
+      - "Do not aggregate claims from multiple sources into a single statement that none of them supports independently."
+      - "Provisional findings can be cited but the synthesis must mark them as provisional."
+
+  - tier: 2
+    name: OPERATOR-ALIGNMENT
+    purpose: |
+      The synthesis serves the declared OR-001 purpose. Out-of-scope content
+      is excluded even if sources cover it. Operator weighting rules
+      (e.g., latest-corrected-round-wins) are applied at extraction time.
+    examples:
+      - "If OR-001.synthesis_purpose is 'inform Q3 brand pivot,' do not include unrelated tactical content from sources."
+      - "Apply OR-001.weighting_rule when sources have multiple rounds; document weighting in Decision."
+      - "Excluded topics from OR-001 are filtered at claim extraction; do not surface them in synthesis output."
+
+  - tier: 3
+    name: SYNTHESIS-QUALITY
+    purpose: |
+      Output structure declared upfront and held. No internal contradictions
+      in the synthesis output. Coverage: every input source has been processed
+      (incorporated, contradicted, or explicitly discarded with reason).
+    examples:
+      - "Synthesis structure (DEC for output structure) is decided before drafting begins."
+      - "Coverage report at completion: every source artifact has status (incorporated | contradicted-and-resolved | discarded)."
+      - "No two synthesis sections make contradictory claims; if they do, that's a synthesis-internal contradiction that must be resolved."
+      - "Anti-patterns from earlier rounds are referenced where the synthesis takes a different direction; not silently dropped."
+
+  - tier: 4
+    name: STYLE
+    purpose: |
+      Voice consistency, formatting, and presentation standards for the
+      synthesis output.
+    examples:
+      - "Match operator's declared voice if a brand-voice anchor is in OR-001."
+      - "Use the same citation format throughout: [SRC-NNN#hash] for sources, [DEC-NNN#hash] for synthesis decisions, [F-NNN#hash] for findings."
+      - "Section headers follow the structure declared in DEC for output structure."
+
+scan_markers:
+  - tier: 1
+    marker: "@@SCAN_1_1"
+    question: "Does every claim in your last output cite at least one source by hash?"
+  - tier: 1
+    marker: "@@SCAN_1_2"
+    question: "Did you contradict any source without resolving via a Decision artifact?"
+  - tier: 2
+    marker: "@@SCAN_2_1"
+    question: "Is anything you wrote in the last step out of scope per OR-001?"
+  - tier: 2
+    marker: "@@SCAN_2_2"
+    question: "Did you apply OR-001.weighting_rule when handling multi-round sources?"
+  - tier: 3
+    marker: "@@SCAN_3_1"
+    question: "Has every source you processed been classified as incorporated, contradicted-and-resolved, or discarded?"
+  - tier: 3
+    marker: "@@SCAN_3_2"
+    question: "Are there contradictions between sections of your synthesis output you have not surfaced?"
+
+# Note: synthesis projects rarely have banned tokens at the schema level; the
+# operator may declare them in the project's 00-REFERENCE-rules.md if the
+# synthesis output is for an audience with voice constraints (e.g., regulated
+# industry, brand-controlled communication).

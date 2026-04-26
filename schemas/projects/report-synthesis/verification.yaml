@@ -1,0 +1,94 @@
+# schemas/projects/report-synthesis/verification.yaml
+# Risk → verification mapping. Synthesis-specific Layer 2 checks emphasize
+# citation integrity and source coverage.
+
+risk_levels:
+  standard:
+    layers: [1, 2]
+    layer2_checks:
+      - source_citation_completeness
+      - schema_validation
+    rationale: |
+      Source inventory, charter declaration, simple claim extraction from a
+      single source. Layer 1 substrate checks plus citation completeness.
+
+  elevated:
+    layers: [1, 2, 3]
+    council_size: 2
+    layer2_checks:
+      - source_citation_completeness
+      - schema_validation
+      - contradiction_surfacing
+      - operator_goal_drift_check
+    failure_scenarios_required: 2
+    rationale: |
+      Contradiction resolution, synthesis structure decisions, weighting
+      decisions. Council fires on completion. Two failure scenarios required:
+      one for "what if a key source is wrong," one for "what if operator
+      goal shifts mid-synthesis."
+
+  critical:
+    layers: [1, 2, 3]
+    council_size: 4
+    layer2_checks:
+      - source_citation_completeness
+      - schema_validation
+      - contradiction_surfacing
+      - operator_goal_drift_check
+      - coverage_audit
+      - synthesis_internal_consistency
+    failure_scenarios_required: 3
+    operator_review_required: true
+    rationale: |
+      Final synthesis output, completeness audit, deliverables that downstream
+      work will consume. Full council fires. Operator review required before
+      project archival.
+
+# Layer 2 check definitions.
+layer2_check_definitions:
+  source_citation_completeness:
+    description: |
+      Every output claim must include at least one [SRC-NNN#hash] or
+      [CLM-NNN#hash] citation. Substrate counts unfulfilled claims; >0 fails.
+
+  schema_validation:
+    description: |
+      All written artifacts validate against their declared schemas (default
+      kinds + extensions). Substrate-enforced; no agent judgment.
+
+  contradiction_surfacing:
+    description: |
+      Substrate scans claim artifacts pairwise for keyword and structural
+      conflicts. Heuristic, not exhaustive. Flags suspected contradictions
+      that are not yet registered as contradiction artifacts; agent must
+      either register or explicitly mark as non-conflicting.
+
+  operator_goal_drift_check:
+    description: |
+      Synthesis output is sampled and checked for alignment with OR-001
+      synthesis_purpose. Heuristic — operator review is the canonical check
+      at critical level.
+
+  coverage_audit:
+    description: |
+      Every registered source artifact has status: incorporated, contradicted,
+      or discarded-with-reason. Sources with status null fail the audit.
+
+  synthesis_internal_consistency:
+    description: |
+      Pairwise check across synthesis output sections for self-contradicting
+      claims. If two sections of the same synthesis make conflicting claims
+      with no internal note of the conflict, fails.
+
+# Default per-task risk classification (operator may override).
+task_default_risks:
+  source-inventory: standard
+  charter: standard
+  claim-extraction: standard
+  anti-pattern-capture: standard
+  contradiction-scan: elevated
+  contradiction-resolution: elevated
+  synthesis-structure: elevated
+  synthesis-draft: elevated
+  completeness-audit: critical
+  final-synthesis: critical

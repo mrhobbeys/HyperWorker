@@ -1,0 +1,59 @@
+# schemas/projects/report-synthesis/capability-gates.yaml
+# Tool requirements per task kind. Subagent delegation is gated by intersection
+# of agent.provides and task.required_tools. Synthesis projects are file-bound:
+# no browser, no external execution, no API calls.
+
+task_capabilities:
+  source-inventory:
+    required_tools: [file_read, file_write]
+    description: "Reads input folder, writes source artifact projections."
+
+  charter:
+    required_tools: [file_read, file_write]
+    description: "Writes operating-reality artifact based on operator declarations."
+
+  claim-extraction:
+    required_tools: [file_read, file_write]
+    description: "Reads one source, writes claim artifacts. One task per source typical; branch-fold for parallelism."
+    delegation_recommended: true
+    rationale: "Each source extraction is hermetic (one source, claim output). Strong subagent fit if subagent has file tools."
+
+  anti-pattern-capture:
+    required_tools: [file_read, file_write]
+    description: "Reads claims with supersedes-relationships across rounds, writes anti-pattern artifacts for wrong-turns."
+
+  contradiction-scan:
+    required_tools: [file_read, file_write]
+    description: "Reads all claims, writes contradiction artifacts where claims disagree."
+
+  contradiction-resolution:
+    required_tools: [file_read, file_write]
+    description: "Reads contradictions, writes Decision artifacts resolving each."
+
+  synthesis-structure:
+    required_tools: [file_read, file_write]
+    description: "Writes Decision artifact declaring output structure."
+
+  synthesis-draft:
+    required_tools: [file_read, file_write]
+    description: "Reads claims and decisions, writes the synthesis output."
+
+  completeness-audit:
+    required_tools: [file_read]
+    description: "Reads sources and synthesis output, reports coverage gaps. No writes — audit only."
+
+  final-synthesis:
+    required_tools: [file_read, file_write]
+    description: "Operator-reviewed final write to deliverable_path."
+
+# What this schema does NOT need.
+not_required:
+  - browser           # No web research during synthesis; sources are pre-collected.
+  - web_fetch         # Same.
+  - shell_exec        # No code execution needed.
+  - external_api      # No external systems.
+
+# Capability gap behavior:
+# If a delegation target's agent.provides lacks file_read or file_write, refuse
+# the delegation and emit capability_gap.md per substrate protocol. Operator
+# adjusts agent profile or runs the task in-line on the parent agent.

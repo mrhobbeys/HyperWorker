@@ -1,0 +1,83 @@
+# schemas/projects/report-synthesis/schema.yaml
+# Project schema metadata. Used by `hw bootstrap --schema report-synthesis`.
+
+schema_id: report-synthesis
+schema_version: 1.0
+harness_version: "5.0"
+description: |
+  Take a corpus of varied-but-related reports (audits, research notes, analyses,
+  competitive briefs, interviews) plus operator constraints/goals, and produce
+  a single source-of-truth synthesis with citation integrity. Every output claim
+  cites a source by hash; every input source is incorporated, contradicted, or
+  explicitly discarded with reason. Earlier rounds of corrected work become
+  anti-patterns rather than ignored noise.
+
+bootstrap_questions:
+  - id: project_name
+    prompt: "What is this synthesis called?"
+    type: string
+    required: true
+  - id: synthesis_purpose
+    prompt: "One sentence: what is this synthesis FOR? What decision or work will it inform?"
+    type: string
+    required: true
+  - id: target_audience
+    prompt: "Who reads the synthesis? (operator only / team / external stakeholder / mixed)"
+    type: string
+    required: true
+  - id: output_format
+    prompt: "What shape is the deliverable? (structured-doc / decision-matrix / executive-brief / strategic-foundation / other)"
+    type: string
+    required: true
+  - id: input_folder
+    prompt: "Where do the source reports live? (path relative to project root, e.g., 'inputs/')"
+    type: string
+    required: true
+  - id: weighting_rule
+    prompt: "How should sources be weighted? (default: 'latest-corrected-round-wins; earlier-rounds-feed-anti-patterns'). Override if needed."
+    type: string
+    required: false
+    default: "latest-corrected-round-wins; earlier-rounds-feed-anti-patterns"
+  - id: excluded_topics
+    prompt: "Anything explicitly out of scope for this synthesis? (list or null)"
+    type: list[string]|null
+    required: false
+  - id: confidence_floor
+    prompt: "Minimum confidence for output claims? (provisional accepts unverified findings; validated requires operator promotion)"
+    type: enum
+    values: [provisional, validated]
+    default: provisional
+  - id: deliverable_path
+    prompt: "Where does the final synthesis output go?"
+    type: string
+    required: true
+
+includes:
+  - precedence-tiers.yaml
+  - artifact-extensions.yaml
+  - capability-gates.yaml
+  - verification.yaml
+  - council.yaml
+  - project-template.md
+  - rules-template.md
+  - task-templates/
+  - README.md
+
+default_tasks:
+  description: |
+    Synthesis decomposes into roughly 10 tasks across 4 phases:
+    Phase A (Setup): inventory + charter
+    Phase B (Extraction): claim extraction + anti-pattern capture
+    Phase C (Reconciliation): contradiction scan + resolution
+    Phase D (Synthesis): structure + draft + audit + final
+  templates:
+    - "00-source-inventory.md"
+    - "01-synthesis-charter.md"
+    - "02-claim-extraction.md"
+    - "03-anti-pattern-capture.md"
+    - "04-contradiction-scan.md"
+    - "05-contradiction-resolution.md"
+    - "06-synthesis-structure.md"
+    - "07-synthesis-draft.md"
+    - "08-completeness-audit.md"
+    - "09-final-synthesis.md"
