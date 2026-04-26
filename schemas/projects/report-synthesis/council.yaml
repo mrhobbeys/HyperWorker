@@ -41,13 +41,44 @@ members:
 
   - role: operator-goal-aligner
     family_default: claude
-    prompt_template: |
-      You are reviewing whether the synthesis serves the OR-001 declared purpose.
-      Read OR-001.synthesis_purpose, target_audience, output_format, and excluded_topics.
-      Sample the synthesis output and check:
-      - Does the output advance the declared purpose?
+    # Trigger-aware prompts. operator-goal-aligner runs at two distinct points:
+    # (1) project.activate — bootstrap. No synthesis output exists yet; the role
+    #     evaluates OR field completeness and corpus-purpose alignment from
+    #     metadata only. The on_activate prompt is used at this trigger.
+    # (2) task.complete / phase.complete / project.archive — output exists; the
+    #     role evaluates whether the synthesis output serves the OR-declared
+    #     purpose. The on_output prompt is used at these triggers.
+    # If a single prompt_template is set instead of the trigger-aware pair, the
+    # harness falls back to it for all triggers (legacy behavior).
+    prompt_template_on_activate: |
+      You are reviewing OR-001 for sufficiency before any synthesis work begins.
+      No deliverable exists yet; do not look for one. Evaluate metadata only.
+      Read OR-001.synthesis_purpose, target_audience, output_format, excluded_topics,
+      input_folder, and weighting_rule. Read the file inventory of input_folder
+      (filenames + sizes only — do not open the contents).
+      Check:
+      - Is synthesis_purpose a single concrete sentence with a real decision-context,
+        not a vague summary intent? ("Inform Q3 brand pivot" passes; "Make sense of
+        the reports" fails.)
+      - Is target_audience specific (role + decision-context), not "internal stakeholders"?
+      - Does output_format declare a concrete shape consistent with the schema's enum?
+      - Does the input_folder file inventory plausibly contain the material needed to
+        serve synthesis_purpose? Flag obvious mismatches (e.g., purpose mentions
+        "competitive analysis" but the corpus is all internal audits) — do NOT certify
+        the corpus is sufficient (that needs content-read, not metadata-only).
+      - Are excluded_topics declared (either populated list or explicit []); not null?
+      Output a single line: PASS or FAIL: <misalignments>.
+
+    prompt_template_on_output: |
+      You are reviewing whether the synthesis output serves the OR-001 declared purpose.
+      Read OR-001.synthesis_purpose, target_audience, output_format, excluded_topics.
+      Sample the synthesis output (the draft, the structure decision, or the final
+      deliverable depending on trigger) and check:
+      - Does the output advance the declared purpose? Cite specific sections that
+        do or do not.
       - Is anything in the output covering excluded_topics?
-      - Does the format match OR-001.output_format?
+      - Does the structure match OR-001.output_format?
+      - Is the voice/tone appropriate for target_audience?
       Output a single line: PASS or FAIL: <misalignments>.
 
   - role: weighting-checker
