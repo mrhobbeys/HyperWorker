@@ -158,6 +158,23 @@ anti-pattern:
       description: "[CLM-NNN#hash] or [DEC-NNN#hash] indicating the correct direction that supersedes this anti-pattern."
 
 operating-reality:
+  # Base operating-reality fields (budget, timeline, team, authority, operator_profile)
+  # are not asked by report-synthesis bootstrap_questions. The synthesis schema does
+  # not need these to operate — purpose/audience/format/sources/scope/deliverable
+  # carry the constraint set. Override the base template's required: true to make
+  # them optional for synthesis projects. An operator may still populate them at
+  # bootstrap if they want them recorded; the schema does not require it.
+  field_overrides:
+    - name: budget
+      required: false
+    - name: timeline
+      required: false
+    - name: team
+      required: false
+    - name: authority
+      required: false
+    - name: operator_profile
+      required: false
   additional_fields:
     - name: synthesis_purpose
       type: string
@@ -167,9 +184,10 @@ operating-reality:
       type: string
       required: true
     - name: output_format
-      type: string
+      type: enum
+      values: [structured-doc, decision-matrix, executive-brief, strategic-foundation, other]
       required: true
-      description: "Shape of the deliverable (structured-doc, decision-matrix, etc.)."
+      description: "Shape of the deliverable. Mirrors schema.yaml bootstrap_questions.output_format."
     - name: weighting_rule
       type: string
       required: true
@@ -177,6 +195,16 @@ operating-reality:
     - name: excluded_topics
       type: list[string]|null
       required: false
+      description: "List of topics out of scope. Use [] for confirmed-empty (operator answered 'none'); null for not-asked."
+    - name: input_folder
+      type: string
+      required: true
+      description: "Path to the source corpus, relative to project root. Created at bootstrap if missing."
+    - name: confidence_floor
+      type: enum
+      values: [provisional, validated]
+      required: false
+      default: provisional
     - name: deliverable_path
       type: string
       required: true

@@ -27,7 +27,8 @@ bootstrap_questions:
     required: true
   - id: output_format
     prompt: "What shape is the deliverable? (structured-doc / decision-matrix / executive-brief / strategic-foundation / other)"
-    type: string
+    type: enum
+    values: [structured-doc, decision-matrix, executive-brief, strategic-foundation, other]
     required: true
   - id: input_folder
     prompt: "Where do the source reports live? (path relative to project root, e.g., 'inputs/')"
