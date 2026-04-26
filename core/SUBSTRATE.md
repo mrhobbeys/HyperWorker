@@ -69,6 +69,20 @@ projects/<id>/
 
 `events.jsonl` lives once, in `.hyperworker/`, at the harness instance root. Projections live alongside the project content they belong to. One event log can drive projections in multiple project subdirectories.
 
+### File Locations (explicit)
+
+The location convention is easy to misread when a project subdirectory feels like the more intuitive home for project-specific events. The substrate is workspace-scoped, not project-scoped.
+
+| File | Location | Notes |
+|---|---|---|
+| `events.jsonl` | `.hyperworker/events.jsonl` at **workspace root** | Never under `projects/<id>/`. One log per workspace; events carry a `project` field for filtering. |
+| `hashes.json` | `.hyperworker/hashes.json` at **workspace root** | Same scope as the event log. |
+| `config.yaml` | `.hyperworker/config.yaml` at **workspace root** | Active model profile + schema source. |
+| Per-project artifacts | `projects/<project-id>/decisions/`, `findings/`, etc. | Project-scoped projections. |
+| Friction logs (working artifact, not event-sourced) | `bootstrap-friction-log.md` at **workspace root** by default; `projects/<project-id>/friction-log.md` if explicitly project-scoped | See HARNESS.md §Friction Logs. |
+
+If an agent reads from `projects/<id>/.hyperworker/events.jsonl`, that path is wrong. The event log is one level up.
+
 ---
 
 ## Event Format
@@ -92,7 +106,42 @@ Every event is one JSON line. Order is significant: events MUST be appended, nev
 | `prev_hash` | string | `hash` of previous event in the chain. First event uses `sha256:0000…`. |
 | `hash` | string | `sha256:` of the canonical JSON serialization of `{id, ts, kind, actor, project, payload, prev_hash}`. |
 
-**Hash computation.** The `hash` field is the SHA-256 of the line's JSON object with `hash` itself omitted, keys sorted lexicographically, and no whitespace. Truncate to 12 hex characters when displaying short form (`a3f9c2b1e0f4`). Full hash is recorded in the event line.
+**Hash computation.** The `hash` field is the SHA-256 of the line's JSON object with `hash` itself omitted, keys sorted lexicographically, and no whitespace, serialized per the Canonical Serialization rule below. Truncate to 12 hex characters when displaying short form (`a3f9c2b1e0f4`). Full hash is recorded in the event line.
+
+---
+
+## Canonical Serialization for Hashing
+
+Every hash the harness computes — event hashes, projection hashes, citation short-hashes — uses the same canonical serialization. Two agents implementing the protocol independently MUST produce byte-identical hashes for the same input.
+
+**The canonical form (Python reference idiom):**
+
+```python
+import json, hashlib
+canonical = json.dumps(
+    obj,
+    sort_keys=True,
+    separators=(',', ':'),
+    ensure_ascii=False,
+)
+full_hash = hashlib.sha256(canonical.encode('utf-8')).hexdigest()
+short_hash = full_hash[:12]
+```
+
+**Each option is load-bearing:**
+
+| Option | Why |
+|---|---|
+| `sort_keys=True` | Two agents emitting the same fields in different insertion orders must produce the same bytes. |
+| `separators=(',', ':')` | Python's default separators include trailing whitespace (`', '`, `': '`). Whitespace changes the bytes; whitespace changes the hash. |
+| `ensure_ascii=False` | **Critical.** Python's `json.dumps` defaults to `ensure_ascii=True`, which escapes any non-ASCII character to `\uXXXX`. An agent writing `"voice": "résumé"` versus `"voice": "résumé"` produces divergent hashes for the same content. The first non-ASCII byte that lands in the log breaks chain integrity for every subsequent event if one agent escapes and another does not. UTF-8 source-of-truth, not ASCII-escaped JSON. |
+| UTF-8 encoding before hashing | The hash is computed over the UTF-8 byte sequence of the canonical string. |
+
+**Projection hashes.** A projection's hash is the SHA-256 of the projection file's bytes as written to disk (UTF-8, LF line endings). For citation purposes, the first 12 lowercase hex characters of the full hash are the short-hash recorded in `hashes.json` and used in `[KIND-NNN#hhhhhhhhhhhh]` citations.
+
+**Full hash retained.** `events.jsonl` records the full SHA-256 hex string in each event's `hash` and `prev_hash` fields. The 12-character truncation is for citation display only; the hash chain itself is verified against full hashes.
+
+Agents that re-implement the harness in non-Python environments must match this exact serialization. Use a JSON library that supports stable key ordering, ASCII-safe-off output, and minimal separators; if none is available, hand-roll the serializer. Do not skip this section.
 
 ---
 
@@ -219,18 +268,25 @@ A protocol is *complete* if a fresh agent can read the relevant `core/*.md` file
 
 ## Citation Format
 
-Every typed artifact is cited by `[<KIND>-<ID>#<short-hash>]` where short-hash is the first 12 hex characters of the artifact projection's SHA-256.
+Every typed artifact is cited by `[<KIND>-<NNN>#<hhhhhhhhhhhh>]` where:
+
+- `<KIND>` is the artifact's prefix (`DEC`, `F`, `AP`, `OR`, plus any schema-declared prefixes such as `SRC`, `CLM`, `CTR`).
+- `<NNN>` is the zero-padded numeric ID (minimum 3 digits, may grow as IDs exceed 999).
+- `<hhhhhhhhhhhh>` is the first **12 lowercase hex characters** of the SHA-256 of the artifact projection. Truncation length is fixed at 12; agents MUST NOT use a different length. The full SHA-256 is in `hashes.json`.
 
 | Citation | Resolves to |
 |---|---|
 | `[DEC-007#a3f9c2b1e0f4]` | Current `decisions/DEC-007.md` if its hash matches; otherwise stale. |
 | `[F-014#b8d4e1779a02]` | Current `findings/F-014.md`. |
-| `[AP-005#…]` | Anti-pattern. |
-| `[OR-001#…]` | Operating-reality. |
+| `[AP-005#c1d2e3f4a5b6]` | Anti-pattern. |
+| `[OR-001#d2e3f4a5b6c7]` | Operating-reality. |
+| `[SRC-003#…]`, `[CLM-042#…]`, `[CTR-001#…]` | Schema-declared kinds (e.g., report-synthesis). |
 
-A citation is **valid** when the cited file exists and its current hash matches the cited short-hash. A citation is **stale** when the file exists but the hash differs (the artifact was superseded or re-projected). A citation is **broken** when the file does not exist.
+A citation is **valid** when the cited file exists and its current short-hash matches the cited 12-hex string. A citation is **stale** when the file exists but the short-hash differs (the artifact was superseded or re-projected). A citation is **broken** when the file does not exist.
 
 Layer 1 verification (`core/VERIFICATION.md`) checks every citation in every event payload that lands in the log.
+
+Templates and protocols throughout this repo use this exact form. When a template shows `[OR-001#<short-hash>]`, the executor substitutes the current 12-hex short-hash from `hashes.json` at the moment the citation is written.
 
 ---
 
@@ -296,16 +352,57 @@ Mark a typed artifact `confidence: validated`.
 
 ### `hw verify`
 
-Replay the event log with hash-chaining and report integrity.
+Replay the event log with hash-chaining and report integrity. `hw verify` is a protocol; an agent executes it by reading and writing files. A reference Python implementation ships at `tools/hw-verify.py` — agents may reimplement for their environment, but the canonical algorithm and result format below are authoritative.
 
-**Steps.**
-1. Read `events.jsonl` line by line in order. For each event:
-   - Recompute `hash` from its content. If recomputed hash ≠ recorded hash, record tamper.
-   - If `prev_hash` ≠ previous line's `hash` (or `sha256:0000…` for the first line), record chain-break.
-2. For each typed-artifact projection on disk, recompute its SHA-256 and compare with `hashes.json`. If they differ, record drift.
-3. For each citation in any event payload (including artifact bodies), check valid / stale / broken.
-4. Report: `OK` (all checks pass) or a structured failure list with event IDs, projection paths, and citation references involved.
-5. `hw verify` does not repair. Repair is a separate agent operation: re-run the projection regeneration protocol for any drifted projection; investigate any tamper or chain-break before continuing.
+**Algorithm.**
+
+1. **Read events.** Open `.hyperworker/events.jsonl`. Read line by line in append order. For each line, parse as JSON.
+2. **Recompute event hash.** For each event:
+   - Build the canonical object: every field of the event *except* `hash`. Specifically: `{id, ts, kind, actor, project, payload, prev_hash}`.
+   - Serialize per the §Canonical Serialization rule (`json.dumps(obj, sort_keys=True, separators=(',',':'), ensure_ascii=False)`).
+   - Compute SHA-256 of the UTF-8-encoded serialization.
+   - Compare with the recorded `hash`. If they differ, record `tamper(EV-NNNN)`.
+3. **Verify chain integrity.** For each event after the first, check that its `prev_hash` equals the previous line's recorded `hash`. The first event's `prev_hash` MUST be the all-zeros sentinel (`sha256:0000…0000` or the equivalent 64-zero hex string). Mismatch records `chain-break(EV-NNNN)`.
+4. **Verify projection hashes.** For every entry in `.hyperworker/hashes.json`:
+   - Read the file at the projection path.
+   - Compute SHA-256 of its bytes; take the first 12 lowercase hex chars.
+   - Compare with the recorded short-hash. Mismatch records `drift(<projection-path>)`.
+   - Missing file (path in `hashes.json` but no file on disk) records `missing-projection(<path>)`.
+   - Conversely, scan `projects/*/decisions/`, `findings/`, `anti-patterns/`, `operating-reality/`, `<schema-kinds>/` for projection files not represented in `hashes.json`. Each records `untracked-projection(<path>)`.
+5. **Verify citations.** For each citation `[KIND-NNN#hhhhhhhhhhhh]` appearing in any event payload (artifact body, completion-report content, decision rationale, etc.):
+   - **Broken** if no projection file exists for `KIND-NNN`.
+   - **Stale** if the projection exists but its current short-hash differs from the cited one. (A stale citation may indicate the cited artifact was superseded; verify against the supersede chain before flagging as a defect.)
+   - **Valid** otherwise.
+6. **Emit result.** Structured report:
+
+```
+hw verify <workspace>:
+  events_scanned:        <N>
+  tamper:                <count> [<list of EV-IDs>]
+  chain_breaks:          <count> [<list of EV-IDs>]
+  projection_drift:      <count> [<list of paths>]
+  missing_projections:   <count> [<list of paths>]
+  untracked_projections: <count> [<list of paths>]
+  broken_citations:      <count> [<list of citations + event-IDs>]
+  stale_citations:       <count> [<list of citations + event-IDs>]
+  result:                PASS | FAIL
+```
+
+`PASS` requires zero entries in tamper, chain_breaks, projection_drift, missing_projections, broken_citations. Stale citations are reported but do not block PASS; a stale citation is information, not corruption (the supersede chain may explain it).
+
+`untracked_projections` is reported as a warning, not a FAIL — operators may have added local files; the next `hw project` will reconcile.
+
+**Incremental verification.**
+
+`hw verify --since=EV-NNNN` skips the chain re-walk for events before `EV-NNNN`. Steps:
+
+1. Read events.jsonl until reaching the line with `id == EV-NNNN`. Use that event's recorded `hash` as the starting `prev_hash` baseline. Trust the prefix.
+2. Run steps 2-3 from `EV-(NNNN+1)` onward.
+3. Run steps 4-5 over the **entire** projection set and **all** citations (incremental cannot skip these; a stale citation in an old event payload is a current defect).
+
+Use `--since` for routine post-task checks where the prior chain is known-good (typically the event ID emitted by the last successful `hw verify`).
+
+`hw verify` does not repair. Repair is a separate agent operation: re-run the projection regeneration protocol for any drifted projection (or run `hw project`); investigate any tamper or chain-break before continuing — do not "fix" a tamper by rewriting `hash` fields.
 
 ### `hw project`
 
@@ -323,10 +420,19 @@ Scaffold a project from a schema. See `core/LOCK.md` and §Bootstrap Protocol in
 
 **Steps.**
 1. Confirm no other project is currently active. If one is, refuse and require `hw park` or `hw wrap` first.
-2. Read `schemas/projects/<name>/`. Copy structural files into `projects/<project-id>/`: `project-template.md → PROJECT.md`, `rules-template.md → 00-REFERENCE-rules.md`, `precedence-tiers.yaml → config-tiers.yaml`, `task-templates/* → tasks/*` (renumbered).
-3. Append `project.activate` event.
-4. Ask the operator only the schema-declared questions (operating reality fields, project description, specific rules content). For each operating-reality answer, run `hw add operating-reality` to write `OR-001`.
-5. Trigger Verification Checkpoint with council. See `core/VERIFICATION.md` §Layer 3 and §8.4 Council Review.
+2. Read `schemas/projects/<name>/`. Copy structural files into `projects/<project-id>/`:
+   - `project-template.md → PROJECT.md`
+   - `rules-template.md → 00-REFERENCE-rules.md`
+   - `precedence-tiers.yaml → config-tiers.yaml`
+   - `task-templates/<filename>.md → tasks/<filename>.md` — **filenames copied verbatim**, frontmatter `id` fields preserved (e.g., `task-templates/00-source-inventory.md` becomes `tasks/00-source-inventory.md` with `id: T-000` intact). The earlier "renumbered" wording was misleading: nothing is renumbered. Filenames and IDs are stable across the copy. Schema-declared task IDs are the canonical handles tasks reference each other by.
+3. Create the operator-declared input/work folder if the schema declares one (e.g., report-synthesis declares `input_folder` in its bootstrap questions). If the folder already exists, leave its contents untouched. Bootstrap is responsible for the folder's existence; tasks downstream assume it exists.
+4. Append `project.activate` event.
+5. Ask the operator only the schema-declared questions (`schema.yaml` `bootstrap_questions`). For each operating-reality answer, run `hw add operating-reality` to write `OR-001`. If the schema's `bootstrap_questions` does not cover every base operating-reality field declared in `templates/artifact-templates/operating-reality-template.md`, the schema's `artifact-extensions.yaml` MUST mark those fields optional or override their defaults; otherwise the operator is asked the missing fields explicitly.
+6. Trigger Verification Checkpoint with council. See `core/VERIFICATION.md` §Layer 3 and §8.4 Council Review.
+
+**Mid-bootstrap corrections.** If the operator corrects an OR field after the first `operating-reality.add`, the correction is event-sourced as a supersede: `hw add operating-reality` for `OR-002` with `reverses: OR-001`. There is no in-place edit. Two-minute-old artifacts are valid supersede targets — the supersede chain captures the correction history with no special handling. See §Superseded Artifact Back-Link below for how the older projection is updated.
+
+**Mid-bootstrap structural directives.** If the operator issues an instruction that doesn't fit `bootstrap_questions` (e.g., "use the browser when needed", "Techsico IT and Techsico are separate companies"), capture it as a typed Decision artifact with an appropriate `synthesis_role` (or schema-equivalent), not as loose conversation. Loose-prose directives that affect project structure are unverifiable; typed Decisions are citable, hash-verified, and become consumed-input for downstream tasks. See HARNESS.md §Bootstrap Protocol for the canonical pattern.
 
 ### `hw schema save --from <project> --as <name>`
 
@@ -410,6 +516,49 @@ Three categories of file:
 | **Mutable Surface (file-canonical)** | `PROJECT.md`, `00-REFERENCE-rules.md`, `task.md` instructions, post-mortem prose | Authoritative as files. Versioned via git. Not event-sourced. |
 
 A file is in exactly one category. If unsure, refer to the table in §File Layout. Editing across the boundary (writing to a projection, attempting to append narrative to `events.jsonl`) is operator error; the harness will overwrite or reject.
+
+---
+
+## Superseded Artifact Back-Link
+
+When artifact `B` supersedes artifact `A` (i.e., a `<kind>.add` event creates `B` with `reverses: A`), the harness emits a `<kind>.supersede` event automatically (see §Event Kinds). The supersede event MUST trigger a re-render of artifact `A`'s projection so that `A`'s frontmatter carries `superseded_by: [B-NNN#hhhhhhhhhhhh]` referencing the superseding artifact's current short-hash.
+
+**Rendering rule.** The projection for `A` is regenerated using the standard protocol in `core/TYPED-ARTIFACTS.md` §Projection Rendering Protocol, with the additional step:
+
+- If any later event in the chain is a `<kind>.supersede` whose `payload.old_id == A`, set `superseded_by: [<new_id>#<short-hash-of-new-projection>]` in `A`'s frontmatter. Else `superseded_by: null`.
+
+This means a re-render of `A` happens twice in the typical flow: once when `A` is first added, and once when `B` (its superseder) is added. The hash of `A`'s projection changes on the second render — citations to the original `A#hash` become stale, which is the correct signal: anything still citing `A` should review whether it should now cite `B`.
+
+**Hash update propagation.** When `A`'s projection re-renders, `hashes.json` is updated for `A`'s path. Any cached `[A#oldhash]` citation in subsequent events becomes stale at Layer 1 verification — visible, recoverable.
+
+The supersede chain remains traversable forward (`A.superseded_by → B`) and backward (`B.reverses → A`).
+
+---
+
+## null vs `[]` for Empty-Set Fields
+
+Several artifact fields accept lists (`tags`, `excluded_topics`, `alternatives_considered`, etc.). The substrate distinguishes two semantically distinct empty states:
+
+| Value | Meaning |
+|---|---|
+| `[]` | Declared as empty. The operator (or agent) explicitly considered the field and confirmed there is nothing to list. |
+| `null` | Not declared, or not applicable. The field's content is unknown or the field does not apply to this artifact. |
+
+**Schema validation enforces the distinction.** A schema field declared `type: list[string]` (no `\|null`) requires `[]` as the empty form; `null` fails validation. A field declared `type: list[string]\|null` accepts both, and the value carries semantic weight: `excluded_topics: []` means "the operator confirmed nothing is out of scope," `excluded_topics: null` means "we did not ask."
+
+**Canonical serialization implication.** `[]` and `null` serialize to different JSON bytes, so they hash differently. An agent that defaults a missing-but-confirmed-empty field to `null` produces a different artifact hash than one that uses `[]`. When in doubt, prefer `[]` for confirmed-empty (the common case after asking the operator) and `null` for confirmed-not-applicable.
+
+When converting operator answers like "None", "no", or an empty operator response, the canonical form is `[]` (the operator answered the question; the answer was empty). `null` is reserved for fields the harness or operator did not address.
+
+---
+
+## Lightweight Completion (Optional Task Frontmatter)
+
+A task template may declare `lightweight_completion: true` in its frontmatter. When set, the task's completion report is a 3-line summary instead of the full template (acceptance criteria result, outputs produced, follow-up note). The `task.complete` event still emits with `completion_report_path`, the report file still lands in `tasks/<task-id>/`, but the body is a 3-bullet summary. Layer 2 still runs.
+
+Use for mechanical tasks where the event log itself captures the substantive state — anti-pattern extraction from supersede chains, declarative structure decisions, mechanical inventories. Do not use for elevated/critical risk tasks; the full completion report is required where the report carries non-obvious state (acceptance criteria for ambiguous criteria, failure scenarios, council outcomes).
+
+The flag is locked at task authoring; an executor cannot opt into a lightweight completion mid-task.
 
 ---
 
