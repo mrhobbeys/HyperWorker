@@ -32,7 +32,33 @@ anti-pattern:
       description: "If this anti-pattern is specific to a vendor's behavior, name the vendor."
 
 operating-reality:
+  # v5.1 field reconciliation. Client-onboarding always has authority (who signs
+  # off on data migrations and SLA changes) and team (cross-functional —
+  # vendor + client + sometimes a third-party integrator). contact_info is
+  # required because there are multiple parties (vendor + client). Budget is
+  # typically already in the SOW, so it is optional. operator_profile is often
+  # "vendor-onboarding-lead" or similar, but not load-bearing if the role is
+  # implied by the schema.
+  field_overrides:
+    - name: budget
+      required: false
+    - name: operator_profile
+      required: false
   additional_fields:
+    - name: contact_info
+      type: object
+      required: true
+      description: "Required: client onboarding involves multiple parties (vendor + client) and contact details must be on file."
+      fields:
+        - name: vendor_legal_name
+          type: string
+          required: true
+        - name: vendor_contact_email
+          type: string
+          required: true
+        - name: client_legal_name
+          type: string
+          required: true
     - name: client_compliance_scope
       type: list[string]
       required: true

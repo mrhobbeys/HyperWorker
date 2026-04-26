@@ -35,6 +35,17 @@ anti-pattern:
       description: "If captured during a real audit, the auditor's exact observation."
 
 operating-reality:
+  # v5.1 field reconciliation. Compliance-audit work always has timeline (audit
+  # deadline — Tier 1 enforces) and authority (the management assertion signer).
+  # operator_profile is required because internal-vs-external auditor changes
+  # what the audit produces (an internal audit produces remediation plans; an
+  # external audit produces a report for the audit firm). budget and team are
+  # often N/A inside a single audit-cycle scope.
+  field_overrides:
+    - name: budget
+      required: false
+    - name: team
+      required: false
   additional_fields:
     - name: framework
       type: string

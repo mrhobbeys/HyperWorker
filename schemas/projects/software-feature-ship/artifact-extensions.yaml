@@ -40,6 +40,18 @@ anti-pattern:
       required: false
 
 operating-reality:
+  # v5.1 field reconciliation. Software-feature-ship work always has timeline
+  # (release date) and authority (deploy approval). budget is often N/A inside
+  # a single release scope; team is often single-developer. operator_profile is
+  # often "ic-engineer" but not load-bearing. Mark optional what the schema
+  # does not actually require.
+  field_overrides:
+    - name: budget
+      required: false
+    - name: team
+      required: false
+    - name: operator_profile
+      required: false
   additional_fields:
     - name: ci_cd
       type: object

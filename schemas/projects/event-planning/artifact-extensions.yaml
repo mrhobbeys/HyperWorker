@@ -32,6 +32,18 @@ anti-pattern:
       required: false
 
 operating-reality:
+  # v5.1 field reconciliation. Event planning always has timeline (the event
+  # date — Tier 1 enforces this), team (vendor / staff coordination), and
+  # budget (event production is budget-bound). authority is typically the
+  # operator unless the operator coordinates a stakeholder organization.
+  # operator_profile is venue-bound or virtual-event-bound; if the format is
+  # virtual, the venue dimension does not apply, so operator_profile becomes
+  # less load-bearing — make it optional.
+  field_overrides:
+    - name: authority
+      required: false
+    - name: operator_profile
+      required: false
   additional_fields:
     - name: event_date
       type: iso8601-date
