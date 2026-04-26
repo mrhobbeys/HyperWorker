@@ -60,10 +60,17 @@ REQUIRED_PAYLOAD_FIELDS = {
     "friction.log": ("type", "description", "surfaced_by", "severity"),
     "friction.log.prompt": ("trigger", "signal_summary"),
     "session.handoff": ("project_id", "closing_actor", "recommended_first_action"),
-    "council.invoke": ("trigger", "fire_id"),
-    "council.report": ("fire_id", "member", "role", "convergence_vote"),
-    "council.converged": ("fire_id",),
-    "council.escalated": ("fire_id",),
+    # fire_id is recommended but not required; projection generator falls back to
+    # the matching council.invoke event.id when missing. v5.0.1 council events
+    # pre-date the field; relaxing to optional preserves backward-compat.
+    "council.invoke": ("trigger",),
+    # fire_id is recommended but not required; projection generator falls back to
+    # the matching council.invoke event.id when missing.
+    "council.report": ("member", "role", "convergence_vote"),
+    # fire_id is recommended but not required; projection generator falls back to
+    # the matching council.invoke event.id when missing.
+    "council.converged": (),
+    "council.escalated": (),
 }
 
 

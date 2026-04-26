@@ -48,18 +48,32 @@ operating-reality:
     - name: operator_profile
       required: false
   additional_fields:
+    # brand_voice_anchor accepts either a single string (v5.0.1 form) or a list
+    # of strings (v5.1 form) or null. The harness normalizes a string value to a
+    # single-element list internally before applying the multi-source composition
+    # rule below. Dual-form acceptance is a transition mechanism so v5.0.1
+    # marketing-campaign projects with a single-string anchor validate unchanged
+    # under v5.1; future major versions may tighten to list-only after sufficient
+    # adoption signal.
     - name: brand_voice_anchor
-      type: list[string]|null
+      type: string|list[string]|null
       required: false
       description: |
-        Voice anchors composed in operator-declared priority order. The first
+        Accepts a single string path/citation (v5.0.1 form) or a list (v5.1
+        form). The harness normalizes string values to a single-element list
+        internally. Operators may migrate to list form at their pace; both are
+        valid through v5.1.x.
+
+        Voice anchors compose in operator-declared priority order. The first
         entry dominates on conflict; later entries narrow or extend. Each entry
         is either a path to a brand voice document, a [F-NNN#hash] citation to
         a finding-encoded voice description, or a [DEC-NNN#hash] citing a
         voice decision. Use null for no anchors declared. The v5.0 type was
-        string|null; v5.1 widens to list to support multi-source compositions
-        (e.g., a competitor-tone analysis + an operator's voice doc + a brand
-        guide) that the FL-009 lead-magnet run identified as load-bearing.
+        string|null; v5.1 widens to support multi-source compositions (e.g., a
+        competitor-tone analysis + an operator's voice doc + a brand guide)
+        that the FL-009 lead-magnet run identified as load-bearing. A
+        single-string value behaves identically to a single-element list — no
+        composition is performed because there is nothing to compose.
     - name: contact_info
       type: object
       required: true

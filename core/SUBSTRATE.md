@@ -693,6 +693,8 @@ Both projections are regenerated on every council event. `hashes.json` tracks ea
 
 **Why both per-fire and aggregate.** The per-fire file is the one an operator opens when reviewing what a specific council found. The aggregate is the one an operator opens when answering "did council fire on this project at all, and where." The two together let the operator answer both questions without grepping `events.jsonl`.
 
+**Backward-compat fallback for `fire_id`.** v5.0.1 council events (`council.invoke`, `council.report`, `council.converged`, `council.escalated`) pre-date the `fire_id` payload field. The projection generator handles this case structurally: when grouping `council.report` events into a per-fire projection, the generator looks for `fire_id` in the payload first; if absent, it reverse-scans `events.jsonl` from the report event's position to find the most recent `council.invoke` event in the same `project` whose trigger window has not yet been closed by a `council.converged` or `council.escalated`, and uses that invoke event's `id` as the grouping key. The same fallback applies to the terminal `council.converged` / `council.escalated` events. v5.1+ events emit `fire_id` directly and skip the reverse scan; v5.0.1 events fall back. `hw verify` does not require `fire_id` on any council event for the same reason — the field is recommended for new events, not required for replay integrity.
+
 ---
 
 ## Session Handoff Event Kind

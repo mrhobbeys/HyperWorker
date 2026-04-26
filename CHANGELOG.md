@@ -53,6 +53,11 @@ Each primitive carries an explicit hypothesis with a falsifier (see HYPERWORKER-
 - **Hard enforcement of `delegation_policy`.** v5.1 ships soft enforcement; hard enforcement (e.g., harness blocks delegation when `subagent_use: never`) deferred to v5.2 if real use shows it is needed.
 - **Stuck-loop detection.** Observed in the v5.0.1 lead-magnet run (agent retried a broken React form-input save method for ~20 minutes before being told to try something else); not exactly an `ab-variant` problem (which is intentional variation). Out of v5.1 scope; flagged in HYPERWORKER-V5.1-SPEC §9 as v5.2 candidate primitive (`task.stuck-loop` event kind triggered by repetition threshold).
 
+### Backward-compat (pre-ship fixes)
+
+- **`fire_id` on council events is recommended, not required.** v5.0.1 council events pre-date the `fire_id` field. The v5.1 projection generator falls back to the matching `council.invoke` event's `id` when grouping reports without a `fire_id`. v5.0.1 projects validate cleanly under v5.1 `hw verify`. (Fixed pre-ship after V5.1-BUILD-REPORT.md §6.)
+- **`brand_voice_anchor` accepts both string and list during transition.** marketing-campaign's `brand_voice_anchor` field type was widened from `string|null` to `list[string]|null` in v5.1 to support multi-source voice anchors. To preserve backward-compat for v5.0.1 projects with a single-string anchor, v5.1 accepts both forms and normalizes string values to a single-element list internally. Operators may migrate to list form at their pace. The dual-form acceptance is a transition-period mechanism; future major versions may tighten to list-only after sufficient adoption signal. (Fixed pre-ship after V5.1-BUILD-REPORT.md §6.)
+
 ---
 
 ## v5.0.1 (2026-04-25) — Cleanup patch
