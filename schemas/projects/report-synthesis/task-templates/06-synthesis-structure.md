@@ -7,6 +7,7 @@ risk_level: elevated
 required_tools: [file_read, file_write]
 delivery_mode: constrained
 depends_on: [T-005]
+lightweight_completion: true
 consumes:
   - "[OR-001#<short-hash>]"
   - "ALL [DEC-NNN#hash] with synthesis_role: contradiction-resolution"

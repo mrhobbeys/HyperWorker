@@ -7,6 +7,11 @@ risk_level: standard            # standard | elevated | critical (locked at auth
 required_tools: [file_write]    # see .hyperworker/agents/<agent>.yaml provides
 delivery_mode: constrained      # prescribed | constrained | bounded-iteration
 depends_on: []
+# lightweight_completion: true       # optional — see SUBSTRATE.md §Lightweight Completion.
+                                      # When true, completion report is a 3-line summary
+                                      # (acceptance criteria result, outputs, follow-up).
+                                      # Use only for mechanical tasks (standard risk).
+                                      # Locked at authoring; cannot be opted into mid-task.
 consumes:
   - "[OR-001#<short-hash>]"     # operating-reality
   # - "[DEC-XXX#<short-hash>]"  # decision
@@ -54,3 +59,13 @@ acceptance_criteria:
 - **Outputs produced:** <paths>
 - **Discoveries (raw):** <items the executor surfaces; planner decides whether to write findings/anti-patterns>
 - **Recommended follow-up artifacts:** <"Write F-… capturing X" / "Write AP-… capturing Y" / "none">
+
+## Lightweight Completion (used iff frontmatter `lightweight_completion: true`)
+
+When `lightweight_completion: true` is set in frontmatter, replace the full completion report above with a 3-line summary:
+
+- **Acceptance criteria:** <X/Y pass>
+- **Outputs:** <paths>
+- **Follow-up:** <one-line note or "none">
+
+The `task.complete` event still emits with `completion_report_path`. Layer 2 still runs. The full template applies for elevated/critical risk tasks regardless; `lightweight_completion` is intended for standard-risk mechanical work (anti-pattern extraction from supersede chains, declarative structure decisions, mechanical inventories) where the event log carries the substantive state.
