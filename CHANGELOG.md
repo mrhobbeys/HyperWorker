@@ -1,5 +1,60 @@
 # Changelog — HyperWorker
 
+## v5.1 (2026-04-26) — Structural primitives from second empirical run
+
+A second empirical run (the cyber-insurance-audit lead-magnet on the marketing-campaign schema) plus carry-forward observations from the v5.0 brand-foundation-synthesis run produced a friction log of structural gaps that v5.0.1's documentation-and-templates-only patch cycle could not close. v5.1 adds the structural primitives those friction entries motivated: three new substrate event kinds, two new operating-reality fields, a new delivery mode, a new task in the synthesis schema, a new task in the marketing-campaign schema, and per-schema field reconciliation. v5.1 is **strictly additive over v5.0.1** — a v5.0.1 project running today runs identically under v5.1 unless it opts into the new primitives.
+
+Each primitive carries an explicit hypothesis with a falsifier (see HYPERWORKER-V5.1-SPEC §7); v5.1.x will retire whatever fails its falsifier in real use.
+
+### Substrate event kinds and projections
+
+- **`friction.log` event kind + auto-prompts.** `core/SUBSTRATE.md` §Friction Log Event Kind documents the payload schema (type, patch_id, description, surfaced_by, severity, suggested_target) and the projection at `friction-log.md` (workspace-scoped by default; `projects/<id>/friction-log.md` if `friction_log_scope: project`). Substrate-level `friction.log.prompt` events fire on observable signals — Layer 1 verification fail-3-on-same-check, any Layer 2 fail, training-fill markers in agent output, an operator mid-flow directive captured as a Decision, council non-convergence on a critical-risk task. The agent reads each prompt and decides whether to follow with an actual `friction.log` entry. Hypothesis H-F1; falsifier: friction logs in v5.1 runs still require post-hoc reconstruction. (Maps to FL self-referential.)
+- **`council.report` projection.** `core/SUBSTRATE.md` §Council Report Projection regenerates `projects/<id>/council/<fire_id>-<trigger>.md` per council fire (grouped by `fire_id` payload field on `council.invoke`/`council.report`/`council.converged`/`council.escalated`) plus an aggregate `projects/<id>/council/INDEX.md` listing fires chronologically. Operator can answer "did council fire on this task and what did it find" without grepping `events.jsonl`. Hypothesis H-F2; falsifier: operators still grep events.jsonl. (General improvement carried forward from v5.0.1 deferred list.)
+- **`session.handoff` event kind.** `core/SUBSTRATE.md` §Session Handoff Event Kind documents the payload (project_id, closing_actor, last_completed_task, next_pending_task, active_artifact_state, open_operator_questions, recommended_first_action, context_compaction_summary) and the projection at `projects/<id>/SESSION-HANDOFF.md` (overwritten on each handoff; not chained). Task templates may declare `requires_handoff_acknowledge: true` to enforce structural acknowledgement before the resuming session's first state-changing event. Hypothesis H-F3; falsifier: resuming agents ignore the projection or paraphrase it incorrectly. (Maps to v5.0.1 deferred D-6.)
+
+### Operating-reality extensions
+
+- **`delegation_policy` field.** Optional OR field captures operator engagement preferences once at bootstrap so they propagate across sessions: `mode` (step-by-step / run-to-completion / hybrid), `subagent_use` (never / when-helpful / aggressive), `pause_on` (council-failures, layer1-failures-after-N-retries, operator-mid-flow-directives, phase-boundaries, critical-risk-task-completion), `resume_authority`. Soft enforcement: the agent reads the field and decides; v5.1 does not block dispatch on violation. Hard enforcement deferred to v5.2 if needed. `core/ATOMICITY.md` §Delegation Policy documents how dispatch consults the field. Hypothesis H-F5; falsifier: operator interventions occur at the same rate with the field set as without. (Maps to v5.0.1 deferred D-4 + D-5.)
+- **`model_selection_policy` field.** Optional OR field declares cost/speed/capability preferences for subagent dispatch and council-member instantiation: `prefer` (cheapest-capable / fastest-capable / most-capable / manual-only), `fallback_trigger` (layer1-failure-after-N / layer2-failure / council-non-convergence / never), `fallback_target` (explicit profile_id), `per_task_overrides`. Per-model profiles in `templates/models/*.yaml` declare `relative_cost`, `relative_capability`, `relative_speed` (1-5 scale) so `cheapest-capable` resolves deterministically. Operators with non-default rosters override rankings in `templates/models/_ranking.yaml`. `core/ATOMICITY.md` §Model Selection Policy and `templates/models/README.md` §v5.1 — model_selection_policy resolution document the algorithm. Hypothesis H-F8; falsifier: operator sets `prefer: cheapest-capable` and the harness still routes most work to the largest model.
+
+### Delivery modes and council roles
+
+- **`ab-variant` delivery mode.** `templates/task-template.md` and `core/ATOMICITY.md` §Delivery Modes add `ab-variant` to the `delivery_mode` enum with conditional-required `ab_variant_count` (2-5, default 3) and `ab_variant_axis` fields. The executor produces N differentiated variants in one pass — each is its own artifact projection with its own hash; Layer 1 citation rules apply per variant. For intentional variation (campaign A/B test, design alternatives, deployment options); not for iteration toward a single winner (that's `bounded-iteration`). Hypothesis H-F4; falsifier: variants are trivially paraphrased without real differentiation on the declared axis.
+- **`variant-comparison-watcher` council role.** Opt-in role added to `core/VERIFICATION.md` §Council Role Library. When a task declares `delivery_mode: ab-variant`, schemas may include this role to verify variants meaningfully differ on the declared `ab_variant_axis` via pairwise diff against a configurable threshold. Threshold is intentionally placeholder in v5.1; tuning is empirical.
+
+### Synthesis schema additions
+
+- **T-001 (purpose-fit corpus scan).** New `schemas/projects/report-synthesis/task-templates/01-corpus-scan.md` (uses the previously-skipped T-001 slot). After T-000 registers every source, the agent reads section-level summaries (filenames + first 20 lines + section headers; NOT full content) and surfaces 2-3 plausible synthesis purposes anchored to the actual corpus signal. Operator confirms current `OR-001.synthesis_purpose` OR triggers a supersede with a refined purpose; the supersede event is captured before T-002 begins. `schema.yaml` `default_tasks.templates` updated to include the new task; T-002's `depends_on` updated from `[T-000]` to `[T-001]`. Hypothesis H-F6; falsifier: synthesis runs still require operator intervention to refuse premature OR locking. (Maps to v5.0.1 deferred A-10 + D-2.)
+
+### Per-schema patches
+
+- **marketing-campaign.** `bootstrap_questions` adds `contact_info` (CAN-SPAM physical address + company legal name + contact email) — the artifact-extensions already required `contact_info` on operating-reality but bootstrap did not ask for it (FL-005). `brand_voice_anchor` widens from `string|null` to `list[string]|null` to support multi-source voice composition (operator voice doc + competitor-tone analysis + brand guide); first-listed dominates on conflict (FL-009). New T-009 (`09-social-promotion.md`) ships LinkedIn post + image-carousel script + short-form video script consuming DEC-001 (offer) and DEC-002 (tone) — closes FL-007 (social promotion needed but not in the schema). Field overrides mark budget, team, operator_profile optional.
+- **software-feature-ship.** `field_overrides`: budget, team, operator_profile optional (timeline + authority required by domain).
+- **client-onboarding.** `field_overrides`: budget, operator_profile optional. New required `contact_info` object (vendor_legal_name + vendor_contact_email + client_legal_name) reflecting multi-party onboarding.
+- **event-planning.** `field_overrides`: authority, operator_profile optional (timeline/team/budget required by domain).
+- **compliance-audit.** `field_overrides`: budget, team optional (timeline/authority required; operator_profile required because internal-vs-external auditor changes deliverables).
+
+### Tooling
+
+- **`tools/hw-verify.py` updated for v5.1 event kinds.** New constants `KNOWN_EVENT_KINDS` (closed set including `friction.log`, `friction.log.prompt`, `session.handoff`, plus all v5.0/v5.0.1 kinds) and `REQUIRED_PAYLOAD_FIELDS` (per-kind structural payload checks). Result struct gains `unknown_event_kinds` (warning only) and `malformed_payloads` (blocking). v5.0.1 events.jsonl files validate unchanged.
+
+### Documentation
+
+- **HARNESS.md.** Title bumped to v5.1. §Friction Logs reframed: the projection is now event-sourced (regenerated from `friction.log` events) instead of a working artifact. File-structure block adds `council/`, `SESSION-HANDOFF.md`, `friction-log.md`, `templates/models/_ranking.yaml`, `templates/session-handoff-template.md`.
+- **`reference/FAILURE-MODES.md`.** Title bumped to v5.1. New §Hypothesis Falsification table for v5.1 hypotheses under empirical evaluation. New structural-limit entries: friction-log auto-prompt false-positive rate, delegation-policy ignored by agent, model-selection-policy ignored by dispatch, ab-variant trivial-paraphrase failure, session-handoff not consumed.
+
+### Version
+
+- `harness_version: "5.1"` across all six schema files and HARNESS.md title.
+
+### Not in v5.1 (deferred)
+
+- **`scope_presets`.** Operator pushback (likely-trap risk: pre-defined presets at schema level lock in patterns before empirical signal supports them) deferred. Operators continue to declare scope subsets conversationally at bootstrap, unchanged from v5.0.1.
+- **Hard enforcement of `delegation_policy`.** v5.1 ships soft enforcement; hard enforcement (e.g., harness blocks delegation when `subagent_use: never`) deferred to v5.2 if real use shows it is needed.
+- **Stuck-loop detection.** Observed in the v5.0.1 lead-magnet run (agent retried a broken React form-input save method for ~20 minutes before being told to try something else); not exactly an `ab-variant` problem (which is intentional variation). Out of v5.1 scope; flagged in HYPERWORKER-V5.1-SPEC §9 as v5.2 candidate primitive (`task.stuck-loop` event kind triggered by repetition threshold).
+
+---
+
 ## v5.0.1 (2026-04-25) — Cleanup patch
 
 Empirical use of v5.0 on a strategic-foundation synthesis (the brand-foundation-synthesis run, 3 sessions, 227 events, 14 input files, 1 final deliverable) produced a 37-entry friction log. v5.0.1 closes the documentation, template, and type gaps that surfaced; it is **strictly additive and clarifying** — no new mechanisms, no schema-level behavior changes, no new event kinds. A v5.0 project completed under v5.0 runs identically under v5.0.1.

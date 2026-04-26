@@ -1,14 +1,28 @@
-# Failure Modes — v5.0
+# Failure Modes — v5.1
 
-> Known limits and structural failure modes of v5.0. Distinct from per-project failures. v5.0 is a theory; some primitives will fail their hypotheses in real use. Document those here as evidence accumulates.
+> Known limits and structural failure modes of v5.0 / v5.0.1 / v5.1. Distinct from per-project failures. The harness is a theory; some primitives will fail their hypotheses in real use. Document those here as evidence accumulates.
 
 ---
 
 ## Hypothesis Falsification (Tracked Cases)
 
-The hypotheses in `core/*.md` §Hypothesis sections each name a falsifier. As v5.0 is run on real projects, observed falsifications accumulate here. v5.1 retires whatever has falsified.
+The hypotheses in `core/*.md` §Hypothesis sections and the v5.1-spec §7 each name a falsifier. As v5.x is run on real projects, observed falsifications accumulate here. v5.x.y retires whatever has falsified.
 
 (empty — populate as evidence is gathered)
+
+### v5.1 hypotheses under empirical evaluation
+
+The v5.1 spec adds seven hypotheses (H-F1 through H-F8, with H-F7 omitted from the spec) covering each new structural primitive. v5.1 ships with all primitives implemented; empirical evaluation begins on the first v5.1 run. Operators record observed falsifications here so v5.1.x can retire what fails.
+
+| ID | Primitive | Falsifier signal to watch |
+|---|---|---|
+| H-F1 | `friction.log` event kind + auto-prompts | v5.1 runs still need post-hoc reconstruction to surface friction; auto-prompts fired but agents rejected them as false-positives at high rates. |
+| H-F2 | `council.report` projection | Operators still grep `events.jsonl` to find council verdicts; per-fire and INDEX projections not consulted. |
+| H-F3 | `session.handoff` event kind | Resuming agents ignore `SESSION-HANDOFF.md` projection or paraphrase incorrectly; `requires_handoff_acknowledge: true` not enforced because tasks did not declare it. |
+| H-F4 | `ab-variant` delivery mode | Variants produced under `ab-variant` are trivially paraphrased without real differentiation on the declared axis; `variant-comparison-watcher` PASSes a paraphrase pair. |
+| H-F5 | `delegation_policy` OR field | Operator sets the field; agent demonstrably ignores it; intervention rate unchanged from no-field baseline. |
+| H-F6 | T-001 corpus-scan task (synthesis) | Synthesis runs still require operator intervention to refuse premature OR locking; T-001 surfaces purposes that match bootstrap framing rather than corpus signal. |
+| H-F8 | `model_selection_policy` OR field | Operator sets `prefer: cheapest-capable`; harness still routes most or all work to the largest model. |
 
 ---
 
@@ -54,6 +68,36 @@ This is a feature, not a failure: the alternative — silently degrading or atte
 If a council never converges (members consistently disagree), the harness escalates to operator review. If the operator is unavailable, the task remains `blocked` with `reason: council_escalated`. The harness does not auto-resolve.
 
 **Mitigation.** Schemas should declare convergence rules appropriate to the work: `all-agree-or-escalate` is conservative; `majority-or-escalate` accepts more disagreement before escalating.
+
+### Friction-log auto-prompt false-positive rate (v5.1)
+
+The `friction.log.prompt` heuristics (Layer 1 repeat fail, Layer 2 fail, training-fill markers, mid-flow directive Decision, council non-convergence on critical) fire on observable signals; the false-positive rate is unknown until v5.1 sees real use. A high false-positive rate means the agent rejects most prompts as spurious, which produces noise without value. A low false-positive rate means the heuristics are well-tuned but possibly miss real friction (false negatives are harder to measure).
+
+**Mitigation.** Operators record the prompt-to-actual-`friction.log` ratio per heuristic. The heuristic that produces the most rejected prompts is the candidate for revision in v5.1.x.
+
+### Delegation policy ignored by agent (v5.1)
+
+`delegation_policy` is declared on OR-001 and read at dispatch time, but enforcement is soft: the agent decides whether to comply. If observed agent behavior diverges from the declared policy at material rates, the field is not load-bearing. Hard enforcement (e.g., harness blocks subagent dispatch when `subagent_use: never`) is deferred to v5.2.
+
+**Mitigation.** Track whether operator interventions occur at the same rate with the field set as without. If yes, falsifier H-F5 is met and v5.1.x revisits.
+
+### Model selection policy ignored by dispatch (v5.1)
+
+`model_selection_policy.prefer: cheapest-capable` resolves through per-model profile rankings, but if the dispatch path does not actually consult the rankings (e.g., the agent self-routes to a more-capable model regardless), the policy is decorative. The chosen profile is recorded in dispatch events; observed routing should match the declared `prefer`.
+
+**Mitigation.** Track the chosen-profile distribution per dispatch event. Routing distribution that does not reflect the declared `prefer` indicates falsifier H-F8 is met.
+
+### ab-variant trivial-paraphrase failure (v5.1)
+
+`ab-variant` produces N differentiated artifacts in one pass. If the executor produces variants that are trivial paraphrases (e.g., three CTAs that differ only in word order on the same framing), the differentiated-output premise is unmet. The optional `variant-comparison-watcher` council role detects this with pairwise diff against a configurable threshold; the threshold is intentionally placeholder in v5.1 and tuning is empirical.
+
+**Mitigation.** Schemas with frequent `ab-variant` use should opt into `variant-comparison-watcher` and tune the threshold per their domain. PASSing variants that the operator subsequently judges trivially-similar is a tuning signal, not a structural failure.
+
+### Session handoff not consumed (v5.1)
+
+`session.handoff` produces a substrate event whose projection (`SESSION-HANDOFF.md`) is what the resuming agent should read. If the resuming agent ignores the projection or paraphrases it incorrectly, the structural anchor is not load-bearing — the v5.0/v5.0.1 informal-prose handoff is no better than the v5.1 event-based one. Tasks that benefit from explicit handoff acknowledgement should set `requires_handoff_acknowledge: true` in their frontmatter; the substrate then enforces acknowledgement before the first state-changing event in the resuming session.
+
+**Mitigation.** Long-project schemas should set `requires_handoff_acknowledge: true` on their entry tasks. If acknowledgement is set and resuming agents still mishandle handoffs, falsifier H-F3 is met.
 
 ---
 

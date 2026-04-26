@@ -3,7 +3,7 @@
 
 schema_id: client-onboarding
 schema_version: 1.0
-harness_version: "5.0.1"
+harness_version: "5.1"
 description: |
   Repeatable onboarding flow: kickoff → provisioning → data migration →
   configuration → training → handoff. The schema's value is in cross-client

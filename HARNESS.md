@@ -1,8 +1,8 @@
-# HyperWorker v5.0.1
+# HyperWorker v5.1
 
 > **Read this file first.** It is the entry point for the harness. An AI agent that reads only this file should learn what the harness is, where the parts are, and how to bootstrap a project.
 
-A project management harness for AI agents. v5.0 is a clean break from v4.1.1, not an iteration. The thesis is that frontier harnesses succeed by making agent compliance **structurally enforceable** rather than verbally requested.
+A project management harness for AI agents. v5.0 was a clean break from v4.1.1; v5.0.1 closed documentation/template gaps surfaced by a strategic-foundation synthesis run; v5.1 adds structural primitives (friction-log event kind, council-report projection, session-handoff event kind, ab-variant delivery mode, delegation-policy and model-selection-policy OR fields, synthesis T-001 corpus-scan task) surfaced by a second empirical run. The thesis is that frontier harnesses succeed by making agent compliance **structurally enforceable** rather than verbally requested.
 
 ---
 
@@ -89,7 +89,9 @@ templates/
     claude-sonnet-4-6.yaml
     claude-haiku-4-5.yaml
     github-copilot.yaml
+    _ranking.yaml                    # operator ranking override (v5.1, optional)
     README.md
+  session-handoff-template.md        # canonical SESSION-HANDOFF.md projection format
 schemas/
   artifacts/                         # default artifact schemas (decision, finding, anti-pattern, operating-reality)
   projects/                          # project schemas with bootstrap-ready scaffolds
@@ -127,6 +129,8 @@ projects/
     findings/                        # projections
     anti-patterns/                   # projections
     operating-reality/               # projections
+    council/                         # projections (v5.1) — per-fire markdown + INDEX.md
+    SESSION-HANDOFF.md               # projection (v5.1) of the latest session.handoff event
     tasks/<task-id>/
       task.md                        # canonical instructions
       consumed-inputs.md             # projection (recitation)
@@ -134,6 +138,7 @@ projects/
     done/                            # completed tasks + post-mortems
   archive/                           # archived projects
 backlog.md                           # projection
+friction-log.md                      # projection (v5.1) of friction.log events; workspace-scoped by default
 config.yaml                          # deployment-wide config
 ```
 
