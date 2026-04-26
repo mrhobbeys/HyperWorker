@@ -18,6 +18,11 @@ context_fill_thresholds:
 council_default_size: 2
 recitation_overlap_threshold: 0.72       # tighter — Sonnet's terse style means lower-overlap paraphrases are more often actually-wrong
 
+# v5.1 model_selection_policy ranking fields. See templates/models/_ranking.yaml.
+relative_cost: 2
+relative_capability: 3
+relative_speed: 4
+
 notes: |
   Sonnet 4.6 is a faster, more terse executor model. Its terseness changes
   recitation overlap statistics: a Sonnet paraphrase that comes out at 0.65

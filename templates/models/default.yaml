@@ -18,6 +18,16 @@ context_fill_thresholds:
 council_default_size: 2
 recitation_overlap_threshold: 0.70
 
+# v5.1 model_selection_policy ranking fields. The default profile sits in the
+# middle of every axis — it makes no claim about cost/capability/speed and so
+# resolves to "no preference" when consulted by `prefer: cheapest-capable` etc.
+# Operators using the default profile typically override these in
+# templates/models/_ranking.yaml, since the default profile is the
+# unknown-model fallback.
+relative_cost: 3
+relative_capability: 3
+relative_speed: 3
+
 notes: |
   This profile makes no claims about the operating model. It enables every
   attention-restoration primitive (recitation, SCAN, compression) at standard

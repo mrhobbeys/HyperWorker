@@ -250,6 +250,23 @@ When `OR-001.delegation_policy` is declared, the harness consults it before disp
 
 The active model profile may declare default delegation behaviors for fields the operator did not set; OR overrides profile defaults.
 
+### Model Selection Policy (v5.1, optional OR field)
+
+When `OR-001.model_selection_policy` is declared, the harness picks a model at every subagent dispatch (per `delegation_policy.subagent_use`) and at every council-member instantiation, by consulting profile rankings:
+
+| Field | Effect |
+|---|---|
+| `prefer` | `cheapest-capable` / `fastest-capable` / `most-capable` resolve through the per-profile rankings (`relative_cost`, `relative_capability`, `relative_speed` in `templates/models/<profile>.yaml`); `manual-only` prompts the operator. |
+| `fallback_trigger` | The substrate event that forces a re-dispatch. `layer1-failure-after-N` triggers when the same Layer 1 check fails N times on the same target (N from active model profile `retry_budget`); `layer2-failure` on any `verify.layer2.fail`; `council-non-convergence` on `council.escalated`; `never` disables fallback. |
+| `fallback_target` | Explicit `profile_id` to fall back to. May be a more-capable model than `prefer` would normally select; the operator declares the explicit target so fallback is deterministic. |
+| `per_task_overrides` | List of `{task_kind, prefer}` pairs. If the dispatched task's `kind` matches, the override's `prefer` replaces the top-level `prefer` for this dispatch. |
+
+Resolution algorithm and override semantics are documented in `templates/models/README.md` §v5.1 — model_selection_policy resolution. Operators with non-default rosters override the per-profile rankings in `templates/models/_ranking.yaml`.
+
+**Soft enforcement.** v5.1 records the chosen profile in the dispatch event but does not block if `prefer: cheapest-capable` is set and an agent self-routes to a more-capable model anyway. If observed rates indicate the policy is being ignored, the falsifier in spec H-F8 is met.
+
+**Pairing with delegation_policy.** Together, `delegation_policy` (whether to delegate, when to pause) and `model_selection_policy` (which model to use when delegating) capture engagement and cost preferences in one place at bootstrap, propagating across sessions without per-task re-prompting.
+
 ---
 
 ## Ratchet

@@ -18,6 +18,11 @@ context_fill_thresholds:
 council_default_size: 2
 recitation_overlap_threshold: 0.72
 
+# v5.1 model_selection_policy ranking fields. See templates/models/_ranking.yaml.
+relative_cost: 1                         # cheapest in the shipped Claude line
+relative_capability: 2
+relative_speed: 5                        # fastest
+
 notes: |
   Haiku 4.5 has a smaller usable context window than the Opus / Sonnet line.
   Aggressive `warn_at` and `compact_at` thresholds reduce the chance of

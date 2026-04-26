@@ -1,0 +1,60 @@
+# templates/models/_ranking.yaml
+# Operator override for the default model rankings shipped per-model in
+# templates/models/<profile_id>.yaml. Used by v5.1's `model_selection_policy`
+# resolution: when OR-001.model_selection_policy.prefer is `cheapest-capable`,
+# `fastest-capable`, or `most-capable`, the harness consults the rankings to
+# choose a model from the available roster.
+#
+# This file is OPTIONAL. If absent, the per-profile defaults in
+# templates/models/<profile_id>.yaml apply directly. If present, this file's
+# entries override the per-profile values for ranking purposes only — the
+# per-profile thresholds, council size, etc. are unaffected.
+#
+# Why override here. Operators with non-default model rosters (e.g., a private
+# deployment with custom pricing, a setup that pairs Claude with a non-Anthropic
+# model, a local model added to the roster) need to declare the relative cost
+# / capability / speed in the operator's own envelope, not the harness defaults.
+
+# Schema. Each entry is `<profile_id>: { relative_cost, relative_capability, relative_speed }`.
+# Each axis is 1-5 where higher = more of the named axis.
+#   relative_cost:        1 = cheapest, 5 = most expensive
+#   relative_capability:  1 = least capable, 5 = most capable
+#   relative_speed:       1 = slowest, 5 = fastest
+#
+# `cheapest-capable` resolves to: among models with `relative_capability >= task_floor`,
+#                                  pick the lowest `relative_cost`.
+# `fastest-capable`  resolves to: among models with `relative_capability >= task_floor`,
+#                                  pick the highest `relative_speed`.
+# `most-capable`     resolves to: highest `relative_capability` overall (cost ignored).
+# `manual-only`      bypasses the ranking entirely; the harness asks the operator.
+#
+# `task_floor` defaults to 3 (mid-capability). Schemas may override per task kind.
+
+# Example overrides — uncomment and edit to match the operator's own envelope.
+
+# rankings:
+#   claude-opus-4-7:
+#     relative_cost: 5
+#     relative_capability: 5
+#     relative_speed: 2
+#   claude-sonnet-4-6:
+#     relative_cost: 2
+#     relative_capability: 3
+#     relative_speed: 4
+#   claude-haiku-4-5:
+#     relative_cost: 1
+#     relative_capability: 2
+#     relative_speed: 5
+
+# Per-task-kind floor overrides. When a task's `kind` matches an entry here,
+# the named ranking floor applies for that task's dispatch. Default floor is 3.
+#
+# task_kind_floors:
+#   prescribed-content: 4          # legally sensitive content needs higher capability
+#   bounded-iteration:  3
+#   constrained:        3
+#   ab-variant:         3
+#   council-member:     4          # council reasoning benefits from higher-capability model
+
+rankings: {}
+task_kind_floors: {}

@@ -18,6 +18,13 @@ context_fill_thresholds:
 council_default_size: 2
 recitation_overlap_threshold: 0.72
 
+# v5.1 model_selection_policy ranking fields. Cross-family rankings are noisy;
+# operators using Copilot in mixed setups should override in
+# templates/models/_ranking.yaml to reflect their own pricing/usage envelope.
+relative_cost: 2
+relative_capability: 3
+relative_speed: 4
+
 notes: |
   Copilot CLI agent mode is a coding-specialist profile. It is well-suited to
   the `software-feature-ship` schema's `code-edit`, `test-write`, and

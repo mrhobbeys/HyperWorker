@@ -33,6 +33,9 @@ At project bootstrap, the harness copies the profile file into `.hyperworker/mod
 | `council_default_size` | Default council member count for this model. |
 | `recitation_overlap_threshold` | Jaccard threshold below which Layer 1 rejects a recitation. |
 | `notes` | Citation-backed notes about model-specific behaviors. |
+| `relative_cost` | 1-5 ranking axis (1=cheapest, 5=most-expensive) used by v5.1 model_selection_policy. |
+| `relative_capability` | 1-5 ranking axis (1=least-capable, 5=most-capable). |
+| `relative_speed` | 1-5 ranking axis (1=slowest, 5=fastest). |
 
 ## Override semantics
 
@@ -61,3 +64,22 @@ A field set at a higher level wins. Schema overrides exist so a compliance-audit
 | `claude-sonnet-4-6.yaml` | Anthropic Claude Sonnet 4.6. Faster; different verbosity profile. |
 | `claude-haiku-4-5.yaml` | Anthropic Claude Haiku 4.5. Smaller context; aggressive compaction defaults. |
 | `github-copilot.yaml` | GitHub Copilot CLI agent mode. Coding-specialist profile. |
+| `_ranking.yaml` | Operator override for the default cost/capability/speed rankings used by v5.1's `model_selection_policy`. Optional; absent means per-profile defaults apply. See the file itself for schema. |
+
+## v5.1 — model_selection_policy resolution
+
+When `OR-001.model_selection_policy.prefer` is set, the harness consults rankings at dispatch time:
+
+1. Read `relative_cost`, `relative_capability`, `relative_speed` from each profile in the active roster (i.e., the profiles in `.hyperworker/models/` that the operator has materialized).
+2. If `templates/models/_ranking.yaml` declares overrides for any profile, those override the per-profile defaults for ranking purposes.
+3. Resolve `prefer`:
+   - `cheapest-capable` — among profiles with `relative_capability >= task_floor`, choose the lowest `relative_cost`. Ties broken by highest `relative_capability`.
+   - `fastest-capable` — among profiles with `relative_capability >= task_floor`, choose the highest `relative_speed`. Ties broken by lowest `relative_cost`.
+   - `most-capable` — choose the highest `relative_capability` regardless of cost.
+   - `manual-only` — surface the choice to the operator at dispatch time; bypass ranking.
+4. If `OR-001.model_selection_policy.per_task_overrides` matches the dispatched task's kind, that override's `prefer` overrides the top-level `prefer` for this dispatch only.
+5. On `fallback_trigger` events (e.g., Layer 1 fails N times in a row), the harness re-dispatches to `fallback_target` (an explicit `profile_id`) regardless of `prefer`.
+
+`task_floor` defaults to `3` (mid-capability) and may be overridden in `_ranking.yaml` by task kind.
+
+Soft enforcement — the harness records the chosen profile in the dispatch event but does not block if an agent ignores the policy in self-dispatch. If `prefer: cheapest-capable` and the harness still routes most work to the largest model, the falsifier in spec H-F8 is met and v5.1.x revisits.

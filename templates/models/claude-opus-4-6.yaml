@@ -18,6 +18,12 @@ context_fill_thresholds:
 council_default_size: 2
 recitation_overlap_threshold: 0.70
 
+# v5.1 model_selection_policy ranking fields. See templates/models/_ranking.yaml
+# for override semantics.
+relative_cost: 4
+relative_capability: 4
+relative_speed: 3
+
 notes: |
   4.6 differs from 4.7 along three documented axes (per Anthropic
   release notes and 2026-04-23 postmortem):

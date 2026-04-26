@@ -18,6 +18,14 @@ context_fill_thresholds:
 council_default_size: 2
 recitation_overlap_threshold: 0.65       # slightly looser; verbose paraphrase may stem-overlap less
 
+# v5.1 model_selection_policy ranking fields. Used when OR-001.model_selection_policy
+# resolves prefer: cheapest-capable / fastest-capable / most-capable. Higher number =
+# more of the named axis. Operators with non-default rosters override in
+# templates/models/_ranking.yaml.
+relative_cost: 5                         # 1=cheapest, 5=most-expensive among shipped Claude profiles
+relative_capability: 5                   # 1=least-capable, 5=most-capable
+relative_speed: 2                        # 1=slowest, 5=fastest
+
 notes: |
   Anthropic's 2026-04-23 postmortem documented that 4.7 underperforms when
   given "be concise" / forced-verbosity-down directives in the system prompt.
