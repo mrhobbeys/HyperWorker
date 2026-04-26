@@ -1,5 +1,72 @@
 # Changelog — HyperWorker
 
+## v5.0.1 (2026-04-25) — Cleanup patch
+
+Empirical use of v5.0 on a strategic-foundation synthesis (the brand-foundation-synthesis run, 3 sessions, 227 events, 14 input files, 1 final deliverable) produced a 37-entry friction log. v5.0.1 closes the documentation, template, and type gaps that surfaced; it is **strictly additive and clarifying** — no new mechanisms, no schema-level behavior changes, no new event kinds. A v5.0 project completed under v5.0 runs identically under v5.0.1.
+
+Structural additions surfaced by the run (purpose-fit corpus scan, friction logging as substrate event kind, council-outcome projection visibility, operator delegation policy as OR field, context-aware session handoff as substrate event kind) are deferred to v5.1.
+
+### Documentation
+
+- **Hash serialization canonical spec.** `core/SUBSTRATE.md` §Canonical Serialization for Hashing now specifies `json.dumps(obj, sort_keys=True, separators=(',', ':'), ensure_ascii=False)` with explicit per-option rationale. The `ensure_ascii=False` choice is load-bearing — switching to Python's default `ensure_ascii=True` produces divergent hashes on any non-ASCII content and breaks chain integrity. (Friction B-1.)
+- **Citation format spec.** `core/SUBSTRATE.md` §Citation Format formalizes `[KIND-NNN#hhhhhhhhhhhh]` with the 12-lowercase-hex truncation rule explicit. Schema-declared kinds (`SRC`, `CLM`, `CTR`) are listed alongside the defaults. (Friction B-2.)
+- **events.jsonl path convention.** `core/SUBSTRATE.md` §File Locations adds an explicit table clarifying that `events.jsonl`, `hashes.json`, and `config.yaml` live at `.hyperworker/` under workspace root, never under `projects/<id>/`. (Friction A-15.)
+- **`hw verify` algorithm fully specified.** `core/SUBSTRATE.md` §`hw verify` replaces the prior brief description with the complete algorithm: event hash recompute → chain integrity → projection drift → citation valid/stale/broken → structured PASS/FAIL result. Adds `--since=EV-NNNN` flag spec for incremental verification. (Friction A-14, C-4.)
+- **Bootstrap clarifications.** `core/SUBSTRATE.md` §`hw bootstrap` clarifies that filenames are copied verbatim with frontmatter IDs preserved (the prior "renumbered" wording was misleading), specifies that operator-declared input folders are created at scaffold time if missing, documents the mid-bootstrap supersede pattern for OR corrections, and points at the operator-mid-flow-directive convention. (Friction A-2, A-3, A-6, A-12.)
+- **Superseded artifact back-link rule.** `core/SUBSTRATE.md` §Superseded Artifact Back-Link specifies that an artifact superseded by another gets `superseded_by: [B-NNN#hash]` written into its frontmatter on the next projection regeneration. Clarifies hash propagation through the supersede chain. (Friction A-9.)
+- **null vs `[]` semantics.** `core/SUBSTRATE.md` §null vs `[]` for Empty-Set Fields documents that `[]` means "declared empty" and `null` means "not declared / not applicable"; canonical serialization treats them as different bytes. (Friction A-8.)
+- **Friction-log location convention.** `HARNESS.md` §Friction Logs declares workspace-root as the default (`bootstrap-friction-log.md`), with per-project override at `projects/<id>/friction-log.md`. (Friction A-5.)
+- **Operator mid-flow directive pattern.** `HARNESS.md` §Operator mid-flow directives documents that mid-bootstrap or mid-task operator instructions outside `bootstrap_questions` are captured as typed Decision artifacts, not loose conversation. (Friction A-12.)
+- **Trigger-aware council prompts pattern.** `core/VERIFICATION.md` documents `prompt_template_on_activate` / `prompt_template_on_output` as the schema-level mechanism for giving a council member trigger-specific prompts. (Friction A-7, C-5.)
+
+### Templates
+
+- **T-001 (synthesis charter) merged into T-000 (source inventory).** Bootstrap already populates OR fields and runs the project.activate council, leaving T-001 with no substantive work. T-001 task template is deleted; its residual responsibilities (Tier 4 STYLE, banned-tokens table, canonical-facts table) fold into T-000 acceptance criteria. Numbering preserved (T-002 onward keep their IDs); T-002's `depends_on` updated from `[T-001]` to `[T-000]`. The T-001 slot is documented as intentionally skipped in `schema.yaml`. (Friction C-1.)
+- **T-009 rewrite (final-synthesis) removes dead references.** Eliminates references to `deliverable.finalize` event kind (does not exist), `hw wrap` protocol (does not exist), council "archive trigger" framing (the existing `project.archive` trigger is referenced correctly), and `audit-report-T008.md` filename (the actual file is `tasks/08-completeness-audit-completion.md` per harness convention). T-008 audit-report path updated correspondingly. (Friction A-16, A-17, A-18.)
+- **Tautological acceptance criteria replaced.** T-002, T-004, T-005, T-006 had criteria that are tautologically satisfied by doing the task at all (e.g., T-006's "Structure declared as Decision artifact" — the task IS that). Each is replaced with a quality check the executor can fail. (Friction C-3.)
+- **`lightweight_completion: true` flag** added to `templates/task-template.md`. When set, completion report is a 3-line summary instead of the full template (acceptance criteria result, outputs, follow-up). T-003 (anti-pattern capture) and T-006 (synthesis structure) marked lightweight. Documented in `core/SUBSTRATE.md` §Lightweight Completion. (Friction C-2.)
+- **T-000 explicit duplicate detection step.** Step 2 specifies SHA-256 hashing before registration so byte-identical files collapse to a single source artifact and the duplicate is flagged in the completion report. (Friction A-11.)
+- **T-002 granularity guidance.** New §Granularity guidance section codifies the split-vs-keep heuristic with examples. (Friction B-3.)
+- **T-004 topic-clustering pre-step.** New §Pre-step section formalizes the clustering optimization (8 groups for ~200 claims) the Session 2 agent invented. Mandatory for N≥50 claims. (Friction B-6.)
+- **T-007 prose style guidance.** New §Prose Style section codifies dense-analytical voice with claim-level citation density. (Friction B-7.)
+- **T-008 7-check methodology canonicalized.** §The 7-Check Methodology documents the seven checks (section completeness, citation integrity, source coverage, OR constraint compliance, anti-pattern consistency, internal consistency, decision coverage) the Session 3 agent invented. (Friction B-8.)
+- **Verbatim quotation principle (Tier 1).** `schemas/projects/report-synthesis/rules-template.md` Tier 1 adds the verbatim-quotation rule with `[paraphrase: ...]` markers required for any non-verbatim summary of operator intent or source content. New SCAN_1_3 marker. (Friction D-3.)
+
+### Reference implementation
+
+- **`tools/hw-verify.py`** ships as the canonical Python reference implementation of the `hw verify` algorithm. Standalone script: `python tools/hw-verify.py --workspace <path> [--since EV-NNNN]`. Exits 0 PASS / 1 FAIL with a structured report. Agents may reimplement for their environment but should match this algorithm. (Friction A-14.)
+
+### New templates
+
+- **`schemas/projects/report-synthesis/artifact-templates/source-template.md`** — schema for `source` artifact kind (was inferred ad-hoc in Session 1). (Friction B-4.)
+- **`schemas/projects/report-synthesis/artifact-templates/claim-template.md`** — schema for `claim` artifact kind. (Friction B-3.)
+- **`schemas/projects/report-synthesis/artifact-templates/contradiction-template.md`** — schema for `contradiction` artifact kind (was invented in Session 2). (Friction B-5.)
+- **`templates/session-handoff-template.md`** — canonical session-handoff format (`projects/<id>/SESSION-HANDOFF.md`, overwritten on each handoff). Marked explicitly as a working artifact, not event-sourced. (Friction A-13. Substrate-event-kind handoffs deferred to v5.1, friction D-6.)
+
+### Convention declarations
+
+- **`output_format` is now `type: enum`** in `schemas/projects/report-synthesis/schema.yaml` and the corresponding `operating-reality` extension, matching the values already enumerated in the bootstrap prompt (`structured-doc | decision-matrix | executive-brief | strategic-foundation | other`). The prior `type: string` declaration could not be schema-validated. (Friction A-4.)
+- **Bootstrap-question vs base-OR-field reconciliation.** `schemas/projects/report-synthesis/artifact-extensions.yaml` adds `field_overrides` marking the base operating-reality fields (`budget`, `timeline`, `team`, `authority`, `operator_profile`) as optional for synthesis projects. The synthesis schema doesn't ask for these and the constraint set it does ask for (purpose/audience/format/sources/scope/deliverable) is sufficient. (Friction A-1.)
+
+### Bug fixes
+
+- **T-008 audit-report path.** Was specified as `audit-report-T008.md` in project root; the actual harness convention writes completion reports to `tasks/<NN-name>-completion.md`. Updated to `tasks/08-completeness-audit-completion.md`. T-009 `consumes:` updated to match. (Friction A-18.)
+
+### Version
+
+- `harness_version: "5.0.1"` across all six schema files and HARNESS.md title.
+
+### Deferred to v5.1 (require new mechanisms or new event kinds)
+
+- Purpose-fit corpus scan as a structural step (friction A-10 + D-2)
+- Friction logging as a substrate event kind (friction self-referential)
+- Council outcome visibility as a projection (general improvement)
+- Operator delegation policy as an OR field (friction D-4 + D-5)
+- Context-aware session handoff as a substrate event kind (friction D-6)
+- Anti-pattern + contradiction artifact templates as global default templates (the report-synthesis-specific templates ship in v5.0.1; non-synthesis schemas wait)
+
+---
+
 ## v5.0 (2026-04-25) — Clean break from v4
 
 ### Philosophy

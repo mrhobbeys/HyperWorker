@@ -3,7 +3,7 @@
 
 schema_id: report-synthesis
 schema_version: 1.0
-harness_version: "5.0"
+harness_version: "5.0.1"
 description: |
   Take a corpus of varied-but-related reports (audits, research notes, analyses,
   competitive briefs, interviews) plus operator constraints/goals, and produce

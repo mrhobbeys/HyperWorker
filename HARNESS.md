@@ -1,4 +1,4 @@
-# HyperWorker v5.0
+# HyperWorker v5.0.1
 
 > **Read this file first.** It is the entry point for the harness. An AI agent that reads only this file should learn what the harness is, where the parts are, and how to bootstrap a project.
 
