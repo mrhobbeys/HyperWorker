@@ -35,11 +35,31 @@ anti-pattern:
       required: false
 
 operating-reality:
+  # v5.1 field reconciliation. Marketing-campaign work always has timeline (the
+  # campaign go-live), authority (who approves campaign assets for publish), and
+  # contact_info (CAN-SPAM). Budget is sometimes implicit in a parent program's
+  # SOW; team is often a single operator + reviewer pair. Mark budget, team,
+  # operator_profile optional for this schema.
+  field_overrides:
+    - name: budget
+      required: false
+    - name: team
+      required: false
+    - name: operator_profile
+      required: false
   additional_fields:
     - name: brand_voice_anchor
-      type: string|null
+      type: list[string]|null
       required: false
-      description: "Path to a brand voice document, or [F-XXX#hash] to a finding-encoded voice description."
+      description: |
+        Voice anchors composed in operator-declared priority order. The first
+        entry dominates on conflict; later entries narrow or extend. Each entry
+        is either a path to a brand voice document, a [F-NNN#hash] citation to
+        a finding-encoded voice description, or a [DEC-NNN#hash] citing a
+        voice decision. Use null for no anchors declared. The v5.0 type was
+        string|null; v5.1 widens to list to support multi-source compositions
+        (e.g., a competitor-tone analysis + an operator's voice doc + a brand
+        guide) that the FL-009 lead-magnet run identified as load-bearing.
     - name: contact_info
       type: object
       required: true

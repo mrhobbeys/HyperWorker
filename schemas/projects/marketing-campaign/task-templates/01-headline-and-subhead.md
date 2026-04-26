@@ -30,7 +30,7 @@ Produce one landing-page headline and one subhead that mirror `DEC-001`'s offer 
 1. Recite each consumed artifact in `consumed-inputs.md`. Confirm each paraphrase passes Layer 1 overlap.
 2. Answer every `@@SCAN_n_m:` marker in `00-REFERENCE-rules.compressed.md`.
 3. Generate three headline candidates that lead with the audience's pain (Tier 4 COPY-METHOD), each ≤ 12 words.
-4. Pick the one closest to the brand-voice anchor in `OR-001.brand_voice_anchor`. Write it under `## Headline`.
+4. Pick the one closest to the brand-voice anchors in `OR-001.brand_voice_anchor`. Write it under `## Headline`. **Multi-source voice composition** (v5.1): `brand_voice_anchor` is a list. Compose the anchors in operator-declared priority order — the first listed anchor dominates on conflict; later anchors narrow or extend the first without overriding it. If a later anchor and the first contradict (e.g., a brand guide says "formal" and a competitor-tone analysis says "casual"), follow the first and note the conflict in the discoveries section of the completion report. If `brand_voice_anchor` is null, default to the rules-template Tier 4 STYLE.
 5. Generate one subhead ≤ 25 words that names the offer outcome without claiming a specific revenue or earnings result.
 6. Run banned-token scan against the rules table; reject any candidate containing a banned token.
 

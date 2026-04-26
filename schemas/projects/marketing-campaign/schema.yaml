@@ -42,6 +42,28 @@ bootstrap_questions:
     type: bool
     required: true
     default: true
+  # v5.1 — contact_info is required by CAN-SPAM for any campaign that emails;
+  # the artifact-extensions already mark it required on operating-reality, so
+  # bootstrap must ask. Operators running non-email-only campaigns may answer
+  # with the company's general contact details; the schema does not gate by
+  # included_channels.
+  - id: contact_info
+    prompt: "CAN-SPAM contact info: physical mailing address, company legal name, contact email."
+    type: object
+    required: true
+    fields:
+      - id: physical_address
+        prompt: "Physical mailing address (street, city, state/region, postal code)."
+        type: string
+        required: true
+      - id: company_legal_name
+        prompt: "Legal name of the entity sending the campaign."
+        type: string
+        required: true
+      - id: email
+        prompt: "Contact email recipients can reply to."
+        type: string
+        required: true
 
 includes:
   - precedence-tiers.yaml
@@ -68,3 +90,4 @@ default_tasks:
     - "06-email-4-objections.md"
     - "07-email-5-cta.md"
     - "08-booking-page-and-confirmation.md"
+    - "09-social-promotion.md"
