@@ -221,6 +221,7 @@ The harness defines a closed set. Schema extensions must add kinds via the proje
 | Kind | Payload |
 |---|---|
 | `session.handoff` | `{project_id, closing_actor, last_completed_task, next_pending_task, active_artifact_state, open_operator_questions[], recommended_first_action, context_compaction_summary}` — see §Session Handoff Event Kind. One event per closing-session boundary; not chained. |
+| `scope.complete` | `{scope_items: [{id, name, terminal_state, reason}]}` — see §Scope Completeness. Emitted before `session.handoff`; Layer 1 cross-checks against PROJECT.md §Scope. |
 
 ---
 
@@ -724,6 +725,43 @@ Long projects span sessions; v5.0/v5.0.1 used informal `SESSION-HANDOFF.md` pros
 The default for new task templates is unset (`false`); schemas that benefit from explicit handoff acknowledgement (long synthesis runs, multi-week projects) set it on the relevant T-* templates.
 
 **Why this is structural.** The projection isn't authoritative; the event is. If the resuming agent paraphrases the handoff incorrectly, replay reproduces the original handoff event and the divergence is visible. The acknowledgement requirement is enforced by the task template (frontmatter field), not by verbal request — Layer 1 inspects the requirement at task start and blocks if no acknowledgement appears in the task's events before the first state-changing event.
+
+---
+
+## Scope Completeness
+
+v5.1 sessions could close with §Scope items silently un-actuated and un-classified — the closing agent finished the tasks it picked up, emitted `session.handoff`, and items declared in PROJECT.md §Scope but never tasked simply disappeared from the trail. v5.1.1 adds a structural check at handoff: a `scope.complete` event must record every §Scope item with an explicit terminal state.
+
+**Payload schema.**
+
+| Field | Type | Meaning |
+|---|---|---|
+| `scope_items` | list[object] | One entry per item declared in PROJECT.md §Scope (Included + Explicitly Excluded). |
+| `scope_items[].id` | string \| null | Task or scope-item ID if one was assigned (e.g., `T-027`). `null` for items declared by name only. |
+| `scope_items[].name` | string | Human-readable scope-item name. Required even when `id` is set, for cross-checking against PROJECT.md §Scope. |
+| `scope_items[].terminal_state` | enum | One of `complete`, `deferred`, `excluded-after-discovery`, `escalated`. |
+| `scope_items[].reason` | string \| null | Reason note. Required for any state other than `complete`; `null` is acceptable for `complete`. |
+
+**Allowed terminal states** are constrained per schema via `capability-gates.yaml` `scope_completeness.allowed_terminal_states`. v5.1.1 ships every schema accepting the full set `[complete, deferred, excluded-after-discovery, escalated]`. Future deploy-shaped schemas may tighten to `complete` only.
+
+| State | Meaning |
+|---|---|
+| `complete` | The item was actuated to its declared terminal state. |
+| `deferred` | In scope, intentionally not actuated this session. The reason captures what gates resumption (operator decision, downstream-task dependency, etc.). |
+| `excluded-after-discovery` | Probing the actual surface revealed the item is outside the project's mission. Distinct from §Explicitly Excluded items declared at bootstrap; `excluded-after-discovery` records mid-session learning. |
+| `escalated` | The closing actor could not classify the item without operator input. The resuming session's first action is operator reconciliation. |
+
+**Layer 1 enforcement.**
+
+The check runs at `session.handoff`. See `core/VERIFICATION.md` §Layer 1 for the row.
+
+1. Find the most recent `scope.complete` event in `events.jsonl` for this project. If `session.handoff` exists in the chain and no `scope.complete` precedes it, FAIL `scope_completeness_missing`.
+2. For each entry in `scope_items`, confirm `terminal_state` is in the schema's allowed set. If not, FAIL `scope_completeness_terminal_state_disallowed`.
+3. Cross-check: every PROJECT.md §Scope item must appear (by `id` or `name`) in the `scope_items` array. If a §Scope item is missing from the snapshot, FAIL `scope_completeness_unrepresented_item`.
+
+**Projection.** The most recent `scope.complete` regenerates `projects/<id>/SCOPE-COMPLETE.md` per `templates/artifact-templates/scope-complete.md`. The event itself remains the source of truth; the projection is the human-readable rendering. `hashes.json` tracks the projection.
+
+**Hypothesis (under empirical evaluation in v5.1.1+).** A scope-completeness check at session.handoff catches silent in-scope skips. Falsifier: a declared scope item resolves to no terminal state and verification PASSes.
 
 ---
 

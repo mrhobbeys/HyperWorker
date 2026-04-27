@@ -57,3 +57,14 @@ not_required:
 # If a delegation target's agent.provides lacks file_read or file_write, refuse
 # the delegation and emit capability_gap.md per substrate protocol. Operator
 # adjusts agent profile or runs the task in-line on the parent agent.
+
+# v5.1.1 — scope-completeness Layer 1 check.
+# At session.handoff, every PROJECT.md §Scope item must be represented in the
+# most recent scope.complete event with a terminal_state in the allowed set.
+# Synthesis projects accept the full set: a section may be deferred to a later
+# round, excluded-after-discovery once corpus probing reveals no source signal
+# supports it, or escalated when operator must decide. See
+# core/SUBSTRATE.md §Scope Completeness.
+scope_completeness:
+  required: true
+  allowed_terminal_states: [complete, deferred, excluded-after-discovery, escalated]

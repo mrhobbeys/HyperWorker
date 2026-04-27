@@ -52,6 +52,7 @@ A task moves up the pyramid only when triggered. Standard-risk routine work runs
 | 5 | Reference graph | No `consumes:` entry points at a non-existent artifact; no `depends_on:` points at a non-existent task. |
 | 6 | Recitation overlap | For every `task.recite` event, Jaccard overlap between paraphrase and source ≥ profile threshold. |
 | 7 | Hash chain | The event's `prev_hash` matches the previous event's `hash`. The event's recomputed hash matches its recorded hash. |
+| 8 | Scope completeness | At `session.handoff`, the most recent `scope.complete` event covers every PROJECT.md §Scope item with a `terminal_state` in the schema's `capability-gates.yaml` `scope_completeness.allowed_terminal_states`. Failure codes: `scope_completeness_missing`, `scope_completeness_terminal_state_disallowed`, `scope_completeness_unrepresented_item`. See `core/SUBSTRATE.md` §Scope Completeness. |
 
 **On failure.** A `verify.layer1.fail` event is appended *immediately after* the offending event. The harness then either:
 

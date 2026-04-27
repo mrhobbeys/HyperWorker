@@ -32,6 +32,10 @@ ARTIFACT_DIRS = ("decisions", "findings", "anti-patterns", "operating-reality",
 ZERO_HASH = "0" * 64
 ZERO_HASH_PREFIXED = "sha256:" + ZERO_HASH
 
+DEFAULT_ALLOWED_TERMINAL_STATES = (
+    "complete", "deferred", "excluded-after-discovery", "escalated",
+)
+
 # v5.1 event kinds. The validator confirms each event's `kind` is in the closed
 # set the harness recognizes. Unknown kinds are reported as untracked but do not
 # block PASS — schemas may extend the set legitimately (e.g., `claim.add`).
@@ -51,6 +55,7 @@ KNOWN_EVENT_KINDS = {
     "capability.gap",
     "friction.log", "friction.log.prompt",
     "session.handoff",
+    "scope.complete",
 }
 
 # Required payload fields per v5.1 event kind. None means no per-kind structural
@@ -60,6 +65,7 @@ REQUIRED_PAYLOAD_FIELDS = {
     "friction.log": ("type", "description", "surfaced_by", "severity"),
     "friction.log.prompt": ("trigger", "signal_summary"),
     "session.handoff": ("project_id", "closing_actor", "recommended_first_action"),
+    "scope.complete": ("scope_items",),
     # fire_id is recommended but not required; projection generator falls back to
     # the matching council.invoke event.id when missing. v5.0.1 council events
     # pre-date the field; relaxing to optional preserves backward-compat.
@@ -128,6 +134,196 @@ def collect_citations(payload) -> list:
     return found
 
 
+def parse_scope_items_from_project_md(project_md_path: Path) -> list:
+    """Parse PROJECT.md §Scope > ### Included bullets.
+
+    Only the Included subsection counts for scope-completeness coverage; items
+    listed under "### Explicitly Excluded" are excluded by definition and need
+    not appear in the scope.complete snapshot. Empty placeholders like
+    "<deliverable / system / artifact>" and parenthesized "none"/"n/a" are
+    skipped.
+    """
+    if not project_md_path.exists():
+        return []
+    text = project_md_path.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    items = []
+    in_scope = False
+    in_included = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("## "):
+            heading = stripped[3:].strip().lower()
+            in_scope = heading == "scope"
+            in_included = False
+            continue
+        if not in_scope:
+            continue
+        if stripped.startswith("### "):
+            sub = stripped[4:].strip().lower()
+            in_included = sub == "included"
+            continue
+        if stripped.startswith("# "):
+            in_scope = False
+            in_included = False
+            continue
+        if not in_included:
+            continue
+        if not stripped.startswith("- "):
+            continue
+        body = stripped[2:].strip()
+        if not body:
+            continue
+        if body.startswith("<") and body.endswith(">"):
+            continue
+        if re.fullmatch(r"\(?\s*(none|n/a|tbd|-)\s*\)?", body, re.IGNORECASE):
+            continue
+        item_id = None
+        id_match = re.search(r"\b(T-\d{3,})\b", body)
+        if id_match:
+            item_id = id_match.group(1)
+        items.append({"id": item_id, "name": body})
+    return items
+
+
+def parse_capability_gates_yaml(path: Path) -> dict:
+    """Minimal YAML reader for capability-gates.yaml. We look only for the
+    `scope_completeness:` block to extract `allowed_terminal_states` and the
+    `external_state_readback:` block to extract `required_for`. Anything more
+    elaborate would need PyYAML; we keep this dependency-free.
+    """
+    if not path.exists():
+        return {}
+    text = path.read_text(encoding="utf-8")
+    out = {}
+
+    def extract_block(block_name: str) -> dict | None:
+        m = re.search(rf"^{re.escape(block_name)}:\s*$", text, re.MULTILINE)
+        if not m:
+            return None
+        block_start = m.end()
+        rest = text[block_start:]
+        block_lines = []
+        for line in rest.splitlines():
+            if line.strip() == "":
+                block_lines.append(line)
+                continue
+            if not line.startswith(" ") and not line.startswith("\t"):
+                break
+            block_lines.append(line)
+        return {"raw": "\n".join(block_lines)}
+
+    sc = extract_block("scope_completeness")
+    if sc is not None:
+        states_match = re.search(
+            r"allowed_terminal_states:\s*\[([^\]]*)\]",
+            sc["raw"],
+        )
+        if states_match:
+            states = [s.strip().strip('"').strip("'")
+                      for s in states_match.group(1).split(",")
+                      if s.strip()]
+            out["scope_completeness"] = {"allowed_terminal_states": states}
+        else:
+            out["scope_completeness"] = {"allowed_terminal_states":
+                                          list(DEFAULT_ALLOWED_TERMINAL_STATES)}
+
+    esrb = extract_block("external_state_readback")
+    if esrb is not None:
+        patterns = re.findall(r"^\s*-\s*\"([^\"]+)\"", esrb["raw"], re.MULTILINE)
+        out["external_state_readback"] = {"required_for": patterns}
+
+    return out
+
+
+def find_schema_for_project(workspace: Path, project_id: str) -> str | None:
+    """Read PROJECT.md §Schema line to get schema name. Falls back to scanning
+    the file for the canonical 'bootstrapped from `schemas/projects/<name>/`'
+    sentence.
+    """
+    project_md = workspace / "projects" / project_id / "PROJECT.md"
+    if not project_md.exists():
+        return None
+    text = project_md.read_text(encoding="utf-8")
+    m = re.search(r"schemas/projects/([a-z0-9-]+)/", text)
+    if m:
+        return m.group(1)
+    return None
+
+
+def check_scope_completeness(workspace: Path, events: list) -> list:
+    """Run Layer 1 scope-completeness check across all projects with session.handoff."""
+    failures = []
+    by_project = defaultdict(list)
+    for ev in events:
+        by_project[ev.get("project")].append(ev)
+
+    for project_id, project_events in by_project.items():
+        if not project_id or project_id == "_harness":
+            continue
+        handoff_indices = [i for i, ev in enumerate(project_events)
+                           if ev.get("kind") == "session.handoff"]
+        if not handoff_indices:
+            continue
+        last_handoff_idx = handoff_indices[-1]
+
+        scope_complete_idx = None
+        for i in range(last_handoff_idx - 1, -1, -1):
+            if project_events[i].get("kind") == "scope.complete":
+                scope_complete_idx = i
+                break
+
+        if scope_complete_idx is None:
+            failures.append(
+                f"{project_id}: scope_completeness_missing "
+                f"(no scope.complete precedes {project_events[last_handoff_idx]['id']})"
+            )
+            continue
+
+        sc_event = project_events[scope_complete_idx]
+        scope_items = sc_event.get("payload", {}).get("scope_items", [])
+
+        schema = find_schema_for_project(workspace, project_id)
+        allowed = list(DEFAULT_ALLOWED_TERMINAL_STATES)
+        if schema:
+            cap_gates_path = (workspace.parent / "schemas" / "projects"
+                              / schema / "capability-gates.yaml")
+            if not cap_gates_path.exists():
+                cap_gates_path = (workspace / "schemas" / "projects"
+                                  / schema / "capability-gates.yaml")
+            cap_gates = parse_capability_gates_yaml(cap_gates_path)
+            sc_cfg = cap_gates.get("scope_completeness")
+            if sc_cfg and sc_cfg.get("allowed_terminal_states"):
+                allowed = sc_cfg["allowed_terminal_states"]
+
+        for entry in scope_items:
+            ts = entry.get("terminal_state")
+            if ts not in allowed:
+                failures.append(
+                    f"{project_id}: scope_completeness_terminal_state_disallowed "
+                    f"(item {entry.get('id') or entry.get('name')!r} -> "
+                    f"{ts!r}; allowed {allowed})"
+                )
+
+        declared_items = parse_scope_items_from_project_md(
+            workspace / "projects" / project_id / "PROJECT.md"
+        )
+        snapshot_ids = {entry.get("id") for entry in scope_items if entry.get("id")}
+        snapshot_names = {entry.get("name") for entry in scope_items if entry.get("name")}
+        for declared in declared_items:
+            if declared["id"] and declared["id"] in snapshot_ids:
+                continue
+            if declared["name"] in snapshot_names:
+                continue
+            failures.append(
+                f"{project_id}: scope_completeness_unrepresented_item "
+                f"({declared['id'] or declared['name']!r} declared in PROJECT.md "
+                f"§Scope but not in scope.complete snapshot)"
+            )
+
+    return failures
+
+
 def find_projection_path(workspace: Path, artifact_id: str, hashes_index: dict) -> Path | None:
     """Locate a projection file for an artifact ID. Prefer hashes.json, else search."""
     for projection_path in hashes_index:
@@ -158,6 +354,7 @@ def verify(workspace: Path, since: str | None) -> dict:
         "stale_citations": [],
         "unknown_event_kinds": [],
         "malformed_payloads": [],
+        "scope_completeness_failures": [],
         "result": "PASS",
     }
 
@@ -270,6 +467,8 @@ def verify(workspace: Path, since: str | None) -> dict:
                     f"[{artifact_id}#{cited_short}] @ {event['id']} (current: {current})"
                 )
 
+    result["scope_completeness_failures"] = check_scope_completeness(workspace, events)
+
     blocking = (
         result["tamper"]
         or result["chain_breaks"]
@@ -277,6 +476,7 @@ def verify(workspace: Path, since: str | None) -> dict:
         or result["missing_projections"]
         or result["broken_citations"]
         or result["malformed_payloads"]
+        or result["scope_completeness_failures"]
     )
     result["result"] = "FAIL" if blocking else "PASS"
     return result
@@ -295,6 +495,7 @@ def render(result: dict) -> str:
         f"  stale_citations:       {len(result['stale_citations'])} {result['stale_citations']}",
         f"  unknown_event_kinds:   {len(result['unknown_event_kinds'])} {result['unknown_event_kinds']}",
         f"  malformed_payloads:    {len(result['malformed_payloads'])} {result['malformed_payloads']}",
+        f"  scope_completeness:    {len(result['scope_completeness_failures'])} {result['scope_completeness_failures']}",
         f"  result:                {result['result']}",
     ]
     if "error" in result:
