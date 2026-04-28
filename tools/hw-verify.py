@@ -56,6 +56,7 @@ KNOWN_EVENT_KINDS = {
     "friction.log", "friction.log.prompt",
     "session.handoff",
     "scope.complete",
+    "external_state.read_back",
 }
 
 # Required payload fields per v5.1 event kind. None means no per-kind structural
@@ -66,6 +67,8 @@ REQUIRED_PAYLOAD_FIELDS = {
     "friction.log.prompt": ("trigger", "signal_summary"),
     "session.handoff": ("project_id", "closing_actor", "recommended_first_action"),
     "scope.complete": ("scope_items",),
+    "external_state.read_back": ("task_id", "artifact_url", "equality_method",
+                                  "divergence_detected"),
     # fire_id is recommended but not required; projection generator falls back to
     # the matching council.invoke event.id when missing. v5.0.1 council events
     # pre-date the field; relaxing to optional preserves backward-compat.
@@ -324,6 +327,106 @@ def check_scope_completeness(workspace: Path, events: list) -> list:
     return failures
 
 
+def task_matches_readback_pattern(task_meta: dict, pattern: str) -> bool:
+    """Match a task's frontmatter against a v5.1.1 external_state_readback pattern.
+
+    Patterns are human-readable strings declared in capability-gates.yaml. v5.1.1
+    recognizes two: a critical-risk match and a live-edit delivery-mode match.
+    The matcher is intentionally narrow; new patterns extend this function.
+    """
+    p = pattern.lower()
+    if "critical" in p and "risk" in p:
+        return str(task_meta.get("risk_level", "")).lower() == "critical"
+    if "live-edit" in p:
+        return str(task_meta.get("delivery_mode", "")).lower() == "live-edit"
+    return False
+
+
+def check_external_state_readback(workspace: Path, events: list) -> tuple:
+    """Run Layer 1 external_state.read_back check.
+
+    Returns (failures, warnings).
+    """
+    failures = []
+    warnings = []
+
+    by_project = defaultdict(list)
+    for ev in events:
+        by_project[ev.get("project")].append(ev)
+
+    for project_id, project_events in by_project.items():
+        if not project_id or project_id == "_harness":
+            continue
+
+        schema = find_schema_for_project(workspace, project_id)
+        if not schema:
+            continue
+
+        cap_gates_path = (workspace / "schemas" / "projects" / schema
+                          / "capability-gates.yaml")
+        if not cap_gates_path.exists():
+            cap_gates_path = (workspace.parent / "schemas" / "projects"
+                              / schema / "capability-gates.yaml")
+        cap_gates = parse_capability_gates_yaml(cap_gates_path)
+        esrb = cap_gates.get("external_state_readback")
+        if not esrb or not esrb.get("required_for"):
+            continue
+        patterns = esrb["required_for"]
+
+        task_meta = {}
+        for ev in project_events:
+            if ev.get("kind") == "task.create":
+                payload = ev.get("payload", {}) or {}
+                tid = payload.get("task_id")
+                fm = payload.get("frontmatter") or {}
+                if tid:
+                    task_meta[tid] = fm
+
+        for idx, ev in enumerate(project_events):
+            if ev.get("kind") != "task.complete":
+                continue
+            tid = (ev.get("payload") or {}).get("task_id")
+            if not tid:
+                continue
+            meta = task_meta.get(tid, {})
+            if not any(task_matches_readback_pattern(meta, p) for p in patterns):
+                continue
+
+            window = project_events[idx + 1: idx + 6]
+            paired = None
+            for follow in window:
+                if follow.get("kind") != "external_state.read_back":
+                    continue
+                payload = follow.get("payload") or {}
+                if payload.get("task_id") == tid:
+                    paired = follow
+                    break
+
+            if paired is None:
+                failures.append(
+                    f"{project_id}: external_state_readback_missing "
+                    f"(task {tid} matched required_for; no paired "
+                    f"external_state.read_back within 5 events of {ev['id']})"
+                )
+                continue
+
+            payload = paired.get("payload") or {}
+            if payload.get("divergence_detected"):
+                follow_idx = project_events.index(paired)
+                trailing = project_events[follow_idx + 1: follow_idx + 6]
+                friction_followup = any(
+                    f.get("kind") == "friction.log"
+                    for f in trailing
+                )
+                msg = (f"{project_id}: external_state_readback_divergence "
+                       f"(task {tid}, read_back {paired['id']})")
+                if not friction_followup:
+                    msg += " — no follow-up friction.log within 5 events"
+                warnings.append(msg)
+
+    return failures, warnings
+
+
 def find_projection_path(workspace: Path, artifact_id: str, hashes_index: dict) -> Path | None:
     """Locate a projection file for an artifact ID. Prefer hashes.json, else search."""
     for projection_path in hashes_index:
@@ -355,6 +458,8 @@ def verify(workspace: Path, since: str | None) -> dict:
         "unknown_event_kinds": [],
         "malformed_payloads": [],
         "scope_completeness_failures": [],
+        "external_state_readback_failures": [],
+        "external_state_readback_warnings": [],
         "result": "PASS",
     }
 
@@ -468,6 +573,9 @@ def verify(workspace: Path, since: str | None) -> dict:
                 )
 
     result["scope_completeness_failures"] = check_scope_completeness(workspace, events)
+    esrb_failures, esrb_warnings = check_external_state_readback(workspace, events)
+    result["external_state_readback_failures"] = esrb_failures
+    result["external_state_readback_warnings"] = esrb_warnings
 
     blocking = (
         result["tamper"]
@@ -477,6 +585,7 @@ def verify(workspace: Path, since: str | None) -> dict:
         or result["broken_citations"]
         or result["malformed_payloads"]
         or result["scope_completeness_failures"]
+        or result["external_state_readback_failures"]
     )
     result["result"] = "FAIL" if blocking else "PASS"
     return result
@@ -496,6 +605,8 @@ def render(result: dict) -> str:
         f"  unknown_event_kinds:   {len(result['unknown_event_kinds'])} {result['unknown_event_kinds']}",
         f"  malformed_payloads:    {len(result['malformed_payloads'])} {result['malformed_payloads']}",
         f"  scope_completeness:    {len(result['scope_completeness_failures'])} {result['scope_completeness_failures']}",
+        f"  ext_state_readback:    {len(result['external_state_readback_failures'])} {result['external_state_readback_failures']}",
+        f"  ext_state_warnings:    {len(result['external_state_readback_warnings'])} {result['external_state_readback_warnings']}",
         f"  result:                {result['result']}",
     ]
     if "error" in result:

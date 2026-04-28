@@ -39,3 +39,14 @@ task_kinds:
 scope_completeness:
   required: true
   allowed_terminal_states: [complete, deferred, excluded-after-discovery, escalated]
+
+# v5.1.1 — external_state.read_back required for tasks that mutate state on
+# external surfaces (CMS edits, calendar bookings, redirect-list entries). The
+# patterns are matched against task front-matter via tools/hw-verify.py.
+# See core/SUBSTRATE.md §External State Read-Back.
+external_state_readback:
+  required_for:
+    - "tasks marked critical-risk: true in task front-matter"
+    - "tasks with delivery_mode: live-edit"
+  default_equality_method: "rest-roundtrip"
+  fallback_equality_method: "manual-attestation"

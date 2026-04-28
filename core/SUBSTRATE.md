@@ -223,6 +223,12 @@ The harness defines a closed set. Schema extensions must add kinds via the proje
 | `session.handoff` | `{project_id, closing_actor, last_completed_task, next_pending_task, active_artifact_state, open_operator_questions[], recommended_first_action, context_compaction_summary}` — see §Session Handoff Event Kind. One event per closing-session boundary; not chained. |
 | `scope.complete` | `{scope_items: [{id, name, terminal_state, reason}]}` — see §Scope Completeness. Emitted before `session.handoff`; Layer 1 cross-checks against PROJECT.md §Scope. |
 
+### External-state events
+
+| Kind | Payload |
+|---|---|
+| `external_state.read_back` | `{task_id, artifact_url, pre_state_ref, post_state_ref, equality_method, divergence_detected, divergence_notes}` — see §External State Read-Back. Per-schema opt-in via `capability-gates.yaml` `external_state_readback.required_for`. |
+
 ---
 
 ## Projections
@@ -762,6 +768,35 @@ The check runs at `session.handoff`. See `core/VERIFICATION.md` §Layer 1 for th
 **Projection.** The most recent `scope.complete` regenerates `projects/<id>/SCOPE-COMPLETE.md` per `templates/artifact-templates/scope-complete.md`. The event itself remains the source of truth; the projection is the human-readable rendering. `hashes.json` tracks the projection.
 
 **Hypothesis (under empirical evaluation in v5.1.1+).** A scope-completeness check at session.handoff catches silent in-scope skips. Falsifier: a declared scope item resolves to no terminal state and verification PASSes.
+
+---
+
+## External State Read-Back
+
+A `task.complete` event records that the agent finished a task. For tasks that mutated state outside `events.jsonl` — a CMS edit, a calendar booking, a remote configuration change, a redirect-list entry — the completion event by itself does not verify the mutation actually landed on the external surface. v5.1.1 adds `external_state.read_back` as the structural primitive for capturing the post-mutation re-read.
+
+**Payload schema.**
+
+| Field | Type | Meaning |
+|---|---|---|
+| `task_id` | string | The task whose mutation this read-back verifies. |
+| `artifact_url` | string | The external surface (URL, REST endpoint, file path, `platform://list/redirections`) re-read. |
+| `pre_state_ref` | string | Loose reference to the pre-mutation state: `screenshot:<path>`, `hash:<sha256>`, `manual-attestation:<token>`, or `none` if pre-state was not captured. |
+| `post_state_ref` | string | Same shape as `pre_state_ref`, but for the post-mutation re-read. |
+| `equality_method` | enum | `visual-diff`, `rest-roundtrip`, `manual-attestation`. Documents how equality (or expected divergence) was checked. |
+| `divergence_detected` | bool | `true` if the post-state differs from what the mutation should have produced. |
+| `divergence_notes` | string \| null | Required when `divergence_detected: true`; describes the divergence. |
+
+**Schema config.** Schemas opt in via `capability-gates.yaml` `external_state_readback.required_for`. The list contains task patterns or task kinds; a task matching any pattern requires a paired `external_state.read_back` event after `task.complete`. v5.1.1 enables this only for marketing-campaign; other schemas adopt as their delivery shape requires.
+
+For platforms that do not surface state for re-read, the schema declares a `fallback_equality_method: manual-attestation` and the agent records the operator's attestation as the `post_state_ref`.
+
+**Layer 1 enforcement.** See `core/VERIFICATION.md` §Layer 1.
+
+1. For each `task.complete` whose task matches a `required_for` pattern, find a paired `external_state.read_back` event with the same `task_id`, later than the `task.complete`, within 5 events. If absent, FAIL `external_state_readback_missing`.
+2. If `divergence_detected: true` on the read-back, emit a Layer 1 WARNING (not FAIL) and require a follow-up `friction.log` event referencing the divergence.
+
+**Hypothesis (under empirical evaluation in v5.1.1+).** `external_state.read_back` makes external mutation verifiable per critical-risk task. Falsifier: a critical-risk `task.complete` ships without a paired read_back event and Layer 1 PASSes.
 
 ---
 
