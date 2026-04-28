@@ -41,3 +41,11 @@ Extend `outputs/landing-page-copy.md` with a body section and a social-proof sec
 - **SCAN markers answered:** <count>
 - **Outputs produced:** outputs/landing-page-copy.md (Body, Social Proof sections)
 - **Discoveries:** <items>
+
+## Live-edit adaptation (v5.1.1)
+
+This template is `delivery_mode: constrained` (draft to a file). If forked to `delivery_mode: live-edit` to mutate an existing landing page (rebrand, content refresh), replace step 1's Recite step with a pre-edit-state capture + enumeration:
+
+> Capture the pre-edit state of the landing page (DOM or CMS export). Enumerate `edit_candidates` (existing body sections, social-proof blocks, CTAs to revise — each with proposed change), `create_candidates` (new sections the rebrand implies — e.g., a vertical-specific section, a new social-proof category), and `delete_candidates` (obsolete sections to remove). Do not pre-prune. The proposal phase enumerates; `scope-shrink-watcher` reviews completeness in council.
+
+See `core/TYPED-ARTIFACTS.md` §Live-Edit Proposal Artifacts.

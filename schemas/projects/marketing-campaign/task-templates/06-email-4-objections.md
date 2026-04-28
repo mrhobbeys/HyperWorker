@@ -38,3 +38,7 @@ Fourth email — handle the top three objections explicitly. Each gets one short
 
 - **Acceptance criteria:** <X/Y pass>
 - **Outputs:** outputs/email-4-objections.md (DRAFT)
+
+## Live-edit adaptation (v5.1.1)
+
+This template is `delivery_mode: constrained`. A live-edit fork uses the v5.1.1 enumeration: `edit_candidates` for the existing objections-email subject + body, `create_candidates` empty for a single-slot replacement (state explicitly), `delete_candidates` for obsolete objection responses no longer relevant. See `core/TYPED-ARTIFACTS.md` §Live-Edit Proposal Artifacts.

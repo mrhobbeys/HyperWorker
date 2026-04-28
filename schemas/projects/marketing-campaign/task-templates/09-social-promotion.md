@@ -54,3 +54,13 @@ The earlier funnel tasks (T-001 through T-008) produce the landing page + email 
 - **Outputs produced:** outputs/social-promotion/linkedin-post.md, outputs/social-promotion/carousel-script.md, outputs/social-promotion/video-script.md (all DRAFT)
 - **Discoveries:** <items — e.g., "Audience-language note: 'practice manager' resonates more on LinkedIn than 'office manager'; flag as F-XXX">
 - **Recommended follow-up artifacts:** "none" or "Write F-XXX capturing channel-specific framing observed during drafting"
+
+## Live-edit adaptation (v5.1.1)
+
+This template is `delivery_mode: constrained`. A live-edit fork against existing pinned LinkedIn posts, scheduled carousel content, or platform-published video posts uses the v5.1.1 enumeration:
+
+- **edit_candidates:** existing scheduled or pinned posts whose copy needs updating.
+- **create_candidates:** new channel-shaped variants the rebrand mission implies — a vertical-specific LinkedIn post, a new carousel for a market the campaign now targets.
+- **delete_candidates:** scheduled or pinned posts that contradict the rebrand and should be unpublished.
+
+Do not pre-prune. `scope-shrink-watcher` reviews completeness in council. See `core/TYPED-ARTIFACTS.md` §Live-Edit Proposal Artifacts.

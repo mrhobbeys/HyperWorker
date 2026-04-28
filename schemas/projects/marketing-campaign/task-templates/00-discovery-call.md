@@ -38,3 +38,7 @@ Run a structured discovery against the operator's stated campaign. Output is two
 - **Outputs produced:** F-001, DEC-001, 00-REFERENCE-rules.md (Tier 1 populated)
 - **Discoveries:** <items the executor surfaces; planner decides whether to write findings/anti-patterns>
 - **Recommended follow-up artifacts:** "Promote F-001 to validated once a second source confirms the audience description" / "none"
+
+## Live-edit adaptation (v5.1.1)
+
+This template is `delivery_mode: constrained` (Q&A discovery; not live-edit). It does not mutate any external surface, so the v5.1.1 edit/create/delete enumeration does not apply. If a future fork of this template runs against an existing brand-rules document on a live wiki/CMS, it would set `delivery_mode: live-edit` and follow `core/TYPED-ARTIFACTS.md` §Live-Edit Proposal Artifacts.

@@ -64,3 +64,17 @@ auto_escalation_rules:
     risk_level: critical
   - condition: "Output references safe_claims table from rules file."
     risk_level: elevated
+
+# v5.1.1 — Layer 1 requirement: live-edit tasks must have a passing
+# scope-shrink-watcher council vote in their convergence event before
+# task.complete projects to status complete. The check is enforced at
+# Layer 1 because dropping a create_candidate is a structural failure of
+# the proposal-to-actuation contract, not a behavioral judgment.
+live_edit_layer1_checks:
+  - id: scope_shrink_watcher_pass
+    description: |
+      For every task.complete event whose task has delivery_mode: live-edit,
+      a council convergence event must reference scope-shrink-watcher in its
+      members and the convergence_vote for that member must be PASS.
+    failure_code: scope_shrink_watcher_missing_or_fail
+    applies_when: "task.delivery_mode == 'live-edit'"

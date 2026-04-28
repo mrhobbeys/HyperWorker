@@ -52,3 +52,7 @@ Final email in the sequence. The first four built trust; this one asks. Single h
 - **Acceptance criteria:** <X/Y pass>
 - **Failure scenarios:** 3 evaluated.
 - **Outputs:** outputs/email-5-cta.md (DRAFT)
+
+## Live-edit adaptation (v5.1.1)
+
+This template is `delivery_mode: constrained`. A live-edit fork uses the v5.1.1 enumeration: `edit_candidates` for the existing CTA email subject + body, `create_candidates` empty for a single-slot replacement (state explicitly), `delete_candidates` for any expired CTA links. See `core/TYPED-ARTIFACTS.md` §Live-Edit Proposal Artifacts.

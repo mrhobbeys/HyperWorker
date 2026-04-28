@@ -51,3 +51,7 @@ Third email — a proof story. Elevated risk because Tier 1 prohibits fabricated
 - **Acceptance criteria:** <X/Y pass>
 - **Failure scenarios:** 3 evaluated; <X> pass.
 - **Outputs:** outputs/email-3-proof.md (DRAFT)
+
+## Live-edit adaptation (v5.1.1)
+
+This template is `delivery_mode: constrained`. A live-edit fork against an existing email automation step uses the v5.1.1 enumeration: `edit_candidates` for the existing proof email's subject + body, `create_candidates` empty for a single-slot replacement (state explicitly), `delete_candidates` for obsolete proof references. See `core/TYPED-ARTIFACTS.md` §Live-Edit Proposal Artifacts.

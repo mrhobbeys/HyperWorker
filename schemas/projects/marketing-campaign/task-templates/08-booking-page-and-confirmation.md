@@ -48,3 +48,13 @@ The funnel's terminal step. Two short pieces of copy: the booking-page form area
 
 - **Acceptance criteria:** <X/Y pass>
 - **Outputs:** outputs/booking-page-copy.md, outputs/booking-confirmation.md (both DRAFT)
+
+## Live-edit adaptation (v5.1.1)
+
+This template is `delivery_mode: constrained`. A live-edit fork against an existing booking page (e.g., MS Bookings, Calendly intro page, or a CMS-hosted booking landing) uses the v5.1.1 enumeration:
+
+- **edit_candidates:** existing booking-page headline, supporting text, CTA copy, confirmation copy.
+- **create_candidates:** any net-new sections the rebrand mission implies (a new pre-call FAQ, a new "what to expect" block).
+- **delete_candidates:** obsolete copy from a prior brand iteration.
+
+Do not pre-prune. `scope-shrink-watcher` reviews completeness in council. See `core/TYPED-ARTIFACTS.md` §Live-Edit Proposal Artifacts.

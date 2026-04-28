@@ -39,3 +39,7 @@ Second email in the sequence. Names the audience's pain in concrete language, wi
 
 - **Acceptance criteria:** <X/Y pass>
 - **Outputs:** outputs/email-2-problem-agitation.md (DRAFT)
+
+## Live-edit adaptation (v5.1.1)
+
+This template is `delivery_mode: constrained`. A live-edit fork against an existing email automation step uses the v5.1.1 enumeration: `edit_candidates` for the existing email's subject + body (with proposed replacement), `create_candidates` empty for a single-slot replacement (state explicitly), `delete_candidates` for obsolete sections. See `core/TYPED-ARTIFACTS.md` §Live-Edit Proposal Artifacts.

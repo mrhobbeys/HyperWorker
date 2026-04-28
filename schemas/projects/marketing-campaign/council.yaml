@@ -41,6 +41,35 @@ members:
       For each AP that could apply, state whether the artifact reintroduces it.
       Output PASS or FAIL with reference to AP-IDs cited.
 
+  # v5.1.1 — scope-shrink-watcher: catches scope-shrinking bias in live-edit
+  # task proposals. Fires only on tasks with delivery_mode: live-edit. Reads
+  # the proposal artifact (edit_candidates, create_candidates, delete_candidates)
+  # and the council member sees the proposal — not the live asset state — so
+  # its judgment is purely about completeness of the enumeration vs. the
+  # actuation plan.
+  - id: scope-shrink-watcher
+    role: scope-shrink-watcher
+    family_default: claude
+    optional: true
+    triggers:
+      - "task proposal includes both edit_candidates and create_candidates"
+      - "task proposal drops any create_candidate without a paired deferral or excluded-after-discovery decision artifact"
+    fail_condition: "any create_candidate or delete_candidate is silently dropped from the actuation plan"
+    pass_condition: "every enumerated candidate is either actuated, deferred with reason, or excluded-after-discovery with reason"
+    context_asymmetry: "this member reviews the proposal artifact only; does not see the live asset state"
+    prompt_template: |
+      You are reviewing a live-edit task proposal for scope-shrink bias.
+      The proposal enumerates edit_candidates, create_candidates, and delete_candidates;
+      the actuation plan is a subset of that enumeration. Your job: confirm every
+      enumerated candidate is either actuated, deferred (with one-sentence reason),
+      or marked excluded-after-discovery (with one-sentence reason). A silently
+      dropped candidate FAILs.
+
+      Acceptable disposition for each candidate: actuate | defer | excluded-after-discovery.
+      Anything else — including absence — FAILs.
+
+      Output a single line: PASS or FAIL: <reason naming the candidate(s) that lack disposition>.
+
 triggers:
   - event: project.activate
     members: [operator-reality-calibrator, scope-guard]
@@ -54,6 +83,11 @@ triggers:
     when: "task.risk_level in {elevated, critical}"
     members: [operator-reality-calibrator, brand-voice-guard, scope-guard, anti-pattern-watcher]
     description: "Per-task council on elevated/critical work."
+
+  - event: task.complete
+    when: "task.delivery_mode == 'live-edit'"
+    members: [scope-shrink-watcher]
+    description: "v5.1.1 — fires on every live-edit task to catch scope-shrink bias in the enumeration-to-actuation step."
 
   - event: project.archive
     members: [operator-reality-calibrator, scope-guard, brand-voice-guard]

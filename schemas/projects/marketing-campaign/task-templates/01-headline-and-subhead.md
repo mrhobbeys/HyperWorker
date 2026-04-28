@@ -42,3 +42,11 @@ Produce one landing-page headline and one subhead that mirror `DEC-001`'s offer 
 - **Outputs produced:** outputs/landing-page-copy.md (Headline, Subhead sections)
 - **Discoveries:** <items>
 - **Recommended follow-up artifacts:** "none" or "Write F-XXX capturing audience-language preference observed during candidate generation"
+
+## Live-edit adaptation (v5.1.1)
+
+This template is `delivery_mode: constrained` (draft to a file). If forked to `delivery_mode: live-edit` to mutate an existing landing-page headline/subhead in a CMS, replace step 2 with the v5.1.1 enumeration:
+
+> Capture the pre-edit state (existing headline, subhead). Enumerate `edit_candidates` (the existing headline + subhead with proposed replacements), `create_candidates` (any net-new variant copy the rebrand mission implies — e.g., a new section heading), and `delete_candidates` (any obsolete copy the rebrand should remove). Do not pre-prune candidates based on perceived effort. The proposal phase enumerates; the council phase decides via `scope-shrink-watcher`.
+
+See `core/TYPED-ARTIFACTS.md` §Live-Edit Proposal Artifacts for the per-candidate field shape and `schemas/projects/marketing-campaign/council.yaml` `scope-shrink-watcher` for the convergence contract.

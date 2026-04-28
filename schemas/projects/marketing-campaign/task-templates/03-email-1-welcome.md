@@ -48,3 +48,13 @@ First email in the nurture sequence; fires immediately after form submission. Co
 - **SCAN markers answered:** <count>
 - **Outputs produced:** outputs/email-1-welcome.md (DRAFT)
 - **Discoveries:** <items>
+
+## Live-edit adaptation (v5.1.1)
+
+This template is `delivery_mode: constrained` (draft email; operator publishes via the email platform). A live-edit fork would target an existing automation slot (e.g., editing an existing welcome email in Mailster/Mailchimp). For that fork:
+
+- **edit_candidates:** the existing welcome email's subject + body (proposed replacement copy).
+- **create_candidates:** likely empty for this slot — no `create_candidates` expected for this task shape, single-email replacement only. State this explicitly in the proposal so the omission is intentional, not a scope-shrink slip.
+- **delete_candidates:** any out-of-date footer fragments, expired CTAs.
+
+See `core/TYPED-ARTIFACTS.md` §Live-Edit Proposal Artifacts.

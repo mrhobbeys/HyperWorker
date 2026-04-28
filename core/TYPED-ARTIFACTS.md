@@ -332,6 +332,38 @@ If an operator wants the v4.1.1 pipeline back, they can implement it on top of t
 
 ---
 
+## Live-Edit Proposal Artifacts (v5.1.1)
+
+When a task declares `delivery_mode: live-edit` (mutating a published asset directly rather than producing a draft for the operator to ship), the proposal artifact a task produces in its enumeration step takes a specific shape. This shape feeds the v5.1.1 `scope-shrink-watcher` council member; without it, the member has no input.
+
+**Required enumeration buckets.**
+
+| Bucket | Meaning |
+|---|---|
+| `edit_candidates` | Existing items on the live surface that warrant modification, each paired with the proposed change. |
+| `create_candidates` | New items the mission implies should exist on the surface, each paired with the proposed creation. |
+| `delete_candidates` | Existing items the mission implies should be removed, each paired with the proposed removal. |
+
+The enumeration is exhaustive at proposal time. The proposal does not pre-prune any candidate based on perceived effort. The pruning decision happens in council review, where `scope-shrink-watcher` checks that every enumerated candidate is either actuated, deferred with reason, or marked excluded-after-discovery with reason — never silently dropped.
+
+**Per-candidate fields.** Each candidate is an object:
+
+```yaml
+- id: <stable-identifier-on-the-surface>
+  surface_ref: "<URL or platform-specific reference>"
+  current_state_summary: "<one-sentence description of what is there now>"
+  proposed_change: "<what the actuation would do>"
+  estimated_effort: low | medium | high
+  disposition: actuate | defer | excluded-after-discovery
+  disposition_reason: "<one sentence; null only when disposition: actuate>"
+```
+
+**No-create-alternative shape.** For task templates whose surface has no plausible create alternative (e.g., a single-string-edit task on a fixed-shape platform field — phone number, business hours, license number), the template explicitly states "no `create_candidates` expected for this task shape — single-field edit only." That note is itself the structural signal that the omission was intentional, not a scope-shrink slip.
+
+**Schema integration.** Schemas that ship live-edit task templates also ship the `scope-shrink-watcher` council member in `council.yaml`, with the appropriate triggers and convergence framing. v5.1.1 enables this for marketing-campaign; other schemas adopt as their delivery shape requires.
+
+---
+
 ## Relationship to Other Mechanisms
 
 | Mechanism | Interaction |
