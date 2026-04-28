@@ -80,6 +80,10 @@ default_tasks:
   description: |
     A canonical lead-generation funnel decomposes into roughly 8 tasks across 3 phases.
     Bootstrapping clones these templates into projects/<id>/tasks/ in numerical order.
+    The zz-prefixed task is an end-of-session audit (v5.1.1) that runs after
+    all live-edit tasks complete and before session.handoff. Projects whose
+    rebrand mission does not touch SEO surface opt out by setting
+    seo_audit_required: false in PROJECT.md.
   templates:
     - "00-discovery-call.md"
     - "01-headline-and-subhead.md"
@@ -91,3 +95,4 @@ default_tasks:
     - "07-email-5-cta.md"
     - "08-booking-page-and-confirmation.md"
     - "09-social-promotion.md"
+    - "zz-seo-impact-audit.md"   # v5.1.1 — opt-out via PROJECT.md seo_audit_required: false
