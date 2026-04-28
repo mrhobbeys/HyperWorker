@@ -58,3 +58,7 @@ This template is `delivery_mode: constrained`. A live-edit fork against an exist
 - **delete_candidates:** obsolete copy from a prior brand iteration.
 
 Do not pre-prune. `scope-shrink-watcher` reviews completeness in council. See `core/TYPED-ARTIFACTS.md` §Live-Edit Proposal Artifacts.
+
+### Redirect implications (v5.1.1)
+
+If a live-edit fork moves the booking page to a new URL (e.g., from `/book-a-call/` to `/cybersecurity-review/`), populate `redirect_implications` in the completion report. The from→to redirect preserves any inbound traffic from the prior CTA links. At session.handoff, every row with `status: applied` must have a paired `external_state.read_back` against the platform's redirections-list endpoint. See `templates/artifact-templates/redirect-coverage-report.md`.

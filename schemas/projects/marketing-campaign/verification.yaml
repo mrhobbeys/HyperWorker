@@ -78,3 +78,27 @@ live_edit_layer1_checks:
       members and the convergence_vote for that member must be PASS.
     failure_code: scope_shrink_watcher_missing_or_fail
     applies_when: "task.delivery_mode == 'live-edit'"
+
+# v5.1.1 — redirect coverage Layer 1 check.
+# At session.handoff, the redirect_coverage_report must exist as a projection;
+# every row with status: applied must have a paired external_state.read_back
+# event against the platform's redirections-list endpoint with
+# divergence_detected: false. Rows with status: deferred or status: excluded
+# require a non-null reason but no read-back.
+redirect_coverage_layer1_checks:
+  - id: redirect_coverage_report_present
+    description: |
+      At session.handoff, projects/<id>/REDIRECT-COVERAGE-REPORT.md must exist
+      as a regenerated projection of every task.complete event with a
+      redirect_implications field.
+    failure_code: redirect_coverage_report_missing
+    applies_at: session.handoff
+  - id: applied_redirects_verified
+    description: |
+      Every redirect row with status: applied must have a paired
+      external_state.read_back event whose artifact_url matches the platform's
+      redirections-list endpoint and whose divergence_detected: false.
+      Acceptable equality_method values include rest-roundtrip, visual-diff,
+      and (for platforms without queryable redirection lists) manual-attestation.
+    failure_code: redirect_coverage_unverified
+    applies_at: session.handoff

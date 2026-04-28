@@ -49,3 +49,17 @@ This template is `delivery_mode: constrained` (draft to a file). If forked to `d
 > Capture the pre-edit state of the landing page (DOM or CMS export). Enumerate `edit_candidates` (existing body sections, social-proof blocks, CTAs to revise — each with proposed change), `create_candidates` (new sections the rebrand implies — e.g., a vertical-specific section, a new social-proof category), and `delete_candidates` (obsolete sections to remove). Do not pre-prune. The proposal phase enumerates; `scope-shrink-watcher` reviews completeness in council.
 
 See `core/TYPED-ARTIFACTS.md` §Live-Edit Proposal Artifacts.
+
+### Redirect implications (v5.1.1)
+
+If a live-edit fork of this task renames the landing-page slug, trashes a section that lived at its own URL, or restructures the page hierarchy, populate `redirect_implications` in the completion report:
+
+```yaml
+redirect_implications:
+  - from_url: "/old-landing/"
+    to_url: "/new-landing/"
+    reason: "rebrand slug rename; preserves inbound links"
+    status: planned
+```
+
+Set `status: excluded` with a reason for intentional 410-Gone removals (e.g., a deprecated offer that should not redirect anywhere). At session.handoff, every row with `status: applied` must have a paired `external_state.read_back` against the platform's redirections-list endpoint. See `templates/artifact-templates/redirect-coverage-report.md`.

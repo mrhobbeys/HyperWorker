@@ -88,3 +88,45 @@ operating-reality:
         - name: email
           type: string
           required: true
+
+# v5.1.1 — task-completion artifact extension for redirect_implications.
+# Any task that renames, trashes, noindexes, or restructures URL-bearing
+# content declares redirects implied by the change. Aggregated at
+# session.handoff into a redirect_coverage_report (see verification.yaml).
+task_completion:
+  field_overrides:
+    redirect_implications:
+      type: "list[object]|null"
+      required: false
+      description: |
+        URL changes implied by this task that require a redirect. Null if
+        the task did not change any URL-bearing surface. An empty list ([])
+        means the task examined its surface and confirmed no redirects are
+        needed (canonical declared-empty form per core/SUBSTRATE.md §null
+        vs []). The list is aggregated at session.handoff into a coverage
+        report; Layer 1 verifies each row with status: applied has a paired
+        external_state.read_back against the platform's redirections-list
+        endpoint.
+      object_shape:
+        from_url:
+          type: string
+          required: true
+          description: "Old URL pattern (path + slug; absolute URL acceptable)."
+        to_url:
+          type: string
+          required: true
+          description: "New URL the redirect should point at. Use '/' if no equivalent and no redirect is desired (paired with status: excluded)."
+        reason:
+          type: string
+          required: true
+          description: "Why this redirect is needed. One sentence."
+        status:
+          type: enum
+          values: [planned, applied, verified, deferred, excluded]
+          required: true
+          description: |
+            planned    — redirect is intended but not yet applied.
+            applied    — redirect was created on the platform; awaiting verification.
+            verified   — applied AND paired external_state.read_back confirms it.
+            deferred   — operator decided to apply later; reason captures why.
+            excluded   — intentionally NO redirect (e.g., 410 Gone); reason captures why.
