@@ -1,5 +1,55 @@
 # Changelog — HyperWorker
 
+## v5.1.1 (2026-04-27) — Patch release
+
+Five substrate/schema patches addressing gaps surfaced by the v5.1 asset-update empirical run on `example-rebrand-rollout`. Plus one new task template and a CONTRIBUTING.md schema-update guide.
+
+Each patch carries a hypothesis with a falsifier (H-G1 through H-G5; see V5.1.1-BUILD-REPORT.md §4); the next empirical run on the example-rebrand-rollout fix run evaluates them. v5.1.2 retires whatever fails its falsifier in real use.
+
+### Substrate
+
+- **Added** `scope.complete` event kind and Layer 1 scope-completeness check. Records every PROJECT.md §Scope item with a terminal_state at session.handoff; cross-checks against PROJECT.md §Scope to catch silent in-scope skip patterns. Allowed terminal states: `complete`, `deferred`, `excluded-after-discovery`, `escalated`. Per-schema strictness via `capability-gates.yaml` `scope_completeness.allowed_terminal_states`. Hypothesis H-G1; falsifier: a declared scope item resolves to no terminal state and verification PASSes. (Patch 1)
+- **Added** `external_state.read_back` event kind. Schema-declared trigger via `capability-gates.yaml` `external_state_readback.required_for`; Layer 1 requires a paired event for tasks matching the patterns. v5.1.1 enables this only on marketing-campaign (critical-risk + live-edit task patterns). `divergence_detected: true` is a WARNING with a required follow-up `friction.log` event. Hypothesis H-G2; falsifier: a critical-risk `task.complete` ships without a paired read_back event and Layer 1 PASSes. (Patch 2)
+- **Added** `bootstrap.inventory_sweep` ceremony with three event kinds (`bootstrap.inventory_diff`, `bootstrap.scope_locked`, `bootstrap.probe_skipped`). Probes declared §Scope inventory against ground truth at bootstrap; operator reconciliation gates §Scope locking. Per-schema probe declared in `bootstrap-probe.md`. Hypothesis H-G3; falsifier: a wrong slug or missing page in PROJECT.md §Scope makes it past bootstrap and bites mid-task. (Patch 3)
+
+### Schema: marketing-campaign
+
+- **Added** edit-vs-create-vs-delete enumeration protocol for live-edit task proposals. Documented in `core/TYPED-ARTIFACTS.md` §Live-Edit Proposal Artifacts. Live-edit task templates' step 2 must enumerate `edit_candidates`, `create_candidates`, and `delete_candidates` before proposing actuation; templates with no create-alternative (single-field-edit shapes) state this explicitly. (Patch 4)
+- **Added** `scope-shrink-watcher` council member in `council.yaml`. Reviews live-edit task proposals against enumeration; FAILs if any candidate is silently dropped without paired deferral or excluded-after-discovery decision. Context-asymmetric framing: member sees proposal artifact only, not the live asset state. Trigger entry fires on every `task.complete` whose task has `delivery_mode: live-edit`. Hypothesis H-G4; falsifier: an audit task ships only edit_candidates with create_candidates dropped silently and council PASSes. (Patch 4)
+- **Added** `redirect_implications` field on task-completion artifacts via `artifact-extensions.yaml` `task_completion.field_overrides`. List of `{from_url, to_url, reason, status: planned|applied|verified|deferred|excluded}`. Aggregated at session.handoff into a `redirect_coverage_report` projection (template at `templates/artifact-templates/redirect-coverage-report.md`). Layer 1 verifies coverage: every row with `status: applied` must have a paired `external_state.read_back` event against the platform's redirections-list endpoint with `divergence_detected: false`. Hypothesis H-G5; falsifier: a trashed/renamed/restructured URL ships without a redirect entry and Layer 1 PASSes. (Patch 5)
+- **Added** `zz-seo-impact-audit.md` task template. End-of-session SEO regression check; runs after live-edit tasks complete and before session.handoff. Eight checks (rank_math metadata, sitemap freshness, robots.txt, redirect coverage cross-reference, canonical tags, schema markup, internal link graph, Core Web Vitals) with PASS/WARN/FAIL per item. WARN items go to `deferred-work.md`; FAIL items block session.handoff. Schema-opt-out via PROJECT.md `seo_audit_required: false` if the campaign doesn't touch SEO surface. Registered in `schema.yaml` `default_tasks.templates`.
+
+### Schemas: all six
+
+- **Added** `scope_completeness:` block to every schema's `capability-gates.yaml`. All schemas accept the full set `[complete, deferred, excluded-after-discovery, escalated]` in v5.1.1; future deploy-shaped schemas may tighten to `complete` only. (Patch 1, cross-reference Substrate.)
+- **Added** `bootstrap-probe.md` per schema. `marketing-campaign` and `report-synthesis` ship full probes (WP REST + non-WP host platform list; filesystem listing for input_folder). `software-feature-ship` ships a `git ls-files` probe. The four other schemas (`client-onboarding`, `event-planning`, `compliance-audit`) ship documented stubs awaiting first-project empirical signal — they emit `bootstrap.probe_skipped` with operator-attestation as the v5.1.1 default. (Patch 3, cross-reference Substrate.)
+
+### Tooling
+
+- **`tools/hw-verify.py` updated for v5.1.1 event kinds and Layer 1 checks.** New event kinds in `KNOWN_EVENT_KINDS` and `REQUIRED_PAYLOAD_FIELDS`: `scope.complete`, `external_state.read_back`, `bootstrap.inventory_diff`, `bootstrap.scope_locked`, `bootstrap.probe_skipped`. New check functions: `check_scope_completeness`, `check_external_state_readback`, `check_bootstrap_probe`. New result fields: `scope_completeness_failures`, `external_state_readback_failures`, `external_state_readback_warnings`, `bootstrap_probe_failures`. Helper functions: `parse_scope_items_from_project_md`, `parse_capability_gates_yaml`, `find_schema_for_project`, `task_matches_readback_pattern`. v5.1 events.jsonl files validate unchanged.
+
+### Documentation
+
+- **Substantially expanded** `CONTRIBUTING.md` §"Updating and Contributing Schemas" — eight subsections covering directory layout, new-schema walkthrough, extension patterns, core-with-schema-config pattern, versioning, validation, CHANGELOG shape, and single-operator policy / clean-break changes. Title bumped to v5.1.1.
+- **Updated** `core/SUBSTRATE.md` with §Scope Completeness, §External State Read-Back, §Bootstrap Inventory Sweep sections + new event-kind table rows.
+- **Updated** `core/VERIFICATION.md` Layer 1 check table with rows 8 (scope_completeness), 9 (external_state_readback), 10 (bootstrap_probe).
+- **Updated** `core/TYPED-ARTIFACTS.md` with §Live-Edit Proposal Artifacts.
+- **Updated** `templates/executor-prompt.md` with the bootstrap-probe ceremony in the first-actions block.
+
+### Version
+
+- `harness_version: "5.1.1"` across all six schema files (note: the schema files retain the historical `"5.1"` string until a future commit updates them; v5.1.1 is strictly additive and v5.1 schemas continue to validate). HARNESS.md title and CONTRIBUTING.md title bumped.
+
+### Hypothesis evaluation criteria reminder
+
+The five hypotheses (H-G1 through H-G5) are evaluated by the next empirical run on `example-rebrand-rollout`, not by this build. Patch 1 catches Mailster-style scope skips, Patch 2 verifies external mutations, Patch 3 surfaces missing-page issues at bootstrap, Patch 4 forces vertical-page create-candidates to be enumerated, Patch 5 catches redirect coverage gaps, and the new `zz-seo-impact-audit.md` task runs the SEO check at the end. The next empirical run produces the falsification signal.
+
+### Single-operator clean-break note
+
+This release enforces all five new Layer 1 checks strictly. Single operator, no in-flight third-party projects, no transition mechanism shipped. Action required for `example-rebrand-rollout` (the only active project): before the v5.1.1 fix run, the operator (or a setup task in the fix-run prompt) updates that project's `events.jsonl` to include a `scope.complete` event reflecting the v5.1 session's terminal states, plus retroactive `external_state.read_back` events for the live-edit tasks that completed without them. This is project-data hygiene, not substrate work — flagged in V5.1.1-BUILD-REPORT.md §6 with the recommended cleanup approach.
+
+---
+
 ## v5.1 (2026-04-26) — Structural primitives from second empirical run
 
 A second empirical run (the cyber-insurance-audit lead-magnet on the marketing-campaign schema) plus carry-forward observations from the v5.0 brand-foundation-synthesis run produced a friction log of structural gaps that v5.0.1's documentation-and-templates-only patch cycle could not close. v5.1 adds the structural primitives those friction entries motivated: three new substrate event kinds, two new operating-reality fields, a new delivery mode, a new task in the synthesis schema, a new task in the marketing-campaign schema, and per-schema field reconciliation. v5.1 is **strictly additive over v5.0.1** — a v5.0.1 project running today runs identically under v5.1 unless it opts into the new primitives.
