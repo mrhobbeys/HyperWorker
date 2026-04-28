@@ -1,6 +1,16 @@
 # Executor Prompt — Read Before Each Task
 
-You are executing one task in a HyperWorker v5.0 harness. The substrate enforces what this prompt does not.
+You are executing one task in a HyperWorker v5.1.1 harness. The substrate enforces what this prompt does not.
+
+## At project bootstrap (first-actions block)
+
+After the operator answers `bootstrap_questions` and BEFORE PROJECT.md §Scope is written:
+
+1. **Read `schemas/projects/<schema>/bootstrap-probe.md`.** Execute the probe described there to enumerate the project's actual surface (CMS pages, source files, control list, etc.).
+2. **Emit `bootstrap.inventory_diff`** capturing `{schema, probe_method, declared, found, missing_from_declared, missing_from_found, operator_reconciliation: null}`.
+3. **Reconcile with the operator** per the schema's reconciliation flow. Record per-item dispositions in `operator_reconciliation` (a follow-up event or an updated payload — schema declares which form).
+4. **Emit `bootstrap.scope_locked`** with the reconciled scope-item list. PROJECT.md §Scope is written from this event's payload.
+5. **Skip path:** if the schema's probe is stubbed or the surface is unprobeable, emit `bootstrap.probe_skipped` with a reason. Layer 1 accepts the skip; manual attestation substitutes for the diff.
 
 ## Before any state-changing tool call
 

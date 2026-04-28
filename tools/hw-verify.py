@@ -57,6 +57,7 @@ KNOWN_EVENT_KINDS = {
     "session.handoff",
     "scope.complete",
     "external_state.read_back",
+    "bootstrap.inventory_diff", "bootstrap.scope_locked", "bootstrap.probe_skipped",
 }
 
 # Required payload fields per v5.1 event kind. None means no per-kind structural
@@ -69,6 +70,9 @@ REQUIRED_PAYLOAD_FIELDS = {
     "scope.complete": ("scope_items",),
     "external_state.read_back": ("task_id", "artifact_url", "equality_method",
                                   "divergence_detected"),
+    "bootstrap.inventory_diff": ("schema", "probe_method", "declared", "found"),
+    "bootstrap.scope_locked": ("project_id",),
+    "bootstrap.probe_skipped": ("schema", "reason"),
     # fire_id is recommended but not required; projection generator falls back to
     # the matching council.invoke event.id when missing. v5.0.1 council events
     # pre-date the field; relaxing to optional preserves backward-compat.
@@ -427,6 +431,69 @@ def check_external_state_readback(workspace: Path, events: list) -> tuple:
     return failures, warnings
 
 
+def check_bootstrap_probe(events: list) -> list:
+    """Run Layer 1 bootstrap-probe check.
+
+    Every project (with a project.activate event) must have either
+    (bootstrap.inventory_diff with operator_reconciliation populated, followed
+    by bootstrap.scope_locked) OR a bootstrap.probe_skipped event.
+    """
+    failures = []
+    by_project = defaultdict(list)
+    for ev in events:
+        by_project[ev.get("project")].append(ev)
+
+    for project_id, project_events in by_project.items():
+        if not project_id or project_id == "_harness":
+            continue
+
+        has_activate = any(ev.get("kind") == "project.activate"
+                           for ev in project_events)
+        if not has_activate:
+            continue
+
+        skipped = any(ev.get("kind") == "bootstrap.probe_skipped"
+                      for ev in project_events)
+        if skipped:
+            continue
+
+        diffs = [ev for ev in project_events
+                 if ev.get("kind") == "bootstrap.inventory_diff"]
+        locks = [ev for ev in project_events
+                 if ev.get("kind") == "bootstrap.scope_locked"]
+
+        if not diffs and not locks:
+            failures.append(
+                f"{project_id}: bootstrap_probe_missing "
+                f"(no bootstrap.inventory_diff, bootstrap.scope_locked, "
+                f"or bootstrap.probe_skipped after project.activate)"
+            )
+            continue
+
+        reconciled = False
+        for diff in diffs:
+            payload = diff.get("payload") or {}
+            if payload.get("operator_reconciliation") is not None:
+                reconciled = True
+                break
+
+        if diffs and not reconciled and not locks:
+            failures.append(
+                f"{project_id}: bootstrap_probe_missing "
+                f"(bootstrap.inventory_diff without operator_reconciliation "
+                f"and no bootstrap.scope_locked)"
+            )
+            continue
+
+        if not locks and diffs and not reconciled:
+            failures.append(
+                f"{project_id}: bootstrap_probe_missing "
+                f"(bootstrap.inventory_diff present but no bootstrap.scope_locked)"
+            )
+
+    return failures
+
+
 def find_projection_path(workspace: Path, artifact_id: str, hashes_index: dict) -> Path | None:
     """Locate a projection file for an artifact ID. Prefer hashes.json, else search."""
     for projection_path in hashes_index:
@@ -460,6 +527,7 @@ def verify(workspace: Path, since: str | None) -> dict:
         "scope_completeness_failures": [],
         "external_state_readback_failures": [],
         "external_state_readback_warnings": [],
+        "bootstrap_probe_failures": [],
         "result": "PASS",
     }
 
@@ -576,6 +644,7 @@ def verify(workspace: Path, since: str | None) -> dict:
     esrb_failures, esrb_warnings = check_external_state_readback(workspace, events)
     result["external_state_readback_failures"] = esrb_failures
     result["external_state_readback_warnings"] = esrb_warnings
+    result["bootstrap_probe_failures"] = check_bootstrap_probe(events)
 
     blocking = (
         result["tamper"]
@@ -586,6 +655,7 @@ def verify(workspace: Path, since: str | None) -> dict:
         or result["malformed_payloads"]
         or result["scope_completeness_failures"]
         or result["external_state_readback_failures"]
+        or result["bootstrap_probe_failures"]
     )
     result["result"] = "FAIL" if blocking else "PASS"
     return result
@@ -607,6 +677,7 @@ def render(result: dict) -> str:
         f"  scope_completeness:    {len(result['scope_completeness_failures'])} {result['scope_completeness_failures']}",
         f"  ext_state_readback:    {len(result['external_state_readback_failures'])} {result['external_state_readback_failures']}",
         f"  ext_state_warnings:    {len(result['external_state_readback_warnings'])} {result['external_state_readback_warnings']}",
+        f"  bootstrap_probe:       {len(result['bootstrap_probe_failures'])} {result['bootstrap_probe_failures']}",
         f"  result:                {result['result']}",
     ]
     if "error" in result:

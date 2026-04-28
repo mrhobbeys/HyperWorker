@@ -229,6 +229,14 @@ The harness defines a closed set. Schema extensions must add kinds via the proje
 |---|---|
 | `external_state.read_back` | `{task_id, artifact_url, pre_state_ref, post_state_ref, equality_method, divergence_detected, divergence_notes}` — see §External State Read-Back. Per-schema opt-in via `capability-gates.yaml` `external_state_readback.required_for`. |
 
+### Bootstrap events
+
+| Kind | Payload |
+|---|---|
+| `bootstrap.inventory_diff` | `{schema, probe_method, declared, found, missing_from_declared, missing_from_found, operator_reconciliation}` — see §Bootstrap Inventory Sweep. |
+| `bootstrap.scope_locked` | `{project_id, locked_at, scope_items[]}` — closes the inventory sweep ceremony after operator reconciliation. |
+| `bootstrap.probe_skipped` | `{schema, reason}` — alternative ceremony close when no probe ran (e.g., schema's probe is stubbed). |
+
 ---
 
 ## Projections
@@ -797,6 +805,41 @@ For platforms that do not surface state for re-read, the schema declares a `fall
 2. If `divergence_detected: true` on the read-back, emit a Layer 1 WARNING (not FAIL) and require a follow-up `friction.log` event referencing the divergence.
 
 **Hypothesis (under empirical evaluation in v5.1.1+).** `external_state.read_back` makes external mutation verifiable per critical-risk task. Falsifier: a critical-risk `task.complete` ships without a paired read_back event and Layer 1 PASSes.
+
+---
+
+## Bootstrap Inventory Sweep
+
+v5.1 §Scope was operator-declared and never cross-checked against the actual project surface. A wrong slug, a missing page, a renamed asset declared at bootstrap got locked into PROJECT.md and bit downstream tasks. v5.1.1 inserts a probe between `bootstrap_questions` and §Scope locking: the executor probes the project's ground truth (CMS pages, source filesystem, git tree, etc.) and emits `bootstrap.inventory_diff`. The operator reconciles the diff before §Scope is written into PROJECT.md.
+
+**Payload schema (`bootstrap.inventory_diff`).**
+
+| Field | Type | Meaning |
+|---|---|---|
+| `schema` | string | Schema ID for the project being bootstrapped. |
+| `probe_method` | string | The probe used (e.g., `wp-rest-pages-list`, `git-ls-files`, `filesystem-listing`). Documented per schema in `bootstrap-probe.md`. |
+| `declared` | list[string] | Items declared via `bootstrap_questions` answers (slugs, paths, control IDs). |
+| `found` | list[string] | Items the probe surfaced from ground truth. |
+| `missing_from_declared` | list[string] | `found` items not present in `declared`. |
+| `missing_from_found` | list[string] | `declared` items not present in `found`. |
+| `operator_reconciliation` | object \| null | Per-item disposition (confirm declared, expand declared, mark out-of-scope). `null` until operator reconciles; a populated value gates `bootstrap.scope_locked`. |
+
+**Ceremony close.** After operator reconciliation, the executor emits `bootstrap.scope_locked` with the final scope-item list. §Scope is then written into PROJECT.md from this event's payload.
+
+**Skip path.** Schemas whose probe is stubbed (or whose project surface cannot be probed automatically) emit `bootstrap.probe_skipped` with a reason. The skip is recorded in the chain so verification can distinguish "probe ran, no diff" from "probe was never attempted."
+
+**Per-schema probe.** Each schema documents its probe method in `schemas/projects/<schema>/bootstrap-probe.md`. The agent reads the schema's probe doc at bootstrap and executes it; the doc declares the API call, filesystem walk, or operator-attest fallback that produces the `found` list.
+
+**Layer 1 enforcement.** See `core/VERIFICATION.md` §Layer 1.
+
+A project's chain must contain either:
+
+1. `bootstrap.inventory_diff` followed by `bootstrap.scope_locked` whose payload's `operator_reconciliation` (or the prior diff event's `operator_reconciliation`) is populated; OR
+2. `bootstrap.probe_skipped` with a reason.
+
+If neither is present after `project.activate`, FAIL `bootstrap_probe_missing`.
+
+**Hypothesis (under empirical evaluation in v5.1.1+).** `bootstrap.inventory_sweep` surfaces declared-vs-actual mismatches before §Scope locks. Falsifier: a wrong slug or missing page in PROJECT.md §Scope makes it past bootstrap and bites mid-task.
 
 ---
 

@@ -54,6 +54,7 @@ A task moves up the pyramid only when triggered. Standard-risk routine work runs
 | 7 | Hash chain | The event's `prev_hash` matches the previous event's `hash`. The event's recomputed hash matches its recorded hash. |
 | 8 | Scope completeness | At `session.handoff`, the most recent `scope.complete` event covers every PROJECT.md §Scope item with a `terminal_state` in the schema's `capability-gates.yaml` `scope_completeness.allowed_terminal_states`. Failure codes: `scope_completeness_missing`, `scope_completeness_terminal_state_disallowed`, `scope_completeness_unrepresented_item`. See `core/SUBSTRATE.md` §Scope Completeness. |
 | 9 | External state read-back | For every `task.complete` whose task matches a schema's `capability-gates.yaml` `external_state_readback.required_for` pattern, a paired `external_state.read_back` event with the same `task_id` exists within 5 events after the `task.complete`. Failure code: `external_state_readback_missing`. `divergence_detected: true` is a WARNING (not FAIL) and prompts a follow-up `friction.log`. See `core/SUBSTRATE.md` §External State Read-Back. |
+| 10 | Bootstrap probe | Every project with a `project.activate` event has either (`bootstrap.inventory_diff` followed by `bootstrap.scope_locked`, with `operator_reconciliation` populated) OR a `bootstrap.probe_skipped` event. Failure code: `bootstrap_probe_missing`. See `core/SUBSTRATE.md` §Bootstrap Inventory Sweep. |
 
 **On failure.** A `verify.layer1.fail` event is appended *immediately after* the offending event. The harness then either:
 
