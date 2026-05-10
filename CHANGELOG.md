@@ -1,32 +1,92 @@
 # Changelog — HyperWorker
 
-## v5.2.0 (Unreleased) — Substrate copywriting + agent mode + soul anchor
+## v5.2.0 (2026-05-10) — Substrate copywriting + agent mode + soul anchor
 
-> Stub. Filled at the end of the v5.2.0 work. See HW-V5.2.0-CLAUDE-CODE-MEGA-PROMPT.md for the release brief.
+Three concerns shipped together: a substrate-wide copywriting pass that applies the v4 hand-roll's direct-response craft (imperative voice, named failure modes with cost, completion signals); a new `delegation_policy.execution_mode` primitive (agent mode for autonomous-with-safety-floors execution); and a soul anchor primitive (operator-identity event + council member). v5.2.0 is **strictly additive over v5.1.1** — existing schemas validate unchanged; `execution_mode` defaults to `interactive` (current behavior); `soul_consistency_watcher` is opt-in per schema.
 
-### Substrate
+Each new primitive carries an explicit hypothesis with a falsifier (H-V52-1 through H-V52-4 below). v5.2.x retires whatever fails its falsifier in real use.
 
-(filled in commit 10)
+### Substrate copywriting pass
 
-### Agent mode
+- **HARNESS.md** rewritten to apply the v4 craft. Imperative voice, named failure modes, completion signals on the bootstrap protocol. Banned modals (`should/may/could/might/generally/we usually/try to/consider`) removed; banned framings (`operate at the highest standards / senior engineer mindset / autonomous agent / with the discipline of`) eliminated. Rules preserved verbatim; tables, code blocks, file structure, command list, and version strings byte-for-byte. Hook framing in the header on substrate-over-rules thesis.
+- **`core/*.md`** rewritten where prose surfaces benefited. Each commit named the failure mode the primitive prevents:
+  - LOCK.md: multi-project drift cost ("neither gets the operator's full reading of state at any moment"), distraction-intake failure mode ("just outline it real quick").
+  - PRECEDENCE.md: SCAN attention-restoration failure mode ("model glances at the section and continues with whatever pattern it had cached"), compliance-theatre framing for after-the-fact SCAN answers.
+  - ATOMICITY.md: hermetic-set failure mode (F-019 leak corrupting recitation projection and dependency graph), branch/fold parent-context-pollution cost, ratchet silent-drift cost with concrete T-009/T-005 example.
+  - VERIFICATION.md: v4.1.1 stacked-eight-component cost, council fabrication-on-mismatched-trigger framing, "two minutes per task, dozens of tasks, hours of operator time on verbal approval" framing for what Pushback becomes.
+  - TYPED-ARTIFACTS.md: v4.1.1 lifecycle maintenance-debt cost, citation-without-reading failure mode (downstream agents fabricating a reading from the artifact's title).
+  - SUBSTRATE.md: surgical edits to v5.1/v5.1.1 event-kind preambles (Friction Log, Session Handoff, Scope Completeness, External State Read-Back, Bootstrap Inventory Sweep) — each named with a concrete failure mode and cost.
+- **`templates/executor-prompt.md`** rewritten — the highest-leverage substrate file. Preamble names the most expensive operator-pull-in pattern (permission-asks at phase boundaries when permission was granted at project init, per v4 Operating Posture).
+- **`templates/task-template.md`, `session-handoff-template.md`** light-touch passes on prose-heavy sections. Other templates and `artifact-templates/*` reviewed and judged sufficient as-is — the v4 craft does not add value over the existing imperative field-driven prose.
+- **Schema READMEs** light pass. Most are already in v4 voice (especially report-synthesis with "Summaries lose decisions"). One targeted addition to `marketing-campaign/README.md` (the agent-generates-six-pieces-with-30%-Tier-1-violations failure mode).
 
-(filled in commit 10)
+### Agent mode (`delegation_policy.execution_mode`)
+
+- **Added** `execution_mode` field to the existing v5.1 OR-001 `delegation_policy`. Three modes:
+  - `interactive` (default) — current v5.1 behavior unchanged.
+  - `agent` (v5.2.0) — proceed autonomously up to the safety floors below.
+  - `observer` (reserved) — not yet implemented; declaring it produces a Layer 1 WARNING and the harness behaves as `interactive`.
+- **Five non-overridable safety floors** (always pause, regardless of mode):
+  1. Critical-risk task completion (`safety_floor_critical_completion`)
+  2. Smoke-run language detected by council (`safety_floor_smoke_run`) — configurable marker dictionary, default set: `"would normally" / "in a real run" / "this is a placeholder" / "demonstrating the structure"`.
+  3. Layer 1 retry threshold exhausted (`safety_floor_layer1_exhausted`)
+  4. Voice/soul anchor breach (`safety_floor_soul_breach`) — fires when `soul_consistency_watcher` returns FAIL on a `task.complete`.
+  5. Operator mid-flow directive (`safety_floor_operator_directive`)
+- **Implementation** spans `core/ATOMICITY.md` §Execution Mode (full safety-floor table + soft-enforcement framing), `templates/executor-prompt.md` §Execution mode (operationally legible per-floor list), `templates/artifact-templates/operating-reality-template.md` (YAML field added), and `core/PRECEDENCE.md` §Operator Mid-Flow Directives Beat Mode Settings (precedence-over-execution_mode framing). Hypothesis H-V52-2; falsifier: an agent-mode run terminates a critical-risk operation that should have paused.
 
 ### Soul anchor primitive
 
-(filled in commit 10)
+- **Added** `SOUL.template.md` at substrate root — brand-clean structural stub. Operators copy and fill in their own. Length discipline: ≤1000 words; tight beats long.
+- **Added** `SOUL.example.md` at substrate root — one filled-in example showing how a real operator adapted the template's intent. Section structure preserved verbatim from the source soul.md (Boil the ocean / Excuses / Anti-patterns / Voice / When in doubt) to demonstrate that operators use their own framing rather than mirroring the template's headers. Operator-specific names and project references genericized to satisfy substrate brand-isolation.
+- **Added** `operator_soul_anchor` event kind in `core/SUBSTRATE.md`. Payload `{soul_path, soul_hash, version, fired_at}`. Fired at bootstrap when `OR-001.soul_anchor_path` is declared (or when `soul.md` exists at workspace root and the schema declares `soul_anchor_required: true`). Re-anchoring on file change is a new `operator_soul_anchor` event; the supersede chain captures the change.
+- **Added** `soul_consistency_watcher` council member in `core/VERIFICATION.md` §Council Role Library. FAILs on: workaround when real fix is reachable / "tabling for later" with no documented blocker / incomplete-presented-as-done / work product fails the named quality bar from the soul anchor. Reads soul.md content from the most recent `operator_soul_anchor` event by hash. Skipped with `member_skipped: no_soul_anchor` if no anchor exists. Smoke-run marker dictionary is shared with the agent-mode safety floor; one event surfaces per detection, not two duplicates. Hypothesis H-V52-3; falsifier: the watcher never fires across 5+ real runs (anchor is not load-bearing) OR fires constantly (anchor is poorly written).
 
 ### Brand isolation
 
-(filled in commit 10)
+- **Pre-v5.2.0 cleanup** committed on the master line before branching: `core/TYPED-ARTIFACTS.md` operator example bumped (`Spencer` → `the operator`); `schemas/projects/report-synthesis/artifact-extensions.yaml:44` source-author example genericized (`'Spencer'` → `'Operator'`).
+- **Final substrate sweep** at commit 11 confirms zero operator-name leaks outside `LICENSE` (copyright), `README.md` (`@mrhobbeys` attribution), `SOUL.example.md` (intentional example content), and `CHANGELOG.md` attribution lines.
 
-### Hypotheses under test
+### Repo hygiene (pre-v5.2.0)
 
-(filled in commit 10 — H-V52-1 through H-V52-4 from the mega-prompt)
+- **Branch convention aligned** with the operator's intended structure (`main / 3.x / 4.x / 5.x`):
+  - `master` renamed to `5.x` (the active 5.x development branch with full v5.0/v5.0.1/v5.1/v5.1.1 history).
+  - `3.x` and `4.x` to be created from the existing remote `v3` and `v4` archival branches in the final remote-burst.
+  - Stale local branches `v5` and `v5.0` to be deleted (subsumed by `5.x`; `v5.0` was also ambiguous per git's own warning).
+- **Gitea remote** added (`https://slh.local/gitea/spencer/HyperWorker.git`) with per-host SSL verification disabled for the local self-signed cert. Gitea force-push reconciliation in the final remote-burst (gitea is a pre-rebase parallel fork; same content, different SHAs; local is canonical).
+
+### Hypotheses under test (v5.2.0)
+
+| ID | Claim | Falsifier |
+|---|---|---|
+| H-V52-1 | The v4 hand-roll's direct-response copywriting craft, applied across substrate files, measurably reduces middle-section suppression and permission-ask frequency in real-work runs. | The next 3 real-work runs show no measurable shift in behavioral signals captured against the v5.1.1 baseline. |
+| H-V52-2 | Agent mode (`execution_mode: agent`) reduces stopping-point cost on agentic-coder workflows (Copilot-style credit consumption, Claude long-session cost) without compromising the safety floors. | A real-work agent-mode run terminates a critical-risk operation that should have paused. |
+| H-V52-3 | A structural operator-identity anchor (soul.md + `operator_soul_anchor` event + `soul_consistency_watcher` council member) produces qualitatively different agent behavior than rules-based prose alone. | The watcher never fires across 5+ real runs (anchor is not load-bearing) OR fires constantly on every task (anchor is poorly written and dilutes the Tier 1 boundary). |
+| H-V52-4 | Reserved for the editing schema. Deferred to v5.2.1; no claim shipped in v5.2.0. | n/a in v5.2.0. |
+
+### Behavioral signals to watch
+
+When v5.2.0 lands in a real-work run, capture these against the v5.1.1 baseline (friction log, post-mortem):
+
+- **Permission-ask count.** How often the agent paused at a phase boundary or council-converged event waiting for operator approval that v4 Operating Posture says was granted at project init. If the copywriting pass reduces this count, H-V52-1 lives. If not, the pass was decoration.
+- **Smoke-run marker emissions.** How often the `soul_consistency_watcher` (where opted-in) or the agent-mode safety floor #2 fires on "would normally" / "for now" / equivalent phrases. Zero fires across 5 runs falsifies H-V52-3 from the under-side; high false-positive rate falsifies it from the over-side.
+- **Agent-mode pause profile.** When `execution_mode: agent` is set, what fraction of pauses are safety floors vs. interactive-mode equivalents the operator would have hit anyway? If the floors are doing the right work, agent mode should pause meaningfully less while preserving every irreversible-mutation gate.
+- **Soul.md drift.** How often the operator updates soul.md mid-project (re-anchoring event). Zero updates is fine; frequent updates may indicate the initial anchor was vague.
+
+### Not in v5.2.0 (deferred)
+
+- **Editing schema (`schemas/projects/editing/`).** Deferred to v5.2.1. The 5.1.1 Book Fix Test project remains the empirical reference for that schema.
+- **Council-skip-with-honesty primitive.** Deferred until after v5.2.0 + the editing schema show whether council-skip is needed as a structural pattern.
+- **Workflow / knowledge layer split.** Deferred indefinitely; v6 contingency, not yet empirically justified.
+- **Hard enforcement of `execution_mode`.** v5.2.0 ships soft enforcement (the agent reads the field and complies; the harness does not block dispatch). Hard enforcement deferred to v5.3 if needed.
+- **`observer` mode.** Reserved enum value, not implemented. Audit-only / no-state-changing-events mode is a v5.3+ candidate.
 
 ### Version
 
-- `harness_version: "5.2.0"` across all six schema files. HARNESS.md title and CONTRIBUTING.md title bumped.
+- `harness_version: "5.2.0"` across all six schema files. HARNESS.md title bumped to v5.2.0. CONTRIBUTING.md title bumped to v5.2.0. README.md badge bumped to 5.2.0. `templates/executor-prompt.md` preamble bumped to v5.2.0.
+
+### Single-operator clean-break note
+
+This release is strictly additive — every v5.1.1 schema validates unchanged under v5.2.0. `execution_mode: interactive` is the default; existing OR-001 records inherit it without modification. `soul_consistency_watcher` is opt-in per schema; no schema in v5.2.0 enables it by default. There is no migration path required for any existing project.
 
 ---
 
