@@ -2,7 +2,7 @@
 
 > Decisions, findings, anti-patterns, and operating-reality are universal cross-cutting concerns of project work. v5.0 makes them addressable, citable, hash-verified, immutable structures over event-sourced substrate. The lifecycle pipeline that v4.1.1 used (DISCOVERIES → LEARNINGS → ARCHIVE) is removed. Validation is a *field*, not a *lifecycle*; supersede semantics replace deletion.
 
-This mechanism replaces v4.1.1's Memory mechanism. The shape of the change: knowledge is no longer a flow through validation gates; it is a set of immutable structured records with hash citations. Operators do not curate a queue; the substrate makes superseded knowledge visible by hash drift.
+This mechanism replaces v4.1.1's Memory mechanism. The shape of the change: knowledge is no longer a flow through validation gates. It is a set of immutable structured records with hash citations. The failure mode v4.1.1's pipeline produced — operator curating a queue while the agent waited, decisions stale by the time they were "promoted" — is eliminated by making supersede the only update path. Operators do not curate; the substrate makes superseded knowledge visible by hash drift.
 
 ---
 
@@ -71,7 +71,7 @@ reverses: null
 tags: [tone, brand]
 ```
 
-Decisions are append-only. Reversal happens by writing a new decision with `reverses: DEC-007`; the old decision projection still exists, but downstream tasks will see citation freshness drift if they cited the old hash.
+Decisions are append-only. Reversal happens by writing a new decision with `reverses: DEC-007`; the old decision projection still exists, but downstream tasks see citation freshness drift if they cited the old hash.
 
 ### Finding (F)
 
@@ -147,7 +147,7 @@ tags: [foundation]
 
 Tasks consume `OR-001` when their plan could violate any of these constraints. The operator-reality-calibrator council member (see `core/VERIFICATION.md`) reads `OR-001` as primary input.
 
-**v5.1 optional fields.** OR-001 may declare `delegation_policy` and `model_selection_policy` to capture operator engagement and cost preferences once at bootstrap. Both are optional; omitted fields inherit harness defaults. See `templates/artifact-templates/operating-reality-template.md` for field semantics, and `core/ATOMICITY.md` for how `delegation_policy` is consulted at task dispatch (soft enforcement: the agent reads the field and decides; v5.1 does not block dispatch when the policy is violated). `model_selection_policy.prefer` resolves through the per-model profile rankings declared in `templates/models/*.yaml` and `templates/models/_ranking.yaml`.
+**v5.1 optional fields.** OR-001 may declare `delegation_policy` and `model_selection_policy` to capture operator engagement and cost preferences once at bootstrap. Both are optional; omitted fields inherit harness defaults. See `templates/artifact-templates/operating-reality-template.md` for field semantics, and `core/ATOMICITY.md` for how `delegation_policy` is consulted at task dispatch (soft enforcement: the agent reads the field and complies; v5.1 does not block dispatch when the policy is violated). `model_selection_policy.prefer` resolves through the per-model profile rankings declared in `templates/models/*.yaml` and `templates/models/_ranking.yaml`.
 
 ---
 
@@ -193,7 +193,7 @@ Every artifact projection is regenerable from its event chain. The protocol:
    - Body: kind-specific markdown sections (the `body:` field of the event payload, if present, rendered as the body section).
 4. Compute SHA-256 of the file content; record short-hash in `hashes.json` and update the `hash:` field in the projection on the next render.
 
-Two agents rendering from the same event prefix MUST produce byte-identical output. If they don't, the rendering protocol has a bug; report it.
+Two agents rendering from the same event prefix produce byte-identical output. If they don't, the rendering protocol has a bug; report it.
 
 ---
 
@@ -214,7 +214,7 @@ Layer 1 verification (see `core/VERIFICATION.md`) checks every citation on every
 
 ## Consumption Protocol
 
-A typed artifact in events is dead until consumed. The consumption protocol forces the agent to anchor its consumed inputs at the decision moment, not at task start.
+A typed artifact in events is dead until consumed. The failure mode the consumption protocol prevents: the artifact exists, the task's frontmatter cites it, the agent never reads the content, and the output reflects no awareness of what the artifact actually said. Citation alone is not enough; downstream agents fabricate a reading from the artifact's title or skim the first paragraph and produce a plausible-looking output that misses the load-bearing constraint. The consumption protocol forces the agent to anchor its consumed inputs at the decision moment, not at task start.
 
 ### Citation requirement
 
@@ -225,7 +225,7 @@ Tasks declare `consumes:` in frontmatter. At delegation time:
 
 ### Recitation
 
-Before any state-changing tool call (any tool that writes a file, sends a message, or modifies external state), the agent updates `consumed-inputs.md` with a paraphrase of each consumed artifact in its own words.
+Before any state-changing tool call (any tool that writes a file, sends a message, or modifies external state), update `consumed-inputs.md` with a paraphrase of each consumed artifact in the agent's own words.
 
 The recitation file format:
 
@@ -253,7 +253,7 @@ The harness emits a `task.recite` event for each entry containing `{task_id, con
 
 - Tokenize paraphrase and the source artifact's title + body.
 - Compute Jaccard overlap on stemmed tokens (lowercase, drop stopwords, simple Porter-style stemming).
-- If overlap < `recitation_overlap_threshold` (declared in the active model profile; default 0.7) → reject the recitation. The agent is asked to re-paraphrase.
+- If overlap < `recitation_overlap_threshold` (declared in the active model profile; default 0.7) → reject the recitation. Re-paraphrase.
 
 Overlap below threshold often means the agent paraphrased something it didn't read. Above-threshold overlap means the agent's words and the source's words share enough lexicon to be plausibly the same content. This is a structural attention restoration check, not a meaning check; it does not catch all paraphrase failures, but it catches the ones where the agent skimmed and produced a generic restatement.
 
@@ -271,7 +271,7 @@ Each tier section in `00-REFERENCE-rules.md` ends with one or more SCAN markers:
 @@SCAN_1_2: Confirm the unsubscribe link and physical mailing address requirements apply to this output (yes / no / not-applicable).
 ```
 
-Before any state-changing action, the agent emits a short answer to each marker via `task.scan` events. The answers are written into the task's working log; the harness does not re-run them every action, but they MUST appear at least once before the first state-changing event in the task.
+Before any state-changing action, emit a short answer to each marker via `task.scan` events. The answers are written into the task's working log; the harness does not re-run them every action, but they MUST appear at least once before the first state-changing event in the task.
 
 The point of SCAN is not the answer's correctness; it is **forcing the model to generate output that touches each rule section**. Output token generation restores attention to the section the marker pointed at. Passive re-reading does not. (Pattern from dev.to/nikolasi.)
 
@@ -311,7 +311,7 @@ There is no DISCOVERIES → LEARNINGS gate. There is no archive. There is no exp
 By default, artifacts are scoped to the project that emitted them. Cross-project read access is opt-in via tags:
 
 - An artifact tagged `cross-project:<scope>` is visible to other projects whose `config.yaml` includes that scope in its `cross_project_subscriptions:`.
-- Visibility is read-only. A subscribing project sees the artifact and can cite it; it cannot supersede it.
+- Visibility is read-only. A subscribing project sees the artifact and cites it; it cannot supersede it.
 
 Cross-project citation looks identical to local citation: `[F-014#b8d4e1779a02]`. Layer 1 resolves it by searching the local project first, then the cross-project subscription set.
 
@@ -321,14 +321,16 @@ This replaces v4.1.1's Universal/Vertical/Client/Engagement scope taxonomy. Oper
 
 ## Why Not a Lifecycle
 
-v4.1.1's Memory pipeline was: capture → human-validate → enter active → age out → archive. The pipeline assumed knowledge ages, gets stale, and needs proactive aging. v5.0 replaces this with:
+v4.1.1's Memory pipeline was: capture → human-validate → enter active → age out → archive. The pipeline assumed knowledge ages, gets stale, and needs proactive aging. The cost of being wrong about that assumption: every artifact carried a maintenance debt, and the operator paid attention to a queue rather than to the work.
+
+v5.0 replaces the lifecycle with:
 
 - **Append-only events.** No knowledge is lost; supersede preserves the prior state.
 - **Hash citations.** Stale knowledge is not silently aging; downstream artifacts citing it produce stale-citation failures at Layer 1, immediately and visibly.
 - **Tag-based visibility.** Cross-project pollution is opt-in, not the result of a misset scope tag.
 - **No archive.** The "off the critical path" idea is replaced by: stop citing it, and it stops affecting decisions. The artifact remains in events; it just no longer flows into prompts.
 
-If an operator wants the v4.1.1 pipeline back, they can implement it on top of this substrate by adding a `lifecycle:` field via schema extension and writing periodic-review tasks. The harness does not enforce the pipeline; it provides the substrate.
+If an operator wants the v4.1.1 pipeline back, they implement it on top of this substrate by adding a `lifecycle:` field via schema extension and writing periodic-review tasks. The harness does not enforce the pipeline; it provides the substrate.
 
 ---
 
@@ -344,7 +346,7 @@ When a task declares `delivery_mode: live-edit` (mutating a published asset dire
 | `create_candidates` | New items the mission implies should exist on the surface, each paired with the proposed creation. |
 | `delete_candidates` | Existing items the mission implies should be removed, each paired with the proposed removal. |
 
-The enumeration is exhaustive at proposal time. The proposal does not pre-prune any candidate based on perceived effort. The pruning decision happens in council review, where `scope-shrink-watcher` checks that every enumerated candidate is either actuated, deferred with reason, or marked excluded-after-discovery with reason — never silently dropped.
+The enumeration is exhaustive at proposal time. Do not pre-prune any candidate based on perceived effort. The pruning decision happens in council review, where `scope-shrink-watcher` checks that every enumerated candidate is either actuated, deferred with reason, or marked excluded-after-discovery with reason — never silently dropped.
 
 **Per-candidate fields.** Each candidate is an object:
 
