@@ -179,16 +179,17 @@ The pre-v5.1 working-artifact form (`bootstrap-friction-log.md`) is retained for
 
 ## Bootstrap Protocol
 
-When asked to build a harness for a goal, execute these six steps in order. Do not skip Step 1; do not infer Step 2 without operator confirmation; do not run `bootstrap_questions` from a schema the operator has not endorsed.
+When asked to build a harness for a goal, execute these seven steps in order. Do not skip Step 1; do not infer Step 2 without operator confirmation; do not run `bootstrap_questions` from a schema the operator has not endorsed.
 
 1. **Understand the goal.** Ask: project description, domain, constraints. If the operator names a schema, skip to Step 3.
-2. **Match a schema.** Suggest one of the five default schemas in `schemas/projects/`. If none fit, offer a custom build that scaffolds from default templates and saves the result with `hw schema save` after the project completes.
+2. **Match a schema.** Suggest one of the six default schemas in `schemas/projects/` (marketing-campaign, software-feature-ship, client-onboarding, event-planning, compliance-audit, report-synthesis). If none fit, offer a custom build that scaffolds from default templates and saves the result with `hw schema save` after the project completes.
 3. **Bootstrap:** `hw bootstrap --schema <name> --name <project-id>`. Protocol in `core/SUBSTRATE.md` §`hw bootstrap`. Ask only the questions the schema declares in `schema.yaml` — typically operating-reality (budget, timeline, team, authority), specific rules content, and project description.
 4. **Write operating-reality.** Each schema-declared question maps to a field in `OR-001`. Run `hw add operating-reality < draft.md` to append the event and render the projection.
-5. **Verification Checkpoint with council.** The schema's `council.yaml` declares a `project.activate` trigger. Council members run with context-asymmetric framing (see `core/VERIFICATION.md` §8.4). Each emits a `council.report`; the convergence rule decides. Surface a single brief summary to the operator, not three free-form questions.
-6. **Execute.** The operator runs `hw next-step` or invokes the first task. The first task's `consumes:` list typically references `OR-001` only; downstream tasks consume artifacts produced by earlier ones.
+5. **Anchor operator identity (if declared).** If `OR-001.soul_anchor_path` is non-null, read the file at that path. If null and `soul.md` exists at workspace root, read it (v5.2.0 default behavior; hard-enforcement via a schema-declared `soul_anchor_required` field is deferred to v5.2.1 per CHANGELOG v5.2.0.1 §Deferred). Compute SHA-256 of the file's bytes; emit `operator_soul_anchor` with `{soul_path, soul_hash, version: "1.0.0", fired_at}`. See `core/SUBSTRATE.md` §Operator Soul Anchor. If no soul.md exists, skip — the harness fires no event and council fires that include `soul_consistency_watcher` will skip the member with `member_skipped: no_soul_anchor`.
+6. **Verification Checkpoint with council.** The schema's `council.yaml` declares a `project.activate` trigger. Council members run with context-asymmetric framing (see `core/VERIFICATION.md` §8.4). Each emits a `council.report`; the convergence rule decides. Surface a single brief summary to the operator, not three free-form questions.
+7. **Execute.** The operator runs `hw next-step` or invokes the first task. The first task's `consumes:` list typically references `OR-001` only; downstream tasks consume artifacts produced by earlier ones.
 
-You will know bootstrap finished when: `OR-001` exists, `00-REFERENCE-rules.md` exists, the council fired and converged (or escalated to operator), and `hw next-step` returns the first task.
+You will know bootstrap finished when: `OR-001` exists, `00-REFERENCE-rules.md` exists, the soul anchor was either fired (if soul.md is declared) or skipped (recorded as no-soul-anchor in the next council fire), the council fired and converged (or escalated to operator), and `hw next-step` returns the first task.
 
 ### Operator mid-flow directives
 

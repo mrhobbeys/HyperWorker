@@ -1,5 +1,5 @@
 # schemas/projects/compliance-audit/council.yaml
-# Compliance council is the largest of the five default schemas. The
+# Compliance council is the largest of the six default schemas. The
 # regulator-perspective member is the load-bearing one — it reads framework
 # clauses by exact text, not paraphrase.
 

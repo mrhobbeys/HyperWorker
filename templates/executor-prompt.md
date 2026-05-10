@@ -14,6 +14,16 @@ After the operator answers `bootstrap_questions` and BEFORE PROJECT.md §Scope i
 
 You will know the bootstrap inventory phase is done when one of: (`bootstrap.scope_locked` exists with populated `operator_reconciliation`) OR (`bootstrap.probe_skipped` exists with a reason).
 
+## At project bootstrap — anchor operator identity (if declared)
+
+After OR-001 is written and the inventory-sweep ceremony closes, but BEFORE the Verification Checkpoint council fires:
+
+1. **Check `OR-001.soul_anchor_path`.** If non-null, read the file at that path. If null and `soul.md` exists at workspace root, read it. Otherwise, skip — fire no event.
+2. **Emit `operator_soul_anchor`** with `{soul_path, soul_hash, version: "1.0.0", fired_at}`. `soul_hash` is the SHA-256 of the file's bytes (full hex). See `core/SUBSTRATE.md` §Operator Soul Anchor.
+3. **If the file changes mid-project** (operator updates the quality bar, adds a refused anti-pattern), emit a new `operator_soul_anchor` event with the new hash. The supersede chain captures the change.
+
+You will know the soul-anchor phase is done when one of: (`operator_soul_anchor` exists in the log) OR (no soul.md is declared and no schema requires one — council fires that include `soul_consistency_watcher` will skip the member with `member_skipped: no_soul_anchor`).
+
 ## Before any state-changing tool call
 
 The failure mode: the agent reads the task, skims the consumed artifacts, and produces output reflecting an artifact's title rather than its content. Recitation forces a paraphrase the harness can verify; SCAN forces an answer that touches each rule section. Both run *before* the first state-changing event, not after.

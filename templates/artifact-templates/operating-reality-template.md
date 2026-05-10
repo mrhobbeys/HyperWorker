@@ -18,6 +18,11 @@ authority:
   can_decide: ["<scope>", "<scope>"]
   requires_approval: ["<scope>", "<scope>"]
 operator_profile: "<short label, e.g., solo-operator-modest-budget>"
+# soul_anchor_path is an optional v5.2.0 field pointing at the operator's filled-in
+# soul.md (operator-identity anchor). null inherits soul.md at workspace root if
+# one exists; otherwise the harness fires no operator_soul_anchor event. See
+# core/SUBSTRATE.md §Operator Soul Anchor and SOUL.template.md / SOUL.example.md.
+soul_anchor_path: <path or null>
 # delegation_policy and model_selection_policy are optional v5.1 fields. Omit
 # either to inherit harness defaults; set to capture preferences once at
 # bootstrap so they propagate across sessions instead of being re-prompted.

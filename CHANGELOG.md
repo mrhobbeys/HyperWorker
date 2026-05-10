@@ -1,5 +1,64 @@
 # Changelog — HyperWorker
 
+## v5.2.0.1 (2026-05-10) — Audit patch
+
+A coherence audit walk-through of v5.2.0 surfaced seven findings (F1–F7). Five fixed here; two deferred to v5.2.1 with documented intent.
+
+The triggering observation: H-V52-3 (the soul-anchor hypothesis) cannot be tested if the primitive is invisible to agents following entry-point files. F5 and F6 made `operator_soul_anchor` unreachable from `HARNESS.md` §Bootstrap Protocol and `templates/executor-prompt.md` §At project bootstrap. A v5.2.0 real-work run with v5.2.0 as-shipped would never fire the event and the hypothesis would stay untestable. The soul anchor's own logic ("never present a workaround when the real fix exists") rules out punting these to v5.2.1.
+
+### F1: `soul_anchor_path` field added to operating-reality template
+
+`templates/artifact-templates/operating-reality-template.md` now declares `soul_anchor_path: <path or null>` as an optional v5.2.0 OR field. Documents that `null` inherits `soul.md` at workspace root, otherwise the harness fires no `operator_soul_anchor` event. References `core/SUBSTRATE.md` §Operator Soul Anchor and the SOUL.template.md / SOUL.example.md substrate files.
+
+### F4: Layer 1 row 11 added for `execution_mode` value validation
+
+`core/VERIFICATION.md` Layer 1 check table gains row 11: `execution_mode validity`. Values must be in `{interactive, agent, observer}`. `observer` is reserved (not implemented in v5.2.0); the harness emits a WARNING with code `execution_mode_observer_reserved` and treats the dispatch as `interactive` for behavior. Any value outside the enum is a FAIL with code `execution_mode_invalid`. Closes the dangling "Layer 1 WARNING on dispatch" claim in `core/ATOMICITY.md` §Execution Mode.
+
+### F5: `operator_soul_anchor` inserted into `HARNESS.md` §Bootstrap Protocol
+
+The bootstrap protocol grew from six steps to seven. New step 5 ("Anchor operator identity") runs after OR-001 is written and before the Verification Checkpoint council. Reads `soul.md` from `OR-001.soul_anchor_path` (or workspace root by default), computes SHA-256, emits `operator_soul_anchor`. The completion-signal sentence updated to mention the soul-anchor phase.
+
+### F6: `operator_soul_anchor` inserted into `templates/executor-prompt.md` §At project bootstrap
+
+New subsection "At project bootstrap — anchor operator identity (if declared)" between the inventory-sweep block and the "Before any state-changing tool call" section. Three-step procedure: check `OR-001.soul_anchor_path`, emit `operator_soul_anchor`, re-emit on file change. Completion signal: either `operator_soul_anchor` exists, or no soul.md is declared and the schema does not require one.
+
+### F7: "Five default schemas" corrected to "six" across the substrate
+
+Four locations updated:
+
+- `HARNESS.md` §Bootstrap Protocol step 2: "five default schemas" → "six default schemas (marketing-campaign, software-feature-ship, client-onboarding, event-planning, compliance-audit, report-synthesis)".
+- `reference/VALIDATION.md` §The Validation Test: same correction; `report-synthesis` added to the parenthetical (the v5.0.1 addition that was never reflected here).
+- `schemas/projects/compliance-audit/council.yaml` header comment: "largest of the five default schemas" → "largest of the six default schemas".
+- `CONTRIBUTING.md` §What we want: "under-represented in the five defaults" → "under-represented in the six defaults".
+
+Origin: `report-synthesis` was added as the sixth default in v5.0.1 but the prose references in HARNESS.md, VALIDATION.md, compliance-audit/council.yaml, and CONTRIBUTING.md were never updated. The v5.2.0 copywriting pass did not catch this — the audit did.
+
+### Deferred to v5.2.1 with documented intent (F2, F3)
+
+Both findings involve adding a schema-config field. Defining them blindly now risks baking in the wrong shape — the research schema work in v5.2.1 will inform the right `capability-gates.yaml` extension pattern.
+
+- **F2: `soul_anchor_required` schema-config field location undefined.** Referenced in `core/SUBSTRATE.md` §Operator Soul Anchor and `core/VERIFICATION.md` Council Role Library, but no schema currently declares where the field lives. v5.2.0.1 keeps the references as forward-looking; v5.2.1 lands the slot. Until then, v5.2.0.1 reads `soul.md` from `OR-001.soul_anchor_path` (or workspace root by default) without hard-enforcement.
+- **F3: smoke-run marker dictionary "configurable per schema" but no schema config field.** Same shape as F2. v5.2.0.1 keeps the default marker set (`"would normally", "in a real run", "this is a placeholder", "demonstrating the structure"`) and the prose claim that schemas can extend it; v5.2.1 lands the actual extension slot in `capability-gates.yaml`.
+
+These are documented as intent, not omission. The audit found them in a single walk-through; deferring them is a known cost.
+
+### What this patch does NOT change
+
+- No new event kinds (the existing `operator_soul_anchor` event remains as defined in v5.2.0).
+- No new schema rules. No new council members. No version bumps to `harness_version` (still `5.2.0` across the six schemas; this is a patch over v5.2.0, not a substrate version change).
+- No changes to the substrate copywriting pass, agent mode, or the soul anchor primitive itself — only their wiring into entry-point files and the OR template.
+
+### Repo state after patch
+
+- `5.x` tip: this patch commit.
+- `main`: fast-forwarded from `5.x`.
+- `v5.2.0`: unchanged, preserved as the original v5.2.0 release branch and tag.
+- `v5.2.0.1`: new tag on this patch commit.
+
+The original `v5.2.0` tag is not amended; v5.2.0.1 sits forward of it on the same line so anyone who pulled v5.2.0 already has a coherent reference.
+
+---
+
 ## v5.2.0 (2026-05-10) — Substrate copywriting + agent mode + soul anchor
 
 Three concerns shipped together: a substrate-wide copywriting pass that applies the v4 hand-roll's direct-response craft (imperative voice, named failure modes with cost, completion signals); a new `delegation_policy.execution_mode` primitive (agent mode for autonomous-with-safety-floors execution); and a soul anchor primitive (operator-identity event + council member). v5.2.0 is **strictly additive over v5.1.1** — existing schemas validate unchanged; `execution_mode` defaults to `interactive` (current behavior); `soul_consistency_watcher` is opt-in per schema.

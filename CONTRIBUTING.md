@@ -4,7 +4,7 @@ v5.0 is a structural test of a hypothesis. The bar for changes is high. This doc
 
 ## What we want
 
-- **New project schemas.** Domains under-represented in the five defaults. Each schema must include the full set: `schema.yaml`, `precedence-tiers.yaml`, `artifact-extensions.yaml`, `capability-gates.yaml`, `verification.yaml`, `council.yaml`, `project-template.md`, `rules-template.md`, `task-templates/`, README. Bar: meaningfully different from existing schemas (different domain extensions, different council composition, different default tasks). Use the marketing-campaign schema as the structural reference.
+- **New project schemas.** Domains under-represented in the six defaults. Each schema must include the full set: `schema.yaml`, `precedence-tiers.yaml`, `artifact-extensions.yaml`, `capability-gates.yaml`, `verification.yaml`, `council.yaml`, `project-template.md`, `rules-template.md`, `task-templates/`, README. Bar: meaningfully different from existing schemas (different domain extensions, different council composition, different default tasks). Use the marketing-campaign schema as the structural reference.
 
 - **Per-model profile additions.** A new profile for a model not yet in `templates/models/`. Cite observed behaviors with evidence — postmortems, framework docs, sample-size-disclosed observations. Do not declare a model "worse" than another.
 

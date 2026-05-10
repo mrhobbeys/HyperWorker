@@ -6,7 +6,7 @@
 
 ## The Validation Test
 
-Pick a domain you know well that is *not* one of the five default schemas (marketing-campaign, software-feature-ship, client-onboarding, event-planning, compliance-audit). Run through the steps below. Configuration-level adjustments are expected; mechanism-level changes mean v5.0 has a gap.
+Pick a domain you know well that is *not* one of the six default schemas (marketing-campaign, software-feature-ship, client-onboarding, event-planning, compliance-audit, report-synthesis). Run through the steps below. Configuration-level adjustments are expected; mechanism-level changes mean v5.0 has a gap.
 
 ### Step 1: Structural Verification
 
