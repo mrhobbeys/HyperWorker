@@ -1,6 +1,6 @@
 # Substrate — Event-Sourced State
 
-> **The substrate is not a mechanism.** It is the medium the five mechanisms compute against. Lock, Atomicity, Typed Artifacts, Verification, and Precedence are all primitives over event-sourced state. This file documents the layer they share.
+> **The substrate is not a mechanism.** It is the medium the five mechanisms compute against. Lock, Atomicity, Typed Artifacts, Verification, and Precedence are all primitives over event-sourced state. This file documents the layer they share. Read it once before the first bootstrap; reread the §`hw verify` and §Canonical Serialization sections any time `hw verify` returns FAIL.
 
 ---
 
@@ -596,7 +596,7 @@ The flag is locked at task authoring; an executor cannot opt into a lightweight 
 
 ## Friction Log Event Kind
 
-`friction.log` makes friction capture a substrate event, not an operator-instructed prose habit. The closing v5.0 lead-magnet run lost real-time friction signal because the agent did not follow a verbal prompt to capture it. v5.1 makes the harness do the prompting and the recording.
+`friction.log` makes friction capture a substrate event, not an operator-instructed prose habit. The failure mode this fixes: the operator says "log friction as you encounter it" at project start; the agent acknowledges; thirty turns later the prompt has been compacted out and friction signal evaporates as an unprompted prose habit. The closing v5.0 lead-magnet run lost real-time friction signal exactly this way. v5.1 makes the harness do the prompting and the recording so the agent's compliance does not depend on remembering a verbal request that is no longer in context.
 
 **Payload schema.**
 
@@ -714,7 +714,7 @@ Both projections are regenerated on every council event. `hashes.json` tracks ea
 
 ## Session Handoff Event Kind
 
-Long projects span sessions; v5.0/v5.0.1 used informal `SESSION-HANDOFF.md` prose authored by the closing agent. The next agent might or might not read it. v5.1 makes handoff a substrate event so the resuming agent has a structural anchor that survives session boundaries by replay.
+Long projects span sessions. v5.0/v5.0.1 used informal `SESSION-HANDOFF.md` prose authored by the closing agent — file-canonical, hand-edited, easy to skip. The resuming agent might or might not read it. The failure mode: the closing agent writes a careful 200-word handoff covering open questions and the next-step recommendation; the resuming agent's first instinct is to grep TASK-STATE.yaml and start the next pending task, never opening SESSION-HANDOFF.md. The closing agent's transfer is silently ignored. v5.1 makes handoff a substrate event so the resuming agent has a structural anchor that survives session boundaries by replay, and a frontmatter-flag mechanism for tasks that REQUIRE the handoff to be acknowledged before the first state-changing event.
 
 **Payload schema.**
 
@@ -744,7 +744,7 @@ The default for new task templates is unset (`false`); schemas that benefit from
 
 ## Scope Completeness
 
-v5.1 sessions could close with §Scope items silently un-actuated and un-classified — the closing agent finished the tasks it picked up, emitted `session.handoff`, and items declared in PROJECT.md §Scope but never tasked simply disappeared from the trail. v5.1.1 adds a structural check at handoff: a `scope.complete` event must record every §Scope item with an explicit terminal state.
+v5.1 sessions could close with §Scope items silently un-actuated and un-classified. The closing agent finished the tasks it picked up, emitted `session.handoff`, and items declared in PROJECT.md §Scope but never tasked simply disappeared from the trail. The cost: an item the operator believed was in flight discovered as un-touched three sessions later, when the project was supposed to be wrapping. The agent had no structural reason to surface it, so it didn't. v5.1.1 adds a structural check at handoff: a `scope.complete` event must record every §Scope item with an explicit terminal state. Items left un-classified fail Layer 1 verification; the session cannot close until every §Scope item has a disposition.
 
 **Payload schema.**
 
@@ -781,7 +781,7 @@ The check runs at `session.handoff`. See `core/VERIFICATION.md` §Layer 1 for th
 
 ## External State Read-Back
 
-A `task.complete` event records that the agent finished a task. For tasks that mutated state outside `events.jsonl` — a CMS edit, a calendar booking, a remote configuration change, a redirect-list entry — the completion event by itself does not verify the mutation actually landed on the external surface. v5.1.1 adds `external_state.read_back` as the structural primitive for capturing the post-mutation re-read.
+A `task.complete` event records that the agent finished a task. For tasks that mutated state outside `events.jsonl` — a CMS edit, a calendar booking, a remote configuration change, a redirect-list entry — the completion event by itself does not verify the mutation actually landed on the external surface. The failure mode: the agent reports "applied the change" because the API call returned 200; the operator believes the task is done; the underlying CMS silently rejected the payload because of a permissions issue and the change never went live. The completion report says success and the live state says nothing changed. v5.1.1 adds `external_state.read_back` as the structural primitive for capturing the post-mutation re-read. After the mutation, re-fetch the surface and compare; the comparison is what proves the task was actually done.
 
 **Payload schema.**
 
@@ -810,7 +810,7 @@ For platforms that do not surface state for re-read, the schema declares a `fall
 
 ## Bootstrap Inventory Sweep
 
-v5.1 §Scope was operator-declared and never cross-checked against the actual project surface. A wrong slug, a missing page, a renamed asset declared at bootstrap got locked into PROJECT.md and bit downstream tasks. v5.1.1 inserts a probe between `bootstrap_questions` and §Scope locking: the executor probes the project's ground truth (CMS pages, source filesystem, git tree, etc.) and emits `bootstrap.inventory_diff`. The operator reconciles the diff before §Scope is written into PROJECT.md.
+v5.1 §Scope was operator-declared and never cross-checked against the actual project surface. The failure mode: the operator names ten pages they want updated; one slug is wrong (renamed three months ago), one page doesn't exist (was archived), one was a draft (never published); these don't surface until task T-007 fails to find its target and the agent has to re-bootstrap PROJECT.md mid-project. The wrong slug bit later, not earlier, when the cost of fixing it had compounded. v5.1.1 inserts a probe between `bootstrap_questions` and §Scope locking: the executor probes the project's ground truth (CMS pages, source filesystem, git tree, etc.) and emits `bootstrap.inventory_diff`. The operator reconciles the diff before §Scope is written into PROJECT.md, so wrong slugs and missing pages surface at minute one, not week three.
 
 **Payload schema (`bootstrap.inventory_diff`).**
 
