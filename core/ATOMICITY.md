@@ -1,6 +1,6 @@
 # Mechanism: Atomicity — One Task, Hermetic Working Set, Capability-Gated
 
-> An atomic task fits in one session, with a declared upstream working set and a declared tool capability requirement. Branch/fold preserves exploratory subwork in events while keeping the parent context clean. Capability gates prevent the v4.1.1 failure mode where subagents were delegated work without the tools to do it.
+> An atomic task fits one session, declares its upstream working set, and declares its tool capability requirement. Three predicates; all three required. Branch/fold preserves exploratory subwork in events while keeping the parent context clean. Capability gates prevent the v4.1.1 failure mode where subagents were delegated work without the tools to do it.
 
 This mechanism subsumes v4.1.1's Dependency mechanism. Dependencies are now declared per task in `consumes:` (artifact citations) and `depends_on:` (task IDs); the dependency graph is a projection (`TASK-STATE.yaml`) over `task.create`, `task.status`, and `task.complete` events.
 
@@ -85,7 +85,9 @@ The agent executing this task reads, in addition to `task.md`:
 3. Each artifact in `consumes:` — read-only, by exact ID and hash.
 4. `templates/executor-prompt.md`.
 
-Anything outside that list is **not** mounted. If the agent needs another artifact, it must `STOP` and emit a `task.status` to `blocked` with a `reason: missing_consumes <artifact>`. The planner adds the artifact to `consumes:` and unblocks.
+Anything outside that list is **not** mounted. The failure mode hermeticism prevents: an agent in mid-task spots a related artifact ("oh, F-019 looks relevant"), reads it, and now its decision is influenced by a finding that was never declared as upstream input. Downstream tasks cannot tell whether the agent used F-019; the recitation projection does not show it; the dependency graph cannot reason about it.
+
+If another artifact is needed, STOP and emit a `task.status` to `blocked` with a `reason: missing_consumes <artifact>`. The planner adds the artifact to `consumes:` and unblocks. One pause, one explicit edge added to the graph, full recitation visibility.
 
 This is the v5.0 form of "Do NOT Touch": positive scope by enumeration of `consumes:`, not negative scope by enumeration of forbidden files.
 
@@ -109,7 +111,7 @@ convergence_criterion: "operator approves OR three passes elapsed"
 max_passes: 3
 ```
 
-The agent STOPs on convergence or max-passes, whichever comes first. Iteration is bounded.
+STOP on convergence or max-passes, whichever comes first. Iteration is bounded.
 
 `ab-variant` requires two additional fields:
 
@@ -118,7 +120,7 @@ ab_variant_count: 3                # integer, range 2-5; default 3
 ab_variant_axis: "primary CTA framing"  # what dimension the variants differ on
 ```
 
-The executor produces exactly `ab_variant_count` artifacts, each its own projection with its own hash. Each artifact's body identifies which variant it is (e.g., a `variant: A` frontmatter field or a `Variant A — <axis-position>` heading). Layer 1 citation rules apply per variant: the recitation projection cites the source artifacts each variant consumed, the schema validation runs on each variant independently. The completion report enumerates all N artifact IDs produced.
+Produce exactly `ab_variant_count` artifacts, each its own projection with its own hash. Each artifact's body identifies which variant it is (e.g., a `variant: A` frontmatter field or a `Variant A — <axis-position>` heading). Layer 1 citation rules apply per variant: the recitation projection cites the source artifacts each variant consumed; the schema validation runs on each variant independently. The completion report enumerates all N artifact IDs produced.
 
 `ab-variant` is for **intentional variation**, not **iteration toward a single winner**. Tasks that produce multiple drafts and then pick one are `bounded-iteration`. Tasks that produce multiple drafts that ship together (campaign A/B test, design alternatives presented to operator, deployment options for staged rollback) are `ab-variant`.
 
@@ -157,7 +159,7 @@ phases:
         ...
 ```
 
-The projection is byte-deterministic from events: same event prefix → same YAML. Operators who hand-edit `TASK-STATE.yaml` will lose their edits on next regeneration.
+The projection is byte-deterministic from events: same event prefix → same YAML. Operators who hand-edit `TASK-STATE.yaml` lose their edits on next regeneration.
 
 ---
 
@@ -174,7 +176,7 @@ pending → in_progress → complete
             failed
 ```
 
-Legal transitions (the agent emits `hw write <task-id> --status <state>` to record):
+Legal transitions (emit `hw write <task-id> --status <state>` to record):
 
 | From | To | Trigger |
 |---|---|---|
@@ -191,7 +193,9 @@ Legal transitions (the agent emits `hw write <task-id> --status <state>` to reco
 
 ## Branch / Fold
 
-When a task needs exploratory subwork — drafting alternatives, investigating an unknown — the agent emits `hw branch <task-id> <branch-name>`. See `core/SUBSTRATE.md` §`hw branch` for the protocol.
+When a task needs exploratory subwork — drafting alternatives, investigating an unknown — emit `hw branch <task-id> <branch-name>`. See `core/SUBSTRATE.md` §`hw branch` for the protocol.
+
+The failure mode branch/fold prevents: exploratory work pollutes the parent task's context. The parent agent has now "remembered" three abandoned drafts plus the chosen one; downstream decisions reference scaffolding that no one ever shipped. The parent's prompt window fills with sub-trajectory; later tasks inherit the noise.
 
 **Inside a branch.** The branch is a fresh atomic task. Its `task.md` declares its own `consumes` (often a subset of the parent's), its own `acceptance_criteria`. Its events are tagged with the branch ID and aggregated under `branch.event` envelopes.
 
@@ -201,7 +205,7 @@ When a task needs exploratory subwork — drafting alternatives, investigating a
 2. A 1–3 sentence `result.md` projection is written to `branches/<branch>/result.md`.
 3. The parent's read-set on next turn includes only `result.md`, not the branch trajectory.
 
-**Why this is structural.** The parent's context window does not have the choice of "remember the whole branch." The branch trajectory is in the log, but the projection the parent reads is the result. Context discipline is enforced by the projection rendering protocol, not by the agent's restraint.
+The parent's context window does not have the choice of "remember the whole branch." The branch trajectory is in the log; the projection the parent reads is the result. Context discipline is enforced by the projection rendering protocol, not by the agent's restraint.
 
 ---
 
@@ -233,7 +237,7 @@ required_tools: [file_write, web_browse]
 2. Add the missing capability to an existing agent profile.
 3. Spawn a different agent with the required tools.
 
-The agent never silently degrades or attempts a tool not in its schema. The schema *is* the boundary; "did the agent comply" is not a question.
+The agent never silently degrades or attempts a tool not in its schema. The schema *is* the boundary; "did the agent comply" is not a question worth asking.
 
 ### Delegation Policy (v5.1, optional OR field)
 
@@ -246,7 +250,7 @@ When `OR-001.delegation_policy` is declared, the harness consults it before disp
 | `pause_on` | List of triggers that force a pause regardless of `mode`. The harness emits a `task.status → blocked` with `reason: pause_on <trigger>` and waits for `resume_authority` to act. |
 | `resume_authority` | `operator-only` — only an operator-actor `task.status` event resumes; `agent-judgment` — the agent may resume itself after a brief pause; `both` — either suffices. |
 
-**Soft enforcement.** v5.1 ships `delegation_policy` as soft enforcement: the agent reads the field at dispatch time and is expected to comply. The harness does not block dispatch on violation. If the field is set and operator interventions still occur at the same rate as without it, the falsifier is met (see spec H-F5) and v5.1.x will revisit. Hard enforcement (e.g., refusing to dispatch a subagent when `subagent_use: never`) is deferred to v5.2 if needed.
+**Soft enforcement.** v5.1 ships `delegation_policy` as soft enforcement: the agent reads the field at dispatch time and complies. The harness does not block dispatch on violation. If the field is set and operator interventions still occur at the same rate as without it, the falsifier is met (see spec H-F5) and v5.1.x revisits. Hard enforcement (e.g., refusing to dispatch a subagent when `subagent_use: never`) is deferred to v5.2 if needed.
 
 The active model profile may declare default delegation behaviors for fields the operator did not set; OR overrides profile defaults.
 
@@ -263,7 +267,7 @@ When `OR-001.model_selection_policy` is declared, the harness picks a model at e
 
 Resolution algorithm and override semantics are documented in `templates/models/README.md` §v5.1 — model_selection_policy resolution. Operators with non-default rosters override the per-profile rankings in `templates/models/_ranking.yaml`.
 
-**Soft enforcement.** v5.1 records the chosen profile in the dispatch event but does not block if `prefer: cheapest-capable` is set and an agent self-routes to a more-capable model anyway. If observed rates indicate the policy is being ignored, the falsifier in spec H-F8 is met.
+**Soft enforcement.** v5.1 records the chosen profile in the dispatch event but does not block if `prefer: cheapest-capable` is set and an agent self-routes to a more-capable model anyway. If observed rates indicate the policy is ignored, the falsifier in spec H-F8 is met.
 
 **Pairing with delegation_policy.** Together, `delegation_policy` (whether to delegate, when to pause) and `model_selection_policy` (which model to use when delegating) capture engagement and cost preferences in one place at bootstrap, propagating across sessions without per-task re-prompting.
 
@@ -271,7 +275,7 @@ Resolution algorithm and override semantics are documented in `templates/models/
 
 ## Ratchet
 
-A completed task that introduces a regression in a previously-completed task is not actually complete.
+A completed task that introduces a regression in a previously-completed task is not actually complete. The failure mode this prevents: a "nice-to-have" tweak in T-009 supersedes DEC-003, which T-005 cited at hash a3f9. T-005's recitation is now stale, and T-005's output (already shipped) was built on a now-revised premise. Without the ratchet, this drifts silently.
 
 **Detection.** When a `task.complete` event is appended, the harness:
 
@@ -288,8 +292,8 @@ The state engine drives this; the agent does not need to remember to check. A re
 v4.1.1 maintained `SESSION-STATE.md` with per-step writes to support mid-task resume. v5.0 removes this. Resume is replay-based:
 
 1. Read `events.jsonl` for events with `actor` matching the resuming agent or task.
-2. The agent reconstructs context from the consumed-inputs projection (already up to date), the task instructions, and the most recent in-progress markers in events.
-3. If a task was mid-step when interrupted, the projected state shows status `in_progress`; the agent re-runs from the last completed step inferred from events.
+2. Reconstruct context from the consumed-inputs projection (already up to date), the task instructions, and the most recent in-progress markers in events.
+3. If a task was mid-step when interrupted, the projected state shows status `in_progress`; re-run from the last completed step inferred from events.
 
 Step-level granularity is now derivable from the event log instead of written redundantly. Tasks that genuinely need finer granularity should be decomposed further, not given a parallel state file.
 
@@ -297,7 +301,7 @@ Step-level granularity is now derivable from the event log instead of written re
 
 ## Boundaries
 
-| Positive | Enumerated by `consumes:`. The agent reads exactly these artifacts plus the rules file plus the task instructions. |
+| Positive | Enumerated by `consumes:`. Read exactly these artifacts plus the rules file plus the task instructions. |
 | Negative | Inferred from the absence in `consumes:`. The hermetic working set is the rule; "Do NOT Touch" is no longer authored manually. |
 
 If the task genuinely needs to *write* outside its scope (e.g., to a shared deliverable), the planner declares it explicitly in `task.md` body. The frontmatter `consumes:` is read-only.
