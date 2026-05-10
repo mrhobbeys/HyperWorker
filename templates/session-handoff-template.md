@@ -1,8 +1,8 @@
 # Session Handoff — {{ project_id }}
 
-> **Working artifact, not event-sourced.** This file is written by the closing agent for the resuming agent at session boundaries. It lives at `projects/<project-id>/SESSION-HANDOFF.md` and is **overwritten on each handoff** — only the latest handoff is kept on disk; older handoffs are reconstructable from the event log if needed.
+> **Projection of the most recent `session.handoff` event.** Lives at `projects/<project-id>/SESSION-HANDOFF.md`. Overwritten on each handoff — only the latest is kept on disk; older handoffs are reconstructable from the event log.
 >
-> Authoritative state lives in `events.jsonl` and projections. This file is a navigation aid for picking up cold; nothing here should be load-bearing or contradict the substrate.
+> Authoritative state lives in `events.jsonl` and projections. This file is a navigation aid for picking up cold. Nothing here is load-bearing; nothing here contradicts the substrate. The failure mode this template prevents: the closing agent embeds a decision in the handoff prose ("we agreed to skip Phase 3"), the resuming agent reads the prose, and the decision affects the project without ever existing as a Decision artifact. Anything load-bearing belongs in events; this file points at events.
 
 ---
 

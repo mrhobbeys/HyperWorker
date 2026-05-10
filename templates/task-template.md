@@ -73,4 +73,4 @@ When `lightweight_completion: true` is set in frontmatter, replace the full comp
 - **Outputs:** <paths>
 - **Follow-up:** <one-line note or "none">
 
-The `task.complete` event still emits with `completion_report_path`. Layer 2 still runs. The full template applies for elevated/critical risk tasks regardless; `lightweight_completion` is intended for standard-risk mechanical work (anti-pattern extraction from supersede chains, declarative structure decisions, mechanical inventories) where the event log carries the substantive state.
+The `task.complete` event still emits with `completion_report_path`. Layer 2 still runs. The full template applies for elevated/critical risk tasks regardless; `lightweight_completion` is for standard-risk mechanical work (anti-pattern extraction from supersede chains, declarative structure decisions, mechanical inventories) where the event log carries the substantive state. Do not set this flag on judgment work — the failure mode is a 3-bullet "X/Y pass / outputs / none" summary that hides a Tier 1 violation the full completion report would have surfaced.
