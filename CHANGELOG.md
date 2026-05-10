@@ -1,5 +1,35 @@
 # Changelog — HyperWorker
 
+## v5.2.0 (Unreleased) — Substrate copywriting + agent mode + soul anchor
+
+> Stub. Filled at the end of the v5.2.0 work. See HW-V5.2.0-CLAUDE-CODE-MEGA-PROMPT.md for the release brief.
+
+### Substrate
+
+(filled in commit 10)
+
+### Agent mode
+
+(filled in commit 10)
+
+### Soul anchor primitive
+
+(filled in commit 10)
+
+### Brand isolation
+
+(filled in commit 10)
+
+### Hypotheses under test
+
+(filled in commit 10 — H-V52-1 through H-V52-4 from the mega-prompt)
+
+### Version
+
+- `harness_version: "5.2.0"` across all six schema files. HARNESS.md title and CONTRIBUTING.md title bumped.
+
+---
+
 ## v5.1.1 (2026-04-27) — Patch release
 
 Five substrate/schema patches addressing gaps surfaced by the v5.1 asset-update empirical run on `example-rebrand-rollout`. Plus one new task template and a CONTRIBUTING.md schema-update guide.
