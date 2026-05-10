@@ -237,6 +237,12 @@ The harness defines a closed set. Schema extensions must add kinds via the proje
 | `bootstrap.scope_locked` | `{project_id, locked_at, scope_items[]}` — closes the inventory sweep ceremony after operator reconciliation. |
 | `bootstrap.probe_skipped` | `{schema, reason}` — alternative ceremony close when no probe ran (e.g., schema's probe is stubbed). |
 
+### Operator-identity events (v5.2.0)
+
+| Kind | Payload |
+|---|---|
+| `operator_soul_anchor` | `{soul_path, soul_hash, version, fired_at}` — see §Operator Soul Anchor. Fired at bootstrap when the operator's soul.md exists. Mirrors the `brand_voice_anchor` pattern: anchors a Phase B task's first state-changing event behind the existence of the anchor on the log. |
+
 ---
 
 ## Projections
@@ -843,6 +849,33 @@ If neither is present after `project.activate`, FAIL `bootstrap_probe_missing`.
 
 ---
 
+## Operator Soul Anchor
+
+The failure mode `operator_soul_anchor` addresses: the operator declares operating identity (quality bar, refused workarounds, voice/posture, when-in-doubt defaults) in conversation at project start; the agent acknowledges; the prompt fills with project content; the identity declaration evaporates from context. Three sessions in, the agent is shipping work that "would normally be done in a real run" or "we can table the regression test for later" — patterns the operator explicitly refused. The operator catches it on review and the cycle repeats.
+
+The substrate fix: a file-canonical operator-identity anchor (`soul.md` at workspace root, or operator-declared path) is read at bootstrap and recorded as an `operator_soul_anchor` event. Every council fire that includes the `soul_consistency_watcher` member (see `core/VERIFICATION.md` §Council Role Library) reads the anchor's content from the recorded event hash; the anchor is structural, not a verbal request.
+
+**Payload schema.**
+
+| Field | Type | Meaning |
+|---|---|---|
+| `soul_path` | string | Path to the operator's filled-in soul.md (typically `soul.md` at workspace root, but the operator may declare another path in `OR-001.soul_anchor_path`). |
+| `soul_hash` | string | SHA-256 of the file's bytes at bootstrap, full hex. Used by `soul_consistency_watcher` to detect drift; if the file changes mid-project, a new `operator_soul_anchor` event must be appended. |
+| `version` | string | `1.0.0` for v5.2.0. Reserved for future schema-extensibility of soul.md content. |
+| `fired_at` | string | ISO 8601 UTC timestamp. |
+
+**When fired.** At bootstrap, after `project.activate` and before any task can transition `pending → in_progress`, if `OR-001.soul_anchor_path` is declared (or if `soul.md` exists at workspace root and the schema declares `soul_anchor_required: true`).
+
+**Skipped path.** If no soul.md exists and the schema does not require one, the harness emits no `operator_soul_anchor` event. Council fires that include `soul_consistency_watcher` skip the member with a `member_skipped: no_soul_anchor` note in the projection. The remaining members proceed normally.
+
+**Re-anchoring on file change.** If `soul.md` changes mid-project (operator updates the quality bar, adds a refused anti-pattern), the operator emits a new `operator_soul_anchor` event with the new hash. The supersede chain captures the change; subsequent `soul_consistency_watcher` fires read the latest anchor.
+
+**Brand isolation.** Substrate ships `SOUL.template.md` (brand-clean structural stub) and `SOUL.example.md` (one filled-in example, with operator-specific names genericized). Operators copy the template, fill in their own content, and save as `soul.md` (operator-side, never committed to the harness substrate).
+
+**Hypothesis (under empirical evaluation in v5.2.0+).** A structural operator-identity anchor produces qualitatively different agent behavior than rules-based prose alone. Falsifier: `soul_consistency_watcher` never fires across 5+ real runs (the anchor is not load-bearing) OR fires constantly on every task (the anchor is poorly written and dilutes the Tier 1 boundary).
+
+---
+
 ## Relationship to Mechanisms
 
 | Mechanism | Substrate use |
@@ -854,3 +887,4 @@ If neither is present after `project.activate`, FAIL `bootstrap_probe_missing`.
 | `core/PRECEDENCE.md` | Reads citations and substrate state to resolve rule conflicts; emits no events of its own. |
 | Friction logging | `friction.log`, `friction.log.prompt` events; `friction-log.md` projection. Spans mechanisms — any mechanism may surface a friction. |
 | Session continuity | `session.handoff` events; `SESSION-HANDOFF.md` projection. Read by Atomicity at task start when `requires_handoff_acknowledge: true`. |
+| Operator identity | `operator_soul_anchor` event; read by Verification's `soul_consistency_watcher` council member at every council fire that includes the role. |
