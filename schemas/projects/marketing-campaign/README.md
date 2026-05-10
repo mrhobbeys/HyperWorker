@@ -1,8 +1,8 @@
 # Schema: marketing-campaign
 
-> Use when: producing a campaign with brand-absolute rules, channel-specific platform limits, and copy that needs to ship as drafts for operator review.
+> Use when: producing a campaign with brand-absolute rules, channel-specific platform limits, and copy that needs to ship as drafts for operator review. The failure mode this schema prevents: agent generates 5 emails and a landing page in one pass, ships all six as the deliverable, and 30% of them carry a Tier 1 voice or compliance violation that only surfaces when an operator finally reads them after the operator has already started routing them. Brand-absolute rules at Tier 1 + draft-only at Tier 2 + per-task Layer 2 verification = no ship without per-piece operator review.
 
-This is the deepest schema in v5.0 — it ports the full marketing-funnel case study from v4.1.1 into the schema-as-bootstrap form. Use it as a structural reference when writing custom schemas.
+This is the deepest schema shipped — it ports the full marketing-funnel case study from v4.1.1 into the schema-as-bootstrap form. Use it as a structural reference when writing custom schemas.
 
 ## What this schema gives you
 
