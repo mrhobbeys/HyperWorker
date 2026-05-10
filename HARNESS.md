@@ -1,8 +1,10 @@
 # HyperWorker v5.1
 
-> **Read this file first.** It is the entry point for the harness. An AI agent that reads only this file should learn what the harness is, where the parts are, and how to bootstrap a project.
+> **Read this file first.** It is the entry point. An AI agent that reads only this file learns what HyperWorker is, where the parts live, and how to bootstrap a project. Stop after this file only when you do not yet need to act; before any state-changing operation, read `core/SUBSTRATE.md` too.
 
-A project management harness for AI agents. v5.0 was a clean break from v4.1.1; v5.0.1 closed documentation/template gaps surfaced by a strategic-foundation synthesis run; v5.1 adds structural primitives (friction-log event kind, council-report projection, session-handoff event kind, ab-variant delivery mode, delegation-policy and model-selection-policy OR fields, synthesis T-001 corpus-scan task) surfaced by a second empirical run. The thesis is that frontier harnesses succeed by making agent compliance **structurally enforceable** rather than verbally requested.
+A project management harness for AI agents. The thesis: frontier harnesses succeed by making agent compliance **structurally enforceable**, not verbally requested. Verbal rules ("be careful," "do not skip steps," "don't fabricate citations") drift the moment context fills. Structural primitives — hash-cited artifacts, append-only events, capability-gated subagents, verification pyramids — do not.
+
+v5.0 was a clean break from v4.1.1. v5.0.1 closed documentation and template gaps surfaced by a strategic-foundation synthesis run. v5.1 added structural primitives surfaced by a second empirical run (friction-log event kind, council-report projection, session-handoff event kind, ab-variant delivery mode, delegation-policy and model-selection-policy OR fields, synthesis T-001 corpus-scan task). v5.1.1 added five Layer 1 primitives surfaced by an asset-update run on a real CMS (`scope.complete` events, `external_state.read_back`, bootstrap inventory sweep, edit-vs-create-vs-delete enumeration, redirect-coverage rollup).
 
 ---
 
@@ -38,7 +40,7 @@ The agent reads this file, picks (or asks about) a schema from `schemas/projects
                     ──────────────────────────────
 ```
 
-Five mechanisms. One substrate. The substrate is event-sourced state with regenerable file projections; mechanisms compute against it. Every primitive that survives is one that doesn't depend on the agent's word — hashes, citations, schemas, event records.
+Five mechanisms. One substrate. The substrate is event-sourced state with regenerable file projections; mechanisms compute against it. Every primitive that survives is one that does not depend on the agent's word — hashes, citations, schemas, event records.
 
 | Mechanism | Solves | File |
 |---|---|---|
@@ -53,7 +55,7 @@ Five mechanisms. One substrate. The substrate is event-sourced state with regene
 
 ## What is `hw`?
 
-**`hw` is an agent protocol, not a CLI.** When this repo says `hw add decision < draft.md`, it means: *the agent performs the file-system protocol described in `core/SUBSTRATE.md` §`hw add`* — append a JSON event line to `events.jsonl`, render the projection, update `hashes.json`. There is no binary to install. Any agent that can read markdown and append to a file can execute every `hw` operation.
+**`hw` is an agent protocol, not a CLI.** When this repo says `hw add decision < draft.md`, it means: *the agent performs the file-system protocol described in `core/SUBSTRATE.md` §`hw add`* — append a JSON event line to `events.jsonl`, render the projection, update `hashes.json`. There is no binary to install. Any agent that can read markdown and append to a file executes every `hw` operation.
 
 The full set of `hw` operations and their protocols is documented in `core/SUBSTRATE.md`. Read it once before the first bootstrap.
 
@@ -156,18 +158,20 @@ If unsure, check `core/SUBSTRATE.md` §Boundary Rule.
 
 ## Friction Logs
 
-Friction logs capture what was unclear, what required training-derived gap-filling, what felt ceremonial, what surprised the operator, and what worked well. v5.1 makes friction logging a substrate event kind (`friction.log`) so capture is structural rather than operator-instructed.
+Friction logs capture what was unclear, what required training-derived gap-filling, what felt ceremonial, what surprised the operator, and what worked well. The failure mode is post-hoc reconstruction: at the end of a run, the operator tries to remember every place the harness rubbed wrong. Memory loses the specifics; the log gets vague generalities; the next patch cycle misses the actual fixes.
+
+v5.1 makes friction capture a substrate event kind (`friction.log`). Capture is structural rather than operator-instructed.
 
 | Default location | Path | Use |
 |---|---|---|
 | Workspace | `friction-log.md` at workspace root | Default. Projection of `friction.log` events scoped to the workspace. |
 | Per-project | `projects/<id>/friction-log.md` | Per-project log when the project's `config.yaml` declares `friction_log_scope: project`. |
 
-The projection is regenerated from `friction.log` events on every new entry. Hand-edits are overwritten on next regeneration; new entries are recorded by appending `friction.log` events (`hw add friction-log < draft.md`-style protocol; see `core/SUBSTRATE.md` §Friction Log Event Kind for the payload schema).
+The projection regenerates from `friction.log` events on every new entry. Hand-edits are overwritten on next regeneration; new entries are recorded by appending `friction.log` events (`hw add friction-log < draft.md`-style protocol; see `core/SUBSTRATE.md` §Friction Log Event Kind for the payload schema).
 
-**Substrate auto-prompts.** The harness emits `friction.log.prompt` informational events when observable signals fire: Layer 1 verification failing on the same check ≥3 times in a task, Layer 2 verification failing, agent output containing training-fill markers, an operator mid-flow directive captured as a Decision, or council non-convergence on a critical-risk task. The agent reads the prompt and decides whether to follow with an actual `friction.log` event. See `core/SUBSTRATE.md` §Friction Log Event Kind for the heuristic table.
+**Substrate auto-prompts.** The harness emits `friction.log.prompt` informational events when observable signals fire: Layer 1 verification failing on the same check ≥3 times in a task, Layer 2 verification failing, agent output containing training-fill markers, an operator mid-flow directive captured as a Decision, or council non-convergence on a critical-risk task. Read each prompt and decide whether to follow with an actual `friction.log` event. See `core/SUBSTRATE.md` §Friction Log Event Kind for the heuristic table.
 
-**Categories.** Recommended `type` values used in payloads: `REGRESSION` (something that worked before broke), `CONFIRMATION` (a previously-logged friction was resolved by a patch), `NEW-SCHEMA` (the friction is schema-specific), `NEW-CROSS` (cross-schema; affects multiple schemas), `TRAINING-FILL` (the agent filled a gap from training rather than the harness), `OPERATOR-CONFUSION` (the operator was unsure what the harness expected).
+**Categories.** Use these `type` values in payloads: `REGRESSION` (something that worked before broke), `CONFIRMATION` (a previously-logged friction was resolved by a patch), `NEW-SCHEMA` (the friction is schema-specific), `NEW-CROSS` (cross-schema; affects multiple schemas), `TRAINING-FILL` (the agent filled a gap from training rather than the harness), `OPERATOR-CONFUSION` (the operator was unsure what the harness expected).
 
 The pre-v5.1 working-artifact form (`bootstrap-friction-log.md`) is retained for projects that started under v5.0 / v5.0.1 and have not yet emitted any `friction.log` events; on the first event, the projection switches to `friction-log.md`.
 
@@ -175,29 +179,29 @@ The pre-v5.1 working-artifact form (`bootstrap-friction-log.md`) is retained for
 
 ## Bootstrap Protocol
 
-When asked to build a harness for a goal, the agent:
+When asked to build a harness for a goal, execute these six steps in order. Do not skip Step 1; do not infer Step 2 without operator confirmation; do not run `bootstrap_questions` from a schema the operator has not endorsed.
 
-1. **Understands the goal.** Asks the operator: project description, domain, constraints. If the operator names a schema, skip to step 3.
-2. **Matches a schema.** Suggests one of the five default schemas in `schemas/projects/`. If none fit, offers a custom build that scaffolds from default templates and saves the result with `hw schema save` after the project completes.
-3. **Bootstraps:** `hw bootstrap --schema <name> --name <project-id>`. The protocol is in `core/SUBSTRATE.md` §`hw bootstrap`. The agent asks only the questions the schema declares in `schema.yaml` — typically operating-reality (budget, timeline, team, authority), specific rules content, and project description.
-4. **Writes operating-reality.** Each schema-declared question maps to a field in `OR-001`. The agent runs `hw add operating-reality < draft.md` to append the event and render the projection.
-5. **Verification Checkpoint with council.** The schema's `council.yaml` declares a `project.activate` trigger. Council members run with context-asymmetric framing (see `core/VERIFICATION.md` §8.4). Each emits a `council.report`; convergence rule decides. Operator sees a single brief summary, not three free-form questions.
-6. **Executes.** Operator runs `hw next-step` or invokes the first task. The first task's `consumes:` list typically references `OR-001` only; downstream tasks consume artifacts produced by earlier ones.
+1. **Understand the goal.** Ask: project description, domain, constraints. If the operator names a schema, skip to Step 3.
+2. **Match a schema.** Suggest one of the five default schemas in `schemas/projects/`. If none fit, offer a custom build that scaffolds from default templates and saves the result with `hw schema save` after the project completes.
+3. **Bootstrap:** `hw bootstrap --schema <name> --name <project-id>`. Protocol in `core/SUBSTRATE.md` §`hw bootstrap`. Ask only the questions the schema declares in `schema.yaml` — typically operating-reality (budget, timeline, team, authority), specific rules content, and project description.
+4. **Write operating-reality.** Each schema-declared question maps to a field in `OR-001`. Run `hw add operating-reality < draft.md` to append the event and render the projection.
+5. **Verification Checkpoint with council.** The schema's `council.yaml` declares a `project.activate` trigger. Council members run with context-asymmetric framing (see `core/VERIFICATION.md` §8.4). Each emits a `council.report`; the convergence rule decides. Surface a single brief summary to the operator, not three free-form questions.
+6. **Execute.** The operator runs `hw next-step` or invokes the first task. The first task's `consumes:` list typically references `OR-001` only; downstream tasks consume artifacts produced by earlier ones.
+
+You will know bootstrap finished when: `OR-001` exists, `00-REFERENCE-rules.md` exists, the council fired and converged (or escalated to operator), and `hw next-step` returns the first task.
 
 ### Operator mid-flow directives
 
-If the operator issues an instruction during bootstrap (or mid-task) that does not fit the schema's `bootstrap_questions` — e.g., "use the browser when needed", "Example Corp IT and Example Corp are separate companies", "treat anything from the 2025 audit as primary" — capture it as a typed Decision artifact, not as loose conversation.
+The operator will issue instructions during bootstrap (or mid-task) that do not fit the schema's `bootstrap_questions` — e.g., "use the browser when needed", "Example Corp IT and Example Corp are separate companies", "treat anything from the 2025 audit as primary." The failure mode is treating these as conversation: they affect project structure or scope, but they leave no trace once the conversation context turns over. Tasks downstream cannot cite them. The next session re-litigates them or silently violates them.
 
-The pattern:
+Capture each as a typed Decision artifact, verbatim, before the next state-changing event:
 
-1. The agent recognizes a directive that affects project structure or scope.
-2. The agent drafts a Decision artifact body capturing the directive **verbatim** (or with explicit paraphrase markers — see Tier 1 verbatim quotation principle in `schemas/projects/<name>/rules-template.md`).
+1. Recognize a directive that affects project structure or scope.
+2. Draft a Decision artifact body capturing the directive **verbatim** (or with explicit paraphrase markers — see Tier 1 verbatim quotation principle in `schemas/projects/<name>/rules-template.md`).
 3. `hw add decision < draft.md` with an appropriate `synthesis_role` or schema-specific role (typical values: `scope-decision`, `weighting-rule`, `inclusion-exclusion`).
 4. Subsequent tasks consume the new DEC by citation.
 
-Loose-prose directives that affect project structure are unverifiable: they don't appear in `consumes:` lists, can't be cited, and disappear when the conversation context turns over. Typed Decisions are citable, hash-verified, regenerable, and survive session boundaries. The cost is one event per directive — under 30 seconds — and well within the substrate's everyday workload.
-
-This applies during bootstrap (corrections to the first OR draft, web-research-policy directives, naming clarifications) and mid-execution (scope expansions, weight overrides, mid-flight constraint changes). The friction log entry A-12 motivates this convention.
+The cost is one event per directive — under 30 seconds. The cost of letting a directive stay loose is rediscovering it three sessions later when the artifact it should have constrained ships wrong. The friction log entry A-12 motivates this convention.
 
 ---
 
@@ -221,7 +225,7 @@ This applies during bootstrap (corrections to the first OR draft, web-research-p
 | `hw wrap` | Project completion protocol. |
 | `hw park` | Demote active project to backlog. |
 
-Every command has a documented protocol in `core/SUBSTRATE.md`. The agent operates them by reading and writing files; no binary required.
+Every command has a documented protocol in `core/SUBSTRATE.md`. Operate them by reading and writing files; no binary required.
 
 ---
 
@@ -235,7 +239,7 @@ Profiles document what each model does *differently*, not which is "better." Whe
 
 ## Startup Validation
 
-Before delegating any task, the agent confirms:
+Before delegating any task, confirm:
 
 - `HARNESS.md`, `core/SUBSTRATE.md` readable.
 - `.hyperworker/events.jsonl` exists (or is empty for a fresh init).
@@ -249,8 +253,8 @@ If any check fails, STOP. Report what is missing. The operator resolves before e
 
 ## Core Principles
 
-1. **Substrate over rules.** Every primitive that survives is one verifiable without asking the agent if it complied.
-2. **Heavy upfront, light ongoing.** Setup carries the cost; runtime is autonomous.
-3. **Append-only events; regenerable projections.** Knowledge is not "managed" via lifecycles; it is recorded and superseded.
+1. **Substrate over rules.** Every primitive that survives is one verifiable without asking the agent if it complied. Rules that ask are ceremonies. Substrate that enforces is structure.
+2. **Heavy upfront, light ongoing.** Setup carries the cost; runtime is autonomous. The operator pays once at bootstrap, not at every phase boundary.
+3. **Append-only events; regenerable projections.** Knowledge is not "managed" via lifecycles; it is recorded and superseded. The supersede chain is visible; deletion is not.
 4. **Five mechanisms plus substrate.** No sixth mechanism without a falsifiable hypothesis and a structural check.
 5. **Theory, not finding.** Each primitive is a hypothesis (see `core/*.md` §Hypothesis sections). v5.1 retires whatever fails its falsifier in real use.
