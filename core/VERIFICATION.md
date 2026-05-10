@@ -1,8 +1,8 @@
 # Mechanism: Verification — Pyramid
 
-> Most failures should be caught at the cheap-fast layer. Mid-cost behavioral checks and high-cost judgmental review are reserved for what they're actually good at. Cross-family or context-asymmetric verification produces less correlated errors than single-context same-family review.
+> Most failures should be caught at the cheap-fast layer. Mid-cost behavioral checks and high-cost judgmental review are reserved for what they are actually good at. Stacking eight components against every task — v4.1.1's posture — buries cheap structural failures under expensive review and costs operator attention every time. Cross-family or context-asymmetric verification produces less correlated errors than single-context same-family review.
 
-This mechanism replaces v4.1.1's eight-component Verification mechanism. The pyramid structure is the load-bearing change: every check is now classified by cost and routed by risk, instead of stacked as eight components every task runs.
+This mechanism replaces v4.1.1's eight-component Verification mechanism. The pyramid is the load-bearing change: every check is now classified by cost and routed by risk, instead of stacked as eight components every task runs.
 
 ---
 
@@ -58,12 +58,12 @@ A task moves up the pyramid only when triggered. Standard-risk routine work runs
 
 **On failure.** A `verify.layer1.fail` event is appended *immediately after* the offending event. The harness then either:
 
-- **Reject + revert** (default for `<kind>.add`, `task.recite`): the offending event is reversed by an immediate `<kind>.supersede` to null and the projection is removed. The agent retries.
+- **Reject + revert** (default for `<kind>.add`, `task.recite`): the offending event is reversed by an immediate `<kind>.supersede` to null and the projection is removed. Retry.
 - **Block** (default for `task.status`): the task transitions to `blocked` with `reason: layer1_fail <check>`.
 
 The agent does not "decide" whether to honor a Layer 1 failure. The substrate enforces; the agent retries or escalates.
 
-**Friction prompt signal.** If the same Layer 1 check fails ≥3 times within a single task on the same `target_id`, the harness emits a `friction.log.prompt` event with `trigger: layer1_repeat`. The agent decides whether to follow with a `friction.log` event. See `core/SUBSTRATE.md` §Friction Log Event Kind for the full heuristic table.
+**Friction prompt signal.** If the same Layer 1 check fails ≥3 times within a single task on the same `target_id`, the harness emits a `friction.log.prompt` event with `trigger: layer1_repeat`. Read each prompt and decide whether to follow with a `friction.log` event. See `core/SUBSTRATE.md` §Friction Log Event Kind for the full heuristic table.
 
 ---
 
@@ -81,7 +81,7 @@ The agent does not "decide" whether to honor a Layer 1 failure. The substrate en
 | 4 | Failure scenario evaluation | If `risk_level ∈ {elevated, critical}` and the task produces end-user-facing content, three realistic failure scenarios are recorded, each evaluated for safety. |
 | 5 | Output presence | Whatever the task was supposed to produce exists at the declared path. |
 
-**Acceptance criteria evaluation.** Each criterion is a string; the agent records, in the completion-report, *how it evaluated it* and *what result it found*. Criteria like "Word count ≤ 300" are mechanically checkable; criteria like "Tone matches brand voice schema X" require judgment. Criteria that require judgment in standard-risk tasks pass on the agent's recorded evaluation; in elevated/critical they additionally trigger Layer 3.
+**Acceptance criteria evaluation.** Each criterion is a string. Record, in the completion-report, *how it was evaluated* and *what result was found*. Criteria like "Word count ≤ 300" are mechanically checkable; criteria like "Tone matches brand voice schema X" require judgment. Criteria that require judgment in standard-risk tasks pass on the recorded evaluation; in elevated/critical they additionally trigger Layer 3.
 
 **On failure.** The task transitions to `blocked` with `reason: layer2_fail <check>`. The completion report records which criteria failed. The planner reviews and decides whether to re-task or unblock.
 
@@ -91,7 +91,7 @@ The agent does not "decide" whether to honor a Layer 1 failure. The substrate en
 
 ## Layer 3 — Judgmental Review
 
-**When.** Triggered by `risk_level` or by configured pivot points. Never invoked by the agent's self-uncertainty.
+**When.** Triggered by `risk_level` or by configured pivot points. Never invoked by the agent's self-uncertainty. Self-uncertainty is a `task.status → blocked` event, not a council fire — councils are expensive and the agent's judgment that something feels off is not a structural trigger.
 
 ### Council Review
 
@@ -121,9 +121,9 @@ convergence_rule: all-agree-or-escalate
 | Critical-risk task completion | `risk_level: critical` in task frontmatter. |
 | Operator command | `hw council <task-id>`. |
 
-**Trigger-aware prompts.** A council role that fires at multiple triggers (e.g., `project.activate` at bootstrap and `task.complete` later) often needs different prompts at each trigger. At `project.activate` no deliverable exists; the role can only evaluate metadata. At `task.complete` the deliverable does exist; the role evaluates the output. A single prompt written for one trigger applied at the other forces the council member to interpret around it (e.g., "sample the output" when no output exists).
+**Trigger-aware prompts.** A council role that fires at multiple triggers (e.g., `project.activate` at bootstrap and `task.complete` later) often needs different prompts at each trigger. At `project.activate` no deliverable exists; the role can only evaluate metadata. At `task.complete` the deliverable does exist; the role evaluates the output. A single prompt written for one trigger applied at the other forces the council member to interpret around it (e.g., "sample the output" when no output exists). The cost: the member fabricates an evaluation, the report passes, and the operator believes the trigger was reviewed when it wasn't.
 
-The schema MAY declare trigger-specific prompts on a council member by replacing `prompt_template:` with a pair (or set) of trigger-keyed templates:
+The schema declares trigger-specific prompts on a council member by replacing `prompt_template:` with a pair (or set) of trigger-keyed templates:
 
 ```yaml
 members:
@@ -141,7 +141,7 @@ The harness selects the prompt by trigger event:
 | `project.activate` | `prompt_template_on_activate` |
 | `task.complete`, `phase.complete`, `project.archive`, `hw council` | `prompt_template_on_output` |
 
-If a role declares only the legacy `prompt_template:`, the harness falls back to it for all triggers (backwards-compatible). Schemas adopting trigger-aware prompts should set both keys; falling through `on_activate → prompt_template` is allowed but produces the bootstrap-time-vs-output-time mismatch this pattern was added to fix (see report-synthesis council.yaml `operator-goal-aligner`).
+If a role declares only the legacy `prompt_template:`, the harness falls back to it for all triggers (backwards-compatible). Schemas adopting trigger-aware prompts set both keys; falling through `on_activate → prompt_template` produces the bootstrap-time-vs-output-time mismatch this pattern was added to fix (see report-synthesis council.yaml `operator-goal-aligner`).
 
 ### Council Role Library
 
@@ -225,7 +225,9 @@ Risk levels are declared at task authoring (planner) and **locked**. Mid-executi
 
 ## What "Pushback" Becomes
 
-v4.1.1 made Pushback a runtime default — every task ran a pre-execution sanity check for "does this make sense." v5.0 makes Pushback a Layer 3 trigger:
+v4.1.1 made Pushback a runtime default — every task ran a pre-execution sanity check for "does this make sense." The cost: low-signal interventions on standard-risk routine work. The agent paused at every task, generated a one-paragraph "this looks fine to proceed," and the operator skimmed and approved. Two minutes per task, dozens of tasks, hours of operator time burned on verbal acknowledgement.
+
+v5.0 makes Pushback a Layer 3 trigger:
 
 - **Council non-convergence** → escalate. The pushback is structural: members disagree, and the agent does not "decide" who's right.
 - **Repeated Layer 1/2 failure** → escalate. The pushback is automatic: if the substrate keeps rejecting, escalate.
@@ -233,7 +235,7 @@ v4.1.1 made Pushback a runtime default — every task ran a pre-execution sanity
 
 Standard-risk routine work does not invoke pushback at all. The earlier behavior of "before each task, the executor evaluates whether the instructions make sense" produced a lot of low-signal interventions; replacing it with structural triggers reduces the operator-pull-in rate.
 
-If an agent encounters a *blocking ambiguity* mid-execution, the response is `task.status → blocked` with a reason, not Pushback. Pushback existed in v4.1.1 as a verbal request to the agent ("evaluate before executing"); v5.0 replaces verbal requests with substrate-level events.
+If a *blocking ambiguity* is encountered mid-execution, the response is `task.status → blocked` with a reason, not Pushback. Pushback existed in v4.1.1 as a verbal request to the agent ("evaluate before executing"); v5.0 replaces verbal requests with substrate-level events.
 
 ---
 
