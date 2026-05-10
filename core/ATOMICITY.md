@@ -246,6 +246,7 @@ When `OR-001.delegation_policy` is declared, the harness consults it before disp
 | Field | Effect |
 |---|---|
 | `mode` | `step-by-step` — pause for confirmation between substantive moves; `run-to-completion` — proceed without pausing except on `pause_on` triggers; `hybrid` — confirm at phase boundaries only. |
+| `execution_mode` | `interactive` (default) — pause at every standard pause point as in v5.1; `agent` (v5.2.0) — autonomous up to safety floors; `observer` (reserved, not yet implemented; declaring it is accepted but produces a Layer 1 WARNING on dispatch). See §Execution Mode below. |
 | `subagent_use` | `never` — execute every task on the parent agent; `when-helpful` — dispatch when the task fits a subagent profile cleanly; `aggressive` — dispatch any task whose `required_tools` are a clean subset of an available subagent. |
 | `pause_on` | List of triggers that force a pause regardless of `mode`. The harness emits a `task.status → blocked` with `reason: pause_on <trigger>` and waits for `resume_authority` to act. |
 | `resume_authority` | `operator-only` — only an operator-actor `task.status` event resumes; `agent-judgment` — the agent may resume itself after a brief pause; `both` — either suffices. |
@@ -253,6 +254,30 @@ When `OR-001.delegation_policy` is declared, the harness consults it before disp
 **Soft enforcement.** v5.1 ships `delegation_policy` as soft enforcement: the agent reads the field at dispatch time and complies. The harness does not block dispatch on violation. If the field is set and operator interventions still occur at the same rate as without it, the falsifier is met (see spec H-F5) and v5.1.x revisits. Hard enforcement (e.g., refusing to dispatch a subagent when `subagent_use: never`) is deferred to v5.2 if needed.
 
 The active model profile may declare default delegation behaviors for fields the operator did not set; OR overrides profile defaults.
+
+### Execution Mode (v5.2.0, `delegation_policy.execution_mode`)
+
+The failure mode `execution_mode` addresses: agentic-coder workflows (Copilot-style billable runs, large-context Claude sessions) burn cycles paused at every `task.complete` boundary waiting for an operator that has authorized the work. Each pause is a 5-15 minute context-switch for the operator and a credit-clock continuing to tick. Across a 9-task project, the cumulative pause cost can exceed the substantive-work cost. `execution_mode` lets the operator declare, once at bootstrap, "take this autonomous unless you hit a safety floor."
+
+| Mode | Behavior |
+|---|---|
+| `interactive` (default) | Current v5.1 behavior. Pause at phase boundaries, council failures, Layer 1 retries-exhausted, every `task.complete`. The operator sees and approves each transition. Default for OR-001 when `execution_mode` is omitted. |
+| `agent` (v5.2.0) | Proceed autonomously up to the safety floors below. Phase boundaries: announce, continue. Council failures: attempt council remediation up to 3 cycles before escalating. Soft warnings: logged to events, not surfaced as pauses. Operator sees an async stream of progress events; intervention at any time still takes precedence (see Safety Floors). |
+| `observer` (reserved) | Not implemented in v5.2.0. Declaring it is accepted but Layer 1 emits a WARNING and the harness behaves as `interactive`. Reserved for future "audit-only, no state-changing events" mode. |
+
+**Safety floors (always pause regardless of `execution_mode`).** `agent` mode does not skip these. The harness emits `task.status → blocked` with the appropriate `reason:` and waits for operator action.
+
+| Safety floor | Trigger | Reason code |
+|---|---|---|
+| Critical-risk task completion | Any `task.complete` whose task has `risk_level: critical`. The substrate cannot reverse an irreversible external mutation; the operator gates it. | `safety_floor_critical_completion` |
+| Smoke-run language | A council member's `finding` text contains a smoke-run marker phrase (configurable per schema; default set: "would normally", "in a real run", "this is a placeholder", "demonstrating the structure"). The agent has reported simulated work as actual work. | `safety_floor_smoke_run` |
+| Layer 1 retry threshold exhausted | Same Layer 1 check has failed (active model profile `retry_budget`) consecutive times on the same `target_id` within one task. Burning cycles indefinitely is not autonomous; it is stuck. | `safety_floor_layer1_exhausted` |
+| Voice / soul anchor breach | `soul_consistency_watcher` council member returns FAIL on a `task.complete` (see core/VERIFICATION.md §Council Role Library). Agent has drifted from operator-declared identity; structural intervention required. | `safety_floor_soul_breach` |
+| Operator mid-flow directive | An `actor: operator` event of any kind lands in the log. The directive is captured immediately as a Decision (per HARNESS.md §Operator mid-flow directives), and the current task pauses to incorporate it before the next state-changing event. | `safety_floor_operator_directive` |
+
+The safety floors are intentionally non-overridable. An operator who sets `execution_mode: agent` AND wants to disable a safety floor must amend the substrate, not the OR-001 field — the floors are the cost of autonomous operation, not negotiable parameters.
+
+**Soft enforcement, like sibling fields.** v5.2.0 ships `execution_mode` as soft enforcement: the agent reads the field, treats safety floors as hard, and treats batched events as informational. The harness does not block dispatch on violation. If `agent` is set and operator interventions still occur at every standard pause point, the falsifier is met (see hypothesis H-V52-2 in CHANGELOG) and v5.2.x revisits.
 
 ### Model Selection Policy (v5.1, optional OR field)
 

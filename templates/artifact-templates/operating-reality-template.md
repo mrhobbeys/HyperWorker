@@ -23,6 +23,7 @@ operator_profile: "<short label, e.g., solo-operator-modest-budget>"
 # bootstrap so they propagate across sessions instead of being re-prompted.
 delegation_policy:
   mode: <step-by-step | run-to-completion | hybrid>            # how the agent engages
+  execution_mode: <interactive | agent | observer>             # v5.2.0 — pause-batching preference; default interactive
   subagent_use: <never | when-helpful | aggressive>            # subagent dispatch posture
   pause_on:
     - council-failures                                          # any council.escalated event

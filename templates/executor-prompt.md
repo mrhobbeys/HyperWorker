@@ -33,3 +33,22 @@ The failure mode: the agent reads the task, skims the consumed artifacts, and pr
 - Acceptance criterion you cannot evaluate → blocked with `reason: layer2_unevaluable <criterion>`.
 
 When done, fill the completion report and emit `hw write <task-id> --status complete`. Layer 2 verification runs automatically; do not declare success.
+
+## Execution mode (v5.2.0)
+
+`OR-001.delegation_policy.execution_mode` declares the operator's pause-batching preference. Default is `interactive`; existing schemas behave as in v5.1 unless the operator opts in.
+
+- **`interactive` (default).** Pause at every standard pause point. Operator approves each phase boundary, each council outcome, each `task.complete` for non-standard risk. Current v5.1 behavior unchanged.
+- **`agent` (v5.2.0).** Proceed autonomously up to the safety floors below. Phase boundaries: announce in events, continue. Council failures: attempt council remediation up to 3 cycles before escalating. Soft warnings: logged, not surfaced as pauses.
+
+### Safety floors (always pause, regardless of mode)
+
+These five conditions ALWAYS pause and emit `task.status → blocked`. They are not configurable away by `execution_mode: agent`.
+
+1. **Critical-risk task completion** — any `task.complete` whose task is `risk_level: critical`. The substrate cannot reverse an irreversible external mutation; the operator gates it. Reason: `safety_floor_critical_completion`.
+2. **Smoke-run language detected by council** — a council member's `finding` text contains a smoke-run marker phrase ("would normally", "in a real run", "this is a placeholder", "demonstrating the structure", or schema-extended set). The agent has reported simulated work as actual work; halt and surface. Reason: `safety_floor_smoke_run`.
+3. **Layer 1 retry threshold exhausted** — same Layer 1 check has failed `retry_budget` (active model profile) consecutive times on the same `target_id` within one task. Burning cycles indefinitely is not autonomous; it is stuck. Reason: `safety_floor_layer1_exhausted`.
+4. **Voice / soul anchor breach** — `soul_consistency_watcher` council member returns FAIL on a `task.complete`. The agent has drifted from operator-declared identity; structural intervention required. Reason: `safety_floor_soul_breach`.
+5. **Operator mid-flow directive** — an `actor: operator` event of any kind lands in the log. Capture immediately as a Decision per HARNESS.md §Operator mid-flow directives; pause the current task to incorporate it before the next state-changing event. Reason: `safety_floor_operator_directive`.
+
+In `agent` mode, treat the safety floors as the only hard pauses. Phase boundaries, standard `task.complete` events, council remediation cycles up to 3 — these are events to log and proceed past, not pause points.

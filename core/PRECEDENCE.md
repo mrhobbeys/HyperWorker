@@ -159,11 +159,19 @@ The Mutable Surface principle applies: this file is operator-editable, file-cano
 
 ---
 
+## Operator Mid-Flow Directives Beat Mode Settings (v5.2.0)
+
+`OR-001.delegation_policy.execution_mode: agent` (v5.2.0; see `core/ATOMICITY.md` §Execution Mode) batches most pause points, but operator mid-flow directives are a hard safety floor regardless of mode. The directive lands as an event with `actor: operator`; the current task pauses, captures the directive as a Decision artifact (per HARNESS.md §Operator mid-flow directives), and incorporates it before the next state-changing event.
+
+This is precedence over execution_mode, not a tier override of rules. The mid-flow directive may itself become a Tier-anchored rule (with citation), or stay as a stand-alone Decision. Either way, agent mode does not let the harness ignore it.
+
+---
+
 ## Relationship to Other Mechanisms
 
 | Mechanism | Interaction |
 |---|---|
 | Lock | The active project's rule file is in force. |
-| Atomicity | Tasks consume the compressed rules file as part of their working set. |
+| Atomicity | Tasks consume the compressed rules file as part of their working set. Execution-mode safety floors live in `core/ATOMICITY.md` §Execution Mode. |
 | Typed Artifacts | Rules cite artifacts by hash to anchor to specific decisions/findings. |
 | Verification | SCAN events feed Layer 2; banned-token scan feeds Layer 2 acceptance criteria. |
