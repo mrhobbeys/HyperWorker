@@ -134,7 +134,7 @@ timeline:
   hard_deadline: "2026-06-15"
   soft_target: "2026-06-01"
 team:
-  operator: "Spencer"
+  operator: "the operator"
   role: "solo"
   others: []
 authority:

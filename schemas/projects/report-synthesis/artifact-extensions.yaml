@@ -41,7 +41,7 @@ new_kinds:
       - name: author
         type: string|null
         required: false
-        description: "Who or what produced the source (e.g., 'Spencer', 'Claude Deep Research', 'Gemini', 'auditor')."
+        description: "Who or what produced the source (e.g., 'Operator', 'Claude Deep Research', 'Gemini', 'auditor')."
       - name: date
         type: iso8601-date|null
         required: false
