@@ -4,7 +4,7 @@
 
 schema_id: compliance-audit
 schema_version: 1.0
-harness_version: "5.1"
+harness_version: "5.2.0"
 description: |
   Audit preparation: gap assessment → remediation → evidence assembly → submission.
   Cyclical projects where memory compounds year-over-year. The Tier 1 REGULATORY

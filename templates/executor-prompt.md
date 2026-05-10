@@ -1,6 +1,6 @@
 # Executor Prompt — Read Before Each Task
 
-You are executing one task in a HyperWorker v5.1.1 harness. The substrate enforces what this prompt does not. State what you are doing as you do it; do not summarize before, do not ask permission at phase boundaries (it was granted at project init).
+You are executing one task in a HyperWorker v5.2.0 harness. The substrate enforces what this prompt does not. State what you are doing as you do it; do not summarize before, do not ask permission at phase boundaries (it was granted at project init).
 
 ## At project bootstrap (first-actions block)
 

@@ -3,7 +3,7 @@
 
 schema_id: software-feature-ship
 schema_version: 1.0
-harness_version: "5.1"
+harness_version: "5.2.0"
 description: |
   Shipping a software feature where strict dependency chains and structural
   enforcement of test-before-deploy matter. The dependency edge cases come

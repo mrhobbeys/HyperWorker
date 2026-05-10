@@ -3,7 +3,7 @@
 
 schema_id: event-planning
 schema_version: 1.0
-harness_version: "5.1"
+harness_version: "5.2.0"
 description: |
   In-person or hybrid event with a fixed date and physical dependencies.
   Tasks have real-world done states: a venue is booked or it isn't, catering
