@@ -1,6 +1,6 @@
 # Mechanism: Lock — Single Project Focus
 
-> Drift across multiple "active" projects is the dominant attention-leak in operator practice. A single project lock with backlog intake eliminates the leak without losing capture.
+> Drift across multiple "active" projects is the dominant attention-leak in operator practice. Two projects "in progress" means neither gets the operator's full reading of state at any given moment; decisions made in one project bleed into the other; context never warms enough to catch the drift before it ships. A single project lock with backlog intake eliminates the leak without losing capture.
 
 ---
 
@@ -72,7 +72,7 @@ The harness has no active project. Use `hw bootstrap --schema <name> --name <id>
 - ...
 ```
 
-The backlog is flat by design. There is no nested project structure, no priority inheritance, no auto-aging. Operators promote entries to projects via `hw bootstrap`; entries that never get promoted stay until manually removed.
+The backlog is flat by design. No nested project structure. No priority inheritance. No auto-aging. Operators promote entries to projects via `hw bootstrap`; entries that never get promoted stay until manually removed.
 
 ---
 
@@ -83,22 +83,26 @@ Switching projects is two events, never one:
 1. `project.archive` (or `project.park`) on the current project.
 2. `project.activate` on the new project.
 
-If the operator says "switch to project X," the agent emits both. If `project.activate` arrives without a prior archive/park, the harness refuses: "<old-project> is still active. Run `hw park` or `hw wrap` first."
+When the operator says "switch to project X," emit both. If `project.activate` arrives without a prior archive/park, the harness refuses: "<old-project> is still active. Run `hw park` or `hw wrap` first."
 
-This is a structural check: the agent cannot accidentally activate two projects, because the projection regeneration protocol will refuse to write `active_project.md` pointing at two paths.
+This is a structural check, not a verbal request. The agent cannot accidentally activate two projects, because the projection regeneration protocol refuses to write `active_project.md` pointing at two paths.
 
 ---
 
 ## Distraction Intake
 
-When the operator drops an idea unrelated to the active project, the agent runs `hw log <text>`. The protocol:
+The operator drops an idea unrelated to the active project. The failure mode is "just outline it real quick" — the agent starts drafting, the parent project's context gets polluted by tangent work, and 20 minutes evaporate before anyone notices the operator never agreed to switch. Capture the idea as a backlog event and stay on the active project. Nothing else.
+
+The protocol for `hw log <text>`:
 
 1. Acknowledge the idea in one sentence.
 2. Synthesize a backlog entry: short title + one-paragraph body + suggested priority + tags inferred from text.
-3. Append `backlog.add` event. Render `backlog.md`. Confirm to the operator: *"Logged as `<entry_id>` (priority: `<X>`). Continuing on `<active-project>`."*
+3. Append `backlog.add` event. Render `backlog.md`. Confirm: *"Logged as `<entry_id>` (priority: `<X>`). Continuing on `<active-project>`."*
 4. Do not draft, sketch, or "just outline." The intake is event-write only.
 
-If the operator pushes for execution: *"To work on this now I'll need to park `<active-project>`. Park it, or stay on it?"* The agent does not infer the answer.
+If the operator pushes for execution: *"To work on this now I'll need to park `<active-project>`. Park it, or stay on it?"* Do not infer the answer.
+
+You will know you have followed this protocol when the active project's TASK-STATE.yaml is unchanged after a distraction-intake exchange.
 
 ---
 
@@ -106,10 +110,10 @@ If the operator pushes for execution: *"To work on this now I'll need to park `<
 
 When the active project's tasks are all `complete` and Layer 2 verification passes:
 
-1. **Discovery sweep.** Read recent events for the project: any `verify.layer2.fail` retries, any rejected `task.recite` paraphrases, any `branch.fold` results that surfaced surprises. The operator is invited to write findings (`hw add finding`) before archiving.
-2. **Append `project.archive`.** Payload includes a one-paragraph summary the agent drafts from PROJECT.md plus a count of artifacts emitted.
+1. **Discovery sweep.** Read recent events for the project: any `verify.layer2.fail` retries, any rejected `task.recite` paraphrases, any `branch.fold` results that surfaced surprises. Invite the operator to write findings (`hw add finding`) before archiving.
+2. **Append `project.archive`.** Payload includes a one-paragraph summary drafted from PROJECT.md plus a count of artifacts emitted.
 3. **Re-render `active_project.md`** to "(none)".
-4. **Present top-3 backlog.** Read `backlog.md`, take the three highest-priority entries, present them to the operator. The operator picks one (or none).
+4. **Present top-3 backlog.** Read `backlog.md`, take the three highest-priority entries, present them. The operator picks one (or none).
 5. **If selected, run `hw bootstrap`** with the schema the operator declares for the chosen entry.
 
 The archived project's projections remain in `projects/<id>/`. They are not deleted — they are off the critical path.

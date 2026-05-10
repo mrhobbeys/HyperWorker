@@ -1,6 +1,6 @@
 # Mechanism: Precedence — Tiered Rule Resolution
 
-> Tiered rule conflict resolution remains the right primitive for "which rule wins" questions. v4.1.1's design is sound; the change in v5.0 is substrate underneath: rules can cite typed artifacts by hash, and each tier section ends with SCAN markers that force attention restoration before state-changing actions.
+> Tiered rule conflict resolution remains the right primitive for "which rule wins" questions. v4.1.1's design is sound; the change in v5.0 is the substrate underneath. Rules cite typed artifacts by hash, and each tier section ends with SCAN markers that force attention restoration before state-changing actions.
 
 ---
 
@@ -14,7 +14,7 @@
 
 ## The Reference File
 
-Each project has one `00-REFERENCE-rules.md` (file-canonical, Mutable Surface). Tiers are declared in the project schema — default names for each tier are `NON-NEGOTIABLE / SCOPE / TECHNICAL / STYLE`, but the schema may override. Higher tier wins on conflict; the ordinal does the resolving, not the agent.
+Each project has one `00-REFERENCE-rules.md` (file-canonical, Mutable Surface). Tiers are declared in the project schema — default names for each tier are `NON-NEGOTIABLE / SCOPE / TECHNICAL / STYLE`, but the schema overrides. Higher tier wins on conflict; the ordinal does the resolving, not the agent.
 
 ```markdown
 # 00-REFERENCE-rules.md — <project-name>
@@ -63,7 +63,7 @@ The schema declares tiers, default rule examples, and SCAN markers. The operator
 
 ## Citing Typed Artifacts in Rules
 
-A rule may anchor to an artifact: `[DEC-002#a3f9c2b1e0f4]` after the rule means "this rule was set by DEC-002 at hash a3f9…". Layer 1 verification checks rule citations whenever the file is rendered to its compressed form.
+A rule anchors to an artifact: `[DEC-002#a3f9c2b1e0f4]` after the rule means "this rule was set by DEC-002 at hash a3f9…". Layer 1 verification checks rule citations every time the file renders to its compressed form.
 
 When `DEC-002` is superseded, the rule citation goes stale. Layer 1 emits `verify.layer1.fail` and the file is flagged for operator update. The rule is not auto-updated; the operator decides whether the new decision changes the rule's content.
 
@@ -71,9 +71,9 @@ When `DEC-002` is superseded, the rule citation goes stale. Layer 1 emits `verif
 
 ## SCAN Markers
 
-Each tier section ends with `@@SCAN_n_m: <question>` markers (n = tier ordinal, m = local index). The agent emits a short answer to each marker via a `task.scan` event before any state-changing action in a task.
+Each tier section ends with `@@SCAN_n_m: <question>` markers (n = tier ordinal, m = local index). Before any state-changing action in a task, emit a short answer to each marker via a `task.scan` event.
 
-**Why output, not re-read.** Passive re-reading does not restore attention. Generating a token-by-token answer forces the model's attention back to the rule section. The pattern (from dev.to/nikolasi research thread) costs under 0.5% of context per task.
+**Why output, not re-read.** Passive re-reading does not restore attention — the model glances at the section and continues with whatever pattern it had cached. Generating a token-by-token answer forces the model's attention back to the rule section. The pattern (from dev.to/nikolasi research thread) costs under 0.5% of context per task; the cost of a Tier 1 violation that slips through because the agent never re-anchored on the rule is far higher.
 
 **Marker design.** Good markers have one-word or short-phrase answers and are constructed so the answer can be verified by inspection of the question's source. Examples:
 
@@ -86,13 +86,13 @@ Each tier section ends with `@@SCAN_n_m: <question>` markers (n = tier ordinal, 
 
 Markers are project-specific. Each project's `rules-template.md` ships with stub markers; the operator adapts them.
 
-**Layer 2 enforcement.** A `task.complete` event is rejected if the task is missing a `task.scan` event for any marker, recorded *before* the first state-changing event in the task. Order matters: SCAN runs before, not after, the state-changing work it prepares for.
+**Layer 2 enforcement.** A `task.complete` event is rejected if the task is missing a `task.scan` event for any marker, recorded *before* the first state-changing event in the task. Order matters: SCAN runs before, not after, the state-changing work it prepares for. After-the-fact answers do not restore attention; they document compliance theatre.
 
 ---
 
 ## Compression and the Agent Prompt
 
-`00-REFERENCE-rules.md` is regenerated to a compressed form (`00-REFERENCE-rules.compressed.md`) on every change. The compressed file is what enters the agent's prompt. Compression preserves: code, paths, IDs, dates, hashes, version numbers, currency amounts, and quoted strings byte-for-byte. Only prose compresses.
+`00-REFERENCE-rules.md` regenerates to a compressed form (`00-REFERENCE-rules.compressed.md`) on every change. The compressed file is what enters the agent's prompt. Compression preserves: code, paths, IDs, dates, hashes, version numbers, currency amounts, and quoted strings byte-for-byte. Only prose compresses.
 
 See `core/TYPED-ARTIFACTS.md` §Compression for the deterministic transform. The agent's prompt always carries the compressed form; the operator edits the source form.
 
@@ -117,11 +117,11 @@ Schemas in `schemas/projects/` rename tiers for their domain (e.g., marketing-ca
 
 When two rules conflict during execution:
 
-1. The agent identifies both rules and their tiers from `00-REFERENCE-rules.compressed.md`.
-2. Higher tier wins. The agent records the resolution in the completion-report's evidence trail.
+1. Identify both rules and their tiers from `00-REFERENCE-rules.compressed.md`.
+2. Higher tier wins. Record the resolution in the completion-report's evidence trail.
 3. If both rules are in the same tier, the conflict is structurally unresolved → `task.status → blocked` with `reason: tier_conflict <rule1> vs <rule2>`. The planner adjusts the rules (clarifies which is higher, splits to different tiers, or revises one).
 
-The agent does **not** invent a resolution. Same-tier conflicts are an authoring error, not a runtime decision.
+Do not invent a resolution. Same-tier conflicts are an authoring error, not a runtime decision.
 
 ---
 
@@ -163,7 +163,7 @@ The Mutable Surface principle applies: this file is operator-editable, file-cano
 
 | Mechanism | Interaction |
 |---|---|
-| Lock | Active project's rule file is in force. |
+| Lock | The active project's rule file is in force. |
 | Atomicity | Tasks consume the compressed rules file as part of their working set. |
-| Typed Artifacts | Rules may cite artifacts by hash to anchor to specific decisions/findings. |
+| Typed Artifacts | Rules cite artifacts by hash to anchor to specific decisions/findings. |
 | Verification | SCAN events feed Layer 2; banned-token scan feeds Layer 2 acceptance criteria. |
