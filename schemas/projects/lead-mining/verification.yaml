@@ -1,0 +1,113 @@
+# schemas/projects/lead-mining/verification.yaml
+# Risk → verification mapping. Lead-mining-specific Layer 2 checks emphasize
+# inbound-only integrity, dedupe correctness, no fabricated contact data, and
+# source-mailbox citation.
+
+risk_levels:
+  standard:
+    layers: [1, 2]
+    layer2_checks:
+      - source_citation_completeness
+      - schema_validation
+    rationale: |
+      Account inventory, enrichment passes, and master-list compilation over
+      already-verified leads. Layer 1 substrate checks plus citation
+      completeness.
+
+  elevated:
+    layers: [1, 2, 3]
+    council_size: 2
+    layer2_checks:
+      - source_citation_completeness
+      - schema_validation
+      - inbound_only_check
+      - no_fabrication_check
+      - dedupe_and_exclusion_check
+    failure_scenarios_required: 2
+    rationale: |
+      Harvest, filter/dedupe, and verify/status passes — the steps where a
+      bad lead can enter or a real lead can silently vanish. Council fires on
+      completion. Two failure scenarios required: one for "what if a
+      contact was fabricated or is actually outbound-only," one for "what if
+      dedupe merged two different people or an exclusion dropped a real
+      lead."
+
+  critical:
+    layers: [1, 2, 3]
+    council_size: 4
+    layer2_checks:
+      - source_citation_completeness
+      - schema_validation
+      - inbound_only_check
+      - no_fabrication_check
+      - dedupe_and_exclusion_check
+      - status_coverage_audit
+      - operator_goal_drift_check
+    failure_scenarios_required: 3
+    operator_review_required: true
+    rationale: |
+      Reserved for any step that would move personal contact data beyond the
+      project workspace or stage outreach — none of the default tasks; the
+      operator classifies such work explicitly. Full council fires. Operator
+      review required; nothing is emailed or shared without operator
+      approval.
+
+# Layer 2 check definitions.
+layer2_check_definitions:
+  source_citation_completeness:
+    description: |
+      Every lead Finding must cite its source mailbox by [SRC-NNN#hash],
+      plus a message/thread reference (subject + date or message id) where
+      the connector exposes one. Substrate counts uncited Findings; >0
+      fails.
+
+  schema_validation:
+    description: |
+      All written artifacts validate against their declared schemas (default
+      kinds + extensions). Substrate-enforced; no agent judgment.
+
+  inbound_only_check:
+    description: |
+      Every lead Finding represents a contact who EMAILED the operator.
+      Contacts the operator only cold-emailed with no reply must not appear
+      as leads; if captured during harvest they carry
+      excluded-with-reason status.
+
+  no_fabrication_check:
+    description: |
+      Every contact field (name, email, company, role, inferred need) traces
+      to the cited mailbox record or to a cited enrichment source, or is
+      explicitly marked "unconfirmed". Any field with no traceable origin
+      fails.
+
+  dedupe_and_exclusion_check:
+    description: |
+      No two lead Findings share the same person or the same company/domain
+      after the dedupe pass; merged duplicates reference the surviving row.
+      Every excluded contact carries excluded-with-reason (vendor,
+      newsletter/automated, internal/personal, outbound-only) — silent drops
+      fail.
+
+  status_coverage_audit:
+    description: |
+      Every registered SRC mailbox was harvested across the full OR-001 date
+      range (or recorded as a capability gap, e.g., missing connector), and
+      every lead has a status (active / cold / current-customer / excluded
+      with reason) and a last-contact date. Unharvested mailboxes and
+      status-null leads fail the audit.
+
+  operator_goal_drift_check:
+    description: |
+      Lead set is sampled and checked for alignment with OR-001: declared
+      mailboxes and date range only, exclude rules applied,
+      current-customer flag honored. Heuristic — operator review is the
+      canonical check at critical level.
+
+# Default per-task risk classification (operator may override).
+task_default_risks:
+  account-inventory: standard
+  inbound-harvest: elevated
+  filter-and-dedupe: elevated
+  enrich-and-infer-need: standard
+  verify-and-status: elevated
+  master-list: standard

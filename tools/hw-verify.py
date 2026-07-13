@@ -16,6 +16,9 @@ are reported as warnings; they do not change the exit code.
 This is a reference implementation. Agents may reimplement the algorithm in
 their environment, but the canonical serialization and citation rules in
 core/SUBSTRATE.md are authoritative — divergence from those rules is a bug.
+
+v5.2.1: KNOWN_EVENT_KINDS synced with the substrate (adds operator_soul_anchor,
+toolchain.anchor) and REQUIRED_PAYLOAD_FIELDS entries added for both.
 """
 
 import argparse
@@ -58,6 +61,8 @@ KNOWN_EVENT_KINDS = {
     "scope.complete",
     "external_state.read_back",
     "bootstrap.inventory_diff", "bootstrap.scope_locked", "bootstrap.probe_skipped",
+    "operator_soul_anchor",   # v5.2.0; missing from this set until v5.2.1
+    "toolchain.anchor",       # v5.2.1
 }
 
 # Required payload fields per v5.1 event kind. None means no per-kind structural
@@ -84,6 +89,8 @@ REQUIRED_PAYLOAD_FIELDS = {
     # the matching council.invoke event.id when missing.
     "council.converged": (),
     "council.escalated": (),
+    "operator_soul_anchor": ("soul_path", "soul_hash", "fired_at"),
+    "toolchain.anchor": ("tools", "source", "fired_at"),
 }
 
 

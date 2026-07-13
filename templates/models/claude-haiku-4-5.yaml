@@ -16,7 +16,8 @@ context_fill_thresholds:
   compact_at: 0.70
 
 council_default_size: 2
-recitation_overlap_threshold: 0.72
+recitation_overlap_floor: 0.40
+recitation_overlap_ceiling: 0.85       # tighter ceiling — smaller models lean on verbatim echo to pass
 
 # v5.1 model_selection_policy ranking fields. See templates/models/_ranking.yaml.
 relative_cost: 1                         # cheapest in the shipped Claude line

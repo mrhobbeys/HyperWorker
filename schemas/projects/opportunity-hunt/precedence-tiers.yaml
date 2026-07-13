@@ -1,0 +1,65 @@
+# schemas/projects/opportunity-hunt/precedence-tiers.yaml
+# Tiered rules for channel opportunity-hunting projects. Tier ordinal wins on
+# conflict. Renaming a tier does not change ordinal precedence.
+
+tiers:
+  - tier: 1
+    name: ELIGIBILITY-INTEGRITY
+    purpose: |
+      Never push a pursuit the business cannot currently execute, and never
+      present unverified opportunity data as fact. Eligibility/membership
+      gates (co-op vendor awards, partner program enrollments, grant program
+      rules, required registrations/certs) live in OR-001 and block pursuit,
+      not discovery: a blocked opportunity is flagged with its gate, not
+      dropped. Nothing is sent without operator approval.
+    examples:
+      - "An opportunity found on a co-op the business is not an awarded vendor on is captured as a Finding flagged 'blocked: co-op vendor award', never marked pursuing."
+      - "Never fabricate a contact, price, deadline, or program rule; unverified fields are 'unconfirmed' and verified before any pursuit effort."
+      - "An opportunity is 'open' only if its response deadline/window is AFTER today; past-deadline items are excluded-after-discovery with the date."
+      - "Operator approval is required before any outreach, proposal, or application is actually sent — the agent drafts, the operator sends."
+      - "Delivery model and subcontracting coverage follow OR-001; do not assume capabilities or coverage OR-001 does not state."
+
+  - tier: 2
+    name: CHANNEL-SCOPE
+    purpose: |
+      This project pursues ONE non-government channel. Cross-channel finds
+      are captured and handed off, never pursued here. Capability and
+      geography gaps are covered per the OR-001 subcontracting answer rather
+      than used as disqualifiers.
+    examples:
+      - "An out-of-channel opportunity is recorded and handed to the correct channel project, not pursued here."
+      - "A capability/geography gap is flagged for the OR-001 subcontracting partner; the opportunity is not disqualified on capability/location alone."
+
+  - tier: 3
+    name: SOURCE-QUALITY
+    purpose: |
+      Every opportunity Finding cites its source; official/primary sources
+      beat aggregators for verification; prioritization follows the declared
+      ranking rule.
+    examples:
+      - "Every opportunity Finding cites its source/listing ([SRC-NNN#hash] plus the listing URL)."
+      - "Deadlines and program figures are verified against the official/primary source, not an aggregator, before pursuit effort."
+      - "Prioritize by: eligibility (can we act now?) > fit > value > effort > deadline proximity."
+
+  - tier: 4
+    name: STYLE
+    purpose: |
+      Presentation and citation consistency for trackers, positioning
+      assets, and drafted outreach/proposals/applications.
+    examples:
+      - "Use the same citation format throughout: [SRC-NNN#hash] for sources, [F-NNN#hash] for opportunities, [DEC-NNN#hash] for pursue/skip calls."
+      - "Match operator's declared voice if a brand-voice anchor is in OR-001."
+
+scan_markers:
+  - tier: 1
+    marker: "@@SCAN_1_1"
+    question: "Is every Finding you marked pursuing eligible per OR-001 eligibility_gates (or explicitly flagged blocked/teaming/sub)?"
+  - tier: 1
+    marker: "@@SCAN_1_2"
+    question: "Does every open Finding have a verified (or explicitly 'unconfirmed') deadline that is AFTER today?"
+  - tier: 2
+    marker: "@@SCAN_2_1"
+    question: "Is anything you captured for pursuit outside this channel per PROJECT.md scope?"
+  - tier: 3
+    marker: "@@SCAN_3_1"
+    question: "Does every opportunity Finding cite its source/listing?"

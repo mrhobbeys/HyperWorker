@@ -1,0 +1,169 @@
+# schemas/projects/lead-mining/artifact-extensions.yaml
+# Domain-specific artifact kinds and field extensions for lead-mining projects.
+
+# New artifact kinds introduced by this schema.
+
+new_kinds:
+  - kind: source
+    description: |
+      A mined mailbox or account. One source artifact per mailbox. Created
+      during 00-account-inventory-and-filters; connector status is updated
+      as it changes. Hash-citable.
+    schema:
+      - name: id
+        type: string
+        pattern: "SRC-\\d{3,}"
+        required: true
+      - name: title
+        type: string
+        required: true
+        description: "Mailbox / account name (e.g., 'primary business mailbox')."
+      - name: address
+        type: string
+        required: true
+        description: "Exact mailbox address."
+      - name: provider
+        type: enum
+        values: [outlook-m365, gmail, other]
+        required: true
+      - name: account_role
+        type: enum
+        values: [business, personal, brand, former]
+        required: true
+      - name: connector_status
+        type: enum
+        values: [connected, missing, pending]
+        required: true
+        description: "Harvest is blocked (capability gap) while a mailbox's connector is missing/pending."
+      - name: date_range
+        type: string
+        required: false
+        description: "Harvest window for this mailbox. Defaults to OR-001 date_range."
+      - name: weight
+        type: enum
+        values: [primary, secondary, contextual]
+        required: true
+        default: primary
+        description: "Mailboxes are primary evidence for leads; enrichment web sources are secondary/contextual."
+      - name: hash
+        type: string
+        required: true
+        description: "Content hash at registration time. Citation freshness check uses this."
+      - name: tags
+        type: list[string]
+        required: false
+
+# Extensions to default artifact kinds.
+
+finding:
+  # Each inbound lead is a Finding.
+  additional_fields:
+    - name: from_source
+      type: string
+      required: true
+      description: "[SRC-NNN#hash] of the mailbox where this inbound contact was found."
+    - name: message_ref
+      type: string|null
+      required: false
+      description: "Message/thread reference (subject + date, or message id) for the inbound contact; cite where the connector exposes one."
+    - name: contact_name
+      type: string
+      required: true
+      description: "Sender's name as it appears in the mailbox; 'unconfirmed' if only an address is known."
+    - name: contact_email
+      type: string
+      required: true
+    - name: company
+      type: string|null
+      required: false
+      description: "Marked 'unconfirmed' until enriched (T-003)."
+    - name: role
+      type: string|null
+      required: false
+      description: "Best effort from signature/enrichment; 'unconfirmed' where unsure."
+    - name: inferred_need
+      type: string|null
+      required: false
+      description: "What service/interest they reached out about, inferred from their original email (set during T-003)."
+    - name: lead_status
+      type: enum
+      values: [unverified, active, cold, current-customer, excluded]
+      required: true
+      description: "unverified until T-004; excluded statuses carry a reason. Current customers are flagged upsell."
+    - name: first_contact_date
+      type: iso8601-date|null
+      required: false
+    - name: last_contact_date
+      type: iso8601-date|null
+      required: false
+      description: "From the mailbox record; set/refreshed during T-004."
+    - name: exclusion_reason
+      type: string|null
+      required: false
+      description: "Required when lead_status is excluded (vendor, newsletter/automated, internal/personal, outbound-only, bounced/invalid)."
+
+decision:
+  additional_fields:
+    - name: decision_role
+      type: enum|null
+      values: [include-exclude-rule, dedupe-merge, status-call, prioritization-rule]
+      required: false
+      description: "What role this decision plays in the mining pipeline. Null if a general decision."
+    - name: lead
+      type: string|null
+      required: false
+      description: "[F-NNN#hash] of the lead this decision covers."
+
+anti-pattern:
+  additional_fields:
+    - name: false_positive_pattern
+      type: string|null
+      required: false
+      description: "The recurring not-a-lead pattern this anti-pattern captures (e.g., a newsletter domain family, an automated-sender signature that slips past filters)."
+
+operating-reality:
+  # Base operating-reality fields (budget, timeline, team, authority,
+  # operator_profile) are not asked by lead-mining bootstrap_questions.
+  # Accounts, date range, exclude rules, current-customer inclusion,
+  # verification scope, and deliverable path carry the constraint set.
+  # Override the base template's required: true to make them optional for
+  # lead-mining projects.
+  field_overrides:
+    - name: budget
+      required: false
+    - name: timeline
+      required: false
+    - name: team
+      required: false
+    - name: authority
+      required: false
+    - name: operator_profile
+      required: false
+  additional_fields:
+    - name: accounts
+      type: list[string]
+      required: true
+      description: "Mailboxes to mine: exact address + provider (Outlook/Gmail) + connector status."
+    - name: date_range
+      type: string
+      required: true
+      default: "last 4 years"
+    - name: exclude_rules
+      type: list[string]
+      required: true
+      default: "vendors/suppliers; newsletters/automated/no-reply; internal staff + personal/family"
+      description: "Who to EXCLUDE from the lead list."
+    - name: include_current_customers
+      type: bool
+      required: true
+      default: true
+      description: "If true, current/active customers stay in the list flagged 'current — upsell'."
+    - name: verify_scope
+      type: list[string]
+      required: true
+      description: "Verification to apply (dedupe+valid; enrich company/role; status check; infer need)."
+    - name: deliverable_path
+      type: string
+      required: true
+      default: "outputs/Master_Lead_List.xlsx"
+      description: "Where the master lead list is written."

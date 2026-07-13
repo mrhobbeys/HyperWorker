@@ -1,0 +1,96 @@
+# schemas/projects/opportunity-hunt/verification.yaml
+# Risk → verification mapping. Opportunity-hunt-specific Layer 2 checks
+# emphasize deadline validity, eligibility gating, and source citation.
+
+risk_levels:
+  standard:
+    layers: [1, 2]
+    layer2_checks:
+      - source_citation_completeness
+      - schema_validation
+    rationale: |
+      Source/program inventory, eligibility-status recording, tracker
+      updates. Layer 1 substrate checks plus citation completeness.
+
+  elevated:
+    layers: [1, 2, 3]
+    council_size: 2
+    layer2_checks:
+      - source_citation_completeness
+      - schema_validation
+      - deadline_validity
+      - eligibility_gate_check
+    failure_scenarios_required: 2
+    rationale: |
+      Opportunity sweeps and qualification. Council fires on completion.
+      Two failure scenarios required: one for "what if a deadline or
+      program figure is wrong," one for "what if an eligibility gate
+      was misread."
+
+  critical:
+    layers: [1, 2, 3]
+    council_size: 4
+    layer2_checks:
+      - source_citation_completeness
+      - schema_validation
+      - deadline_validity
+      - eligibility_gate_check
+      - coverage_audit
+      - operator_goal_drift_check
+    failure_scenarios_required: 3
+    operator_review_required: true
+    rationale: |
+      Pursue/skip decisions and drafted outreach/proposals/applications —
+      outputs that commit real money and reputation. Full council fires.
+      Operator review required before any pursuit effort proceeds; operator
+      approval required before anything is actually sent or submitted.
+
+# Layer 2 check definitions.
+layer2_check_definitions:
+  source_citation_completeness:
+    description: |
+      Every opportunity Finding must cite its source/listing by
+      [SRC-NNN#hash] plus the listing URL. Substrate counts uncited
+      Findings; >0 fails.
+
+  schema_validation:
+    description: |
+      All written artifacts validate against their declared schemas (default
+      kinds + extensions). Substrate-enforced; no agent judgment.
+
+  deadline_validity:
+    description: |
+      Every Finding with status open/pursuing has a response deadline/window
+      AFTER today, sourced from a cited listing or explicitly marked
+      "unconfirmed". Past-deadline items must carry status
+      excluded-after-discovery with the date.
+
+  eligibility_gate_check:
+    description: |
+      No Finding marked pursuing may be blocked by an OR-001
+      eligibility/membership gate without an explicit flag (e.g.,
+      "blocked: co-op vendor award", "blocked: partner enrollment") or an
+      explicit teaming/subcontracting note.
+
+  coverage_audit:
+    description: |
+      Every registered SRC source was swept this cycle (or recorded as a
+      capability gap), and every discovered opportunity has a status:
+      pursuing, watch, or excluded with reason. Unswept sources and
+      status-null Findings fail the audit.
+
+  operator_goal_drift_check:
+    description: |
+      Qualified opportunity set is sampled and checked for alignment with
+      OR-001 channel, what_we_sell, target_buyers, and geographies.
+      Heuristic — operator review is the canonical check at critical level.
+
+# Default per-task risk classification (operator may override).
+task_default_risks:
+  registration-inventory: standard
+  portal-inventory: standard
+  opportunity-sweep: elevated
+  qualify-and-prioritize: elevated
+  capability-statement: elevated
+  bid-decision-and-draft: critical
+  tracker-update: standard

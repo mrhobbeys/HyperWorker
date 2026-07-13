@@ -1,0 +1,64 @@
+# schemas/projects/gov-bid-hunt/precedence-tiers.yaml
+# Tiered rules for government bid-hunting projects. Tier ordinal wins on conflict.
+# Renaming a tier does not change ordinal precedence.
+
+tiers:
+  - tier: 1
+    name: ELIGIBILITY-INTEGRITY
+    purpose: |
+      Never recommend a bid the business cannot legally submit, and never
+      present unverified solicitation data as fact. Eligibility gates live in
+      OR-001 and block pursuit, not discovery: a blocked opportunity is
+      flagged with its gate, not dropped. Entity routing follows OR-001;
+      excluded entities are never used.
+    examples:
+      - "A federal opportunity found while SAM.gov registration is inactive is captured as a Finding flagged 'blocked: SAM.gov', never marked pursuing."
+      - "Never fabricate a solicitation number, deadline, set-aside, or agency; unverified fields are 'unconfirmed' and verified before any bid effort."
+      - "An opportunity is 'open' only if its response deadline is AFTER today; past-deadline items are excluded-after-discovery with the date."
+      - "Operator approval is required before any bid is actually submitted."
+      - "Do not route work to, rely on, or register through any entity marked EXCLUDED in OR-001."
+
+  - tier: 2
+    name: SEGMENT-SCOPE
+    purpose: |
+      This project pursues ONE service-line segment. Cross-segment finds are
+      captured and handed off, never pursued here. Capability and geography
+      gaps are covered per the OR-001 subcontracting answer rather than used
+      as disqualifiers.
+    examples:
+      - "An out-of-segment opportunity is recorded and handed to the correct segment project, not pursued here."
+      - "A capability/geography gap is flagged for the named subcontracting partner; the bid is not disqualified on capability/location alone."
+
+  - tier: 3
+    name: SOURCE-QUALITY
+    purpose: |
+      Every opportunity Finding cites its source; official portals beat
+      aggregators for verification; prioritization follows the declared
+      ranking rule.
+    examples:
+      - "Every opportunity Finding cites its portal/listing ([SRC-NNN#hash] plus the listing URL)."
+      - "Deadlines and solicitation numbers are verified against the official portal, not an aggregator, before bid effort."
+      - "Prioritize by: eligibility (can we bid now?) > fit > deadline proximity > size/effort."
+
+  - tier: 4
+    name: STYLE
+    purpose: |
+      Presentation and citation consistency for trackers, capability
+      statements, and drafted responses.
+    examples:
+      - "Use the same citation format throughout: [SRC-NNN#hash] for portals, [F-NNN#hash] for opportunities, [DEC-NNN#hash] for bid/no-bid calls."
+      - "Match operator's declared voice if a brand-voice anchor is in OR-001."
+
+scan_markers:
+  - tier: 1
+    marker: "@@SCAN_1_1"
+    question: "Is every Finding you marked pursuing eligible per OR-001 registration_status (or explicitly flagged teaming/sub)?"
+  - tier: 1
+    marker: "@@SCAN_1_2"
+    question: "Does every open Finding have a verified (or explicitly 'unconfirmed') deadline that is AFTER today?"
+  - tier: 2
+    marker: "@@SCAN_2_1"
+    question: "Is anything you captured for pursuit outside this segment per PROJECT.md §Segment scope?"
+  - tier: 3
+    marker: "@@SCAN_3_1"
+    question: "Does every opportunity Finding cite its source portal/listing?"

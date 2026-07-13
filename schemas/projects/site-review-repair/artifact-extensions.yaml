@@ -1,0 +1,47 @@
+# schemas/projects/site-review-repair/artifact-extensions.yaml
+decision:
+  additional_fields:
+    - name: change_type
+      type: string|null
+      required: false
+      description: "content | template | css | config | redirect | none"
+    - name: rollback_ref
+      type: string|null
+      required: false
+    - name: affects_urls
+      type: list[string]|null
+      required: false
+finding:
+  additional_fields:
+    - name: severity
+      type: string
+      required: true
+      default: "medium"
+      description: "blocker | high | medium | low"
+    - name: affects_urls
+      type: list[string]|null
+      required: false
+    - name: fix_effort
+      type: string|null
+      required: false
+anti-pattern:
+  additional_fields:
+    - name: platform
+      type: string|null
+      required: false
+operating-reality:
+  field_overrides:
+    - name: budget
+      required: false
+    - name: team
+      required: false
+  additional_fields:
+    - name: site_domain
+      type: string
+      required: true
+    - name: platform
+      type: string
+      required: true
+    - name: definition_of_done
+      type: string
+      required: true

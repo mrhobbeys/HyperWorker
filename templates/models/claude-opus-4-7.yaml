@@ -16,7 +16,8 @@ context_fill_thresholds:
   compact_at: 0.70
 
 council_default_size: 2
-recitation_overlap_threshold: 0.65       # slightly looser; verbose paraphrase may stem-overlap less
+recitation_overlap_floor: 0.30       # slightly looser floor; verbose paraphrase may stem-overlap less
+recitation_overlap_ceiling: 0.90
 
 # v5.1 model_selection_policy ranking fields. Used when OR-001.model_selection_policy
 # resolves prefer: cheapest-capable / fastest-capable / most-capable. Higher number =

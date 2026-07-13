@@ -1,0 +1,38 @@
+tiers:
+  1:
+    name: OPERATOR-EXECUTES-SENSITIVE
+    purpose: "The worker never performs credentialed or irreversible monetization actions. Cannot be overridden."
+    examples:
+      - "Never enter credentials, payment methods, bank, or ID numbers."
+      - "Never click 'activate', 'accept terms', link/authorize accounts, or submit forms — the OPERATOR does these."
+      - "Report-first: propose steps and an operator checklist; do not self-execute beyond operator-approved quick wins."
+      - "COMMIT to ONE clear recommended path — never refuse to recommend. Separate 'my recommendation' from 'operator executes'."
+      - "Operator decisions are FINAL: record them verbatim and NEVER re-open or contradict them. Raise a concern at most once, then comply."
+      - "No change to live ad code/placements without operator approval AND a rollback."
+    scan_markers:
+      - "@@SCAN_1_1: Confirm this step is a proposal/checklist, not a credentialed action the agent performed."
+  2:
+    name: SCOPE
+    purpose: "Assigned site, Monetization only."
+    examples:
+      - "Only the assigned site; Monetization only (not Review & Repair or SEO)."
+      - "Scope changes need operator approval + a new DEC-XXX."
+    scan_markers:
+      - "@@SCAN_2_1: Confirm this is Monetization for the assigned site."
+  3:
+    name: TECHNICAL
+    purpose: "Integration correctness."
+    examples:
+      - "On Ezoic sites, AdSense runs THROUGH Ezoic mediation — never double-serve standalone AdSense + Ezoic on the same pages."
+      - "ads.txt managed by Ezoic; verify entries rather than hand-editing conflicting copies."
+      - "Respect the operator's ad-density goal."
+  4:
+    name: DOCUMENTATION
+    purpose: "Hygiene."
+    examples:
+      - "Keep STATUS.md current. Clear operator checklists."
+banned_tokens:
+  - banned: "I activated"
+    replacement: "operator to activate"
+    tier: 1
+    why: "The agent never activates monetization; it proposes and the operator executes."

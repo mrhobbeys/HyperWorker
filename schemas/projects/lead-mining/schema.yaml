@@ -1,0 +1,69 @@
+# schemas/projects/lead-mining/schema.yaml
+# Mine the operator's OWN email history (multiple accounts, multi-year) for
+# inbound contacts that are potential leads, build one verified master list,
+# and capture what each one needed. Inbound-only: people who emailed the
+# operator. Each lead = a Finding; each mailbox/source = a SRC; each
+# include/exclude rule = a Decision.
+schema_id: lead-mining
+schema_version: 1.0
+harness_version: "5.2.0"
+description: |
+  Harvest, dedupe, filter, verify, and enrich inbound email contacts across the
+  operator's mailboxes into a single master lead list with each contact's
+  inferred need, company/role, and status (active / cold / current customer).
+  Vendors, newsletters/automated, and internal/personal senders are excluded.
+bootstrap_questions:
+  - id: project_name
+    prompt: "Project name (e.g., 'Email Lead Mining')."
+    type: string
+    required: true
+  - id: accounts
+    prompt: "Which mailboxes to mine, with exact addresses + provider (Outlook/Gmail) + connector status?"
+    type: list[string]
+    required: true
+  - id: date_range
+    prompt: "How far back? (e.g., last 4 years / since 2022)"
+    type: string
+    required: true
+    default: "last 4 years"
+  - id: exclude_rules
+    prompt: "Who to EXCLUDE (default: vendors/suppliers, newsletters/automated/no-reply, internal staff + personal/family)."
+    type: list[string]
+    required: true
+    default: "vendors/suppliers; newsletters/automated/no-reply; internal staff + personal/family"
+  - id: include_current_customers
+    prompt: "Include current/active customers (flagged for upsell)? (yes/no)"
+    type: bool
+    required: true
+    default: true
+  - id: verify_scope
+    prompt: "What verification to apply (dedupe+valid; enrich company/role; status check; infer need)."
+    type: list[string]
+    required: true
+  - id: deliverable_path
+    prompt: "Where does the master lead list go?"
+    type: string
+    required: true
+    default: "outputs/Master_Lead_List.xlsx"
+includes:
+  - precedence-tiers.yaml
+  - artifact-extensions.yaml
+  - capability-gates.yaml
+  - verification.yaml
+  - council.yaml
+  - project-template.md
+  - rules-template.md
+  - task-templates/
+  - README.md
+default_tasks:
+  description: |
+    6 tasks: A) account inventory + filters (T-000); B) harvest inbound senders
+    (T-001, fan-out per account/window), filter & dedupe (T-002); C) enrich &
+    infer need (T-003), verify & status (T-004), compile master list + handoff (T-005).
+  templates:
+    - "00-account-inventory-and-filters.md"
+    - "01-harvest-inbound-contacts.md"
+    - "02-filter-and-dedupe.md"
+    - "03-enrich-and-infer-need.md"
+    - "04-verify-and-status.md"
+    - "05-compile-master-list.md"

@@ -31,7 +31,8 @@ At project bootstrap, the harness copies the profile file into `.hyperworker/mod
 | `context_fill_thresholds.warn_at` | Fraction of context window where the harness warns. |
 | `context_fill_thresholds.compact_at` | Fraction where compaction is forced. |
 | `council_default_size` | Default council member count for this model. |
-| `recitation_overlap_threshold` | Jaccard threshold below which Layer 1 rejects a recitation. |
+| `recitation_overlap_floor` | Jaccard overlap below which Layer 1 rejects a recitation (likely unread; default 0.35). |
+| `recitation_overlap_ceiling` | Jaccard overlap above which Layer 1 rejects a recitation (verbatim echo, not paraphrase; default 0.90). v5.2.1; replaces the deprecated single `recitation_overlap_threshold`. |
 | `notes` | Citation-backed notes about model-specific behaviors. |
 | `relative_cost` | 1-5 ranking axis (1=cheapest, 5=most-expensive) used by v5.1 model_selection_policy. |
 | `relative_capability` | 1-5 ranking axis (1=least-capable, 5=most-capable). |
@@ -43,7 +44,7 @@ Profile fields are merged into the harness defaults at project load time. Order 
 
 1. Harness defaults (hard-coded in `core/*.md`).
 2. The active model profile (`.hyperworker/models/<name>.yaml`).
-3. Schema-level overrides (`schemas/projects/<name>/*.yaml`, e.g., a schema declaring `recitation_overlap_threshold: 0.75`).
+3. Schema-level overrides (`schemas/projects/<name>/*.yaml`, e.g., a schema declaring `recitation_overlap_floor: 0.45`).
 4. Project-local overrides (`projects/<id>/.config-override.yaml`, if the operator wants per-project tuning).
 
 A field set at a higher level wins. Schema overrides exist so a compliance-audit schema can require tighter thresholds even on a verbose-CoT model.

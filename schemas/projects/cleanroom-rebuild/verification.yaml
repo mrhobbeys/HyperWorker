@@ -1,0 +1,165 @@
+# schemas/projects/cleanroom-rebuild/verification.yaml
+# Risk -> verification mapping for cleanroom rebuilds.
+# Layer 1 carries the five structural WALL checks (named in capability-gates.yaml
+# wall_enforcement) in addition to the substrate-default Layer 1 checks. Any wall
+# breach is a Layer 1 FAIL surfaced to the operator immediately — it is never a
+# judgment the agent resolves. Layer 2 checks are behavioral, per task kind. Layer 3
+# fires the cleanroom-integrity-auditor council (see council.yaml).
+
+# Wall checks run at Layer 1 on every event, alongside substrate checks 1-12 in
+# core/VERIFICATION.md. These are the schema's structural extension of Layer 1.
+layer1_wall_checks:
+  - id: build-no-observed-read
+    description: |
+      No build-room task event (build-from-spec, verify-against-oracle) may cite an
+      OBS artifact or reference any path under observed/. Substrate resolves each
+      [KIND-ID#hash] in a build event's payload; any cited artifact with
+      consumable_by_build:false (i.e., any OBS) is a FAIL. Any observed/ path string
+      in a build event is a FAIL.
+    on_fail: "reject-and-surface-to-operator"
+  - id: build-executor-isolation
+    description: |
+      Build-room tasks MUST declare executor=local_model bound to the
+      OR-001.build_executor endpoint, which has no app_driver / network-to-original
+      capability. A build task recorded as run on the orchestrator (which CAN reach
+      the original) is a wall breach FAIL.
+    on_fail: "reject-and-surface-to-operator"
+  - id: no-smoke-no-peek
+    description: |
+      Any event from a no_smoke_run / no_peek task recording that the original was
+      run, or its binaries / decompilation read, is a FAIL surfaced to the operator
+      immediately. Shares the smoke-run marker dictionary with the safety floor.
+    on_fail: "reject-and-surface-to-operator"
+  - id: spec-purity
+    description: |
+      SPEC/BR are the only original-derived inputs crossing into the build zone. A
+      SPEC body quoting original code or UI strings verbatim beyond functional
+      necessity (i.e., not justified in verbatim_carryover) is flagged for
+      spec-author review. NON-BLOCKING warning, not a hard FAIL.
+    on_fail: "warn-and-flag-spec-author"
+  - id: zone-write-discipline
+    description: |
+      A task writing outside its declared write_zones is a FAIL (e.g., a build task
+      writing into observed/, or an observation task writing into src/).
+    on_fail: "reject-and-surface-to-operator"
+
+# Layer 1 citation/hash checks specific to this schema (in addition to substrate
+# checks 2-3 citation existence/freshness).
+layer1_citation_checks:
+  - id: spec-derived-from-present
+    description: "Every SPEC/BR add event has a non-empty derived_from list, each entry a resolvable [OBS-NNN#hash]. Empty or unresolvable = FAIL."
+  - id: oracle-case-present
+    description: "Every behavior-rule add event has at least one oracle_case and at least one worked_example. Missing = FAIL."
+  - id: build-cites-spec-only
+    description: "Every build/test event citing original-derived knowledge cites only SPEC/BR (consumable_by_build:true). Citing F-* with from_observation set, or any OBS, = FAIL (overlaps build-no-observed-read)."
+
+risk_levels:
+  standard:
+    layers: [1, 2]
+    layer2_checks:
+      - spec_citation_completeness
+      - schema_validation
+      - zone_discipline_self_check
+    rationale: |
+      Target inventory, charter, individual screen / data-layer / hardware captures,
+      and routine spec authoring. Layer 1 substrate + wall checks plus citation and
+      zone self-check.
+
+  elevated:
+    layers: [1, 2, 3]
+    council_size: 2
+    layer2_checks:
+      - spec_citation_completeness
+      - schema_validation
+      - zone_discipline_self_check
+      - oracle_case_coverage
+      - screen_spec_coverage
+    failure_scenarios_required: 2
+    rationale: |
+      Behavior-rule authoring, test-oracle authoring, hardware spec. Council fires.
+      Two failure scenarios: one for "what if a measured rule was mis-measured," one
+      for "what if a captured screen has an unobserved branch."
+
+  critical:
+    layers: [1, 2, 3]
+    council_size: 4
+    cross_family: false
+    operator_review_required: true
+    failure_scenarios_required: 3
+    layer2_checks:
+      - spec_citation_completeness
+      - schema_validation
+      - zone_discipline_self_check
+      - oracle_case_coverage
+      - screen_spec_coverage
+      - wall_breach_audit
+      - oracle_pass_rate
+    rationale: |
+      The spec->build phase boundary, build-from-spec, and verify-against-oracle.
+      Full council including the cleanroom-integrity-auditor fires. Operator review
+      required before the build room is opened and before project archival.
+
+# Layer 2 check definitions.
+layer2_check_definitions:
+  spec_citation_completeness:
+    description: |
+      Every SPEC/BR cites at least one [OBS-NNN#hash] in derived_from; every build
+      code/test artifact cites only SPEC/BR by hash for original-derived behavior.
+      Substrate counts violations; >0 fails.
+
+  schema_validation:
+    description: |
+      All written artifacts validate against their declared schemas (default kinds +
+      this schema's extensions). Substrate-enforced; no agent judgment.
+
+  zone_discipline_self_check:
+    description: |
+      The completion report records which zones the task read and wrote, and the
+      executor confirms they match the task-kind's declared read_zones / write_zones
+      in capability-gates.yaml. Discrepancy fails (and overlaps Layer 1
+      zone-write-discipline).
+
+  oracle_case_coverage:
+    description: |
+      Every behavior-rule has at least one oracle case in the test oracle (T-009),
+      and every oracle case maps to a BR. Orphan rules or orphan cases fail.
+
+  screen_spec_coverage:
+    description: |
+      Every captured screen (OBS observation_type:screen) is covered by a SPEC
+      screen-spec before the build room opens. Uncovered captured screens fail.
+
+  wall_breach_audit:
+    description: |
+      Scans the task's events for any wall-relevant near-miss (build context that
+      touched observed/, a smoke/peek marker, an executor mismatch). Any hit fails
+      and routes to the cleanroom-integrity-auditor.
+
+  oracle_pass_rate:
+    description: |
+      For verify-against-oracle tasks, the built app's run against the spec-derived
+      oracle is recorded; PASS requires every oracle case to pass. Judged against the
+      ORACLE, never against the original.
+
+# Default per-task risk classification (operator may override).
+task_default_risks:
+  target-inventory: standard
+  charter: standard
+  screen-flow-capture: standard
+  data-layer-behavior-trace: standard
+  hardware-io-capture: standard
+  data-dictionary: standard
+  behavior-rules: elevated
+  screen-specs: standard
+  hardware-spec: elevated
+  test-oracle: critical
+  build-from-spec: critical
+  verify-against-oracle: critical
+
+auto_escalation_rules:
+  - condition: "Task is build-from-spec or verify-against-oracle (build room opens)."
+    risk_level: critical
+  - condition: "Task authors a behavior-rule touching money (pricing, tax, discount, rounding)."
+    risk_level: elevated
+  - condition: "Task is the spec->build phase boundary (last Phase C task / first Phase D task)."
+    risk_level: critical

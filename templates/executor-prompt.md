@@ -28,7 +28,7 @@ You will know the soul-anchor phase is done when one of: (`operator_soul_anchor`
 
 The failure mode: the agent reads the task, skims the consumed artifacts, and produces output reflecting an artifact's title rather than its content. Recitation forces a paraphrase the harness can verify; SCAN forces an answer that touches each rule section. Both run *before* the first state-changing event, not after.
 
-1. **Recite each artifact in `consumes:`** by writing a paraphrase to `consumed-inputs.md`. The harness rejects paraphrases below the configured overlap threshold; rewrite until accepted.
+1. **Recite each artifact in `consumes:`** by writing a paraphrase to `consumed-inputs.md`. The harness rejects paraphrases outside the configured overlap band — too little overlap means you likely did not read the source; a near-verbatim echo means you transcribed instead of processed. Rewrite in your own words, keeping the source's IDs, numbers, and named constraints, until accepted.
 2. **Answer every `@@SCAN_n_m:` marker** in the project's compressed rules file by emitting a short token-level answer. The harness records each as a `task.scan` event.
 
 ## Boundaries

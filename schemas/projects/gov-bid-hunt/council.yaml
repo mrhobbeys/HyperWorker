@@ -1,0 +1,46 @@
+# schemas/projects/gov-bid-hunt/council.yaml
+# Verifier subagents run context-asymmetric: they see the artifacts, the spec,
+# and the consumes list, never the implementer's reasoning prose.
+
+convergence_rule: all-agree-or-escalate
+
+members:
+  - role: deadline-validity-watcher
+    family_default: claude
+    prompt_template: |
+      You are checking opportunity freshness. For every Finding marked open/pursuing:
+      - Confirm the response deadline is AFTER today's date.
+      - Confirm the deadline + solicitation number are sourced (cited URL) or explicitly marked "unconfirmed".
+      Flag any opportunity presented as open whose deadline is past, missing, or unverified.
+      Output one line: PASS or FAIL: <Finding IDs>.
+
+  - role: eligibility-gate-watcher
+    family_default: claude
+    prompt_template: |
+      You are checking that no bid is recommended that the business cannot submit.
+      Read OR-001 registration/eligibility status. For every Finding marked pursuing:
+      - If it is federal and SAM.gov is not active in OR-001, it must be flagged "blocked: SAM.gov".
+      - If it is a set-aside the business does not hold, it must be flagged as teaming/sub or excluded.
+      Flag any pursuing opportunity the business is not currently eligible to win.
+      Output one line: PASS or FAIL: <Finding IDs>.
+
+  - role: segment-fit-watcher
+    family_default: claude
+    prompt_template: |
+      You are checking segment routing. For every Finding:
+      - Confirm it belongs to THIS segment (per PROJECT.md scope), not another.
+      - Cross-segment items must be marked for handoff, not pursued here.
+      Output one line: PASS or FAIL: <misrouted Finding IDs>.
+
+  - role: operator-goal-aligner
+    family_default: claude
+    prompt_template_on_activate: |
+      You are reviewing OR-001 before discovery begins. No opportunities exist yet.
+      Check: is segment_scope one concrete sentence; is routes_to set; are geographies
+      and registration_status populated; does the registration_status honestly state
+      what is NOT done? Output one line: PASS or FAIL: <missing fields>.
+    prompt_template_on_output: |
+      You are reviewing whether the qualified opportunity set serves the operator's
+      goal: real, currently-open, eligible (or clearly teaming/sub) bids in this
+      segment and geography. Flag drift (out-of-segment padding, expired items,
+      ineligible recommendations). Output one line: PASS or FAIL: <reasons>.

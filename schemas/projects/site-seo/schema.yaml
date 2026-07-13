@@ -1,0 +1,57 @@
+# schemas/projects/site-seo/schema.yaml
+schema_id: site-seo
+schema_version: 1.0
+harness_version: "5.2.0"
+description: |
+  Per-site SEO recovery workstream, run as an ORDERED sequence of deep-focus phases. Report-first:
+  the worker diagnoses and proposes; the operator/dev/server-side crew execute changes. Each phase
+  that surfaces server-side or dev work ENDS WITH A HANDOFF for the server-side Claude Code / Recovery
+  crew. Ranking + duplicate-content detection is done with HAIKU SUBAGENTS per ranking-test-haiku.md.
+  DMCA / stolen-content is one of the LAST phases. The final phase is OPEN-ENDED — the ongoing SEO
+  plan continues there (the project does not hard-complete).
+
+bootstrap_questions:
+  - id: site_domain
+    prompt: "Which site? (domain)"
+    type: string
+    required: true
+  - id: gsc_account
+    prompt: "Google account that HOLDS the Search Console property (may differ from the operator's everyday account)."
+    type: string
+    required: true
+  - id: recovery_dependency
+    prompt: "Status of the Recovery docroot sitemap/robots fix this SEO work depends on (done / pending / n-a)."
+    type: string
+    required: true
+  - id: priority_order
+    prompt: "Any reordering of the default phase sequence, or null to use the default order."
+    type: string|null
+    required: true
+  - id: known_state
+    prompt: "Known SEO state to carry in (GSC counts, broken sitemaps, stolen-content leads), or null."
+    type: string|null
+    required: true
+
+includes:
+  - precedence-tiers.yaml
+  - artifact-extensions.yaml
+  - capability-gates.yaml
+  - verification.yaml
+  - council.yaml
+  - project-template.md
+  - rules-template.md
+  - task-templates/
+  - ranking-test-haiku.md
+  - README.md
+
+default_tasks:
+  templates:
+    - "00-scope-baseline.md"
+    - "01-technical-indexing.md"
+    - "02-index-exclusion-diagnosis.md"
+    - "03-content-quality-pruning.md"
+    - "04-structure-internal-linking.md"
+    - "05-onpage-schema.md"
+    - "06-ranking-test-haiku.md"
+    - "07-dmca-investigation.md"
+    - "08-ongoing-seo-plan.md"

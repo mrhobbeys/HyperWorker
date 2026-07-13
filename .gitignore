@@ -27,3 +27,7 @@ Thumbs.db
 
 # Agent-specific files (per-instance, not per-repo)
 .claude/
+
+# Python
+__pycache__/
+*.pyc

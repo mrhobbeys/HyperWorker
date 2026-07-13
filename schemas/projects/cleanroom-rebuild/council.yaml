@@ -1,0 +1,112 @@
+# schemas/projects/cleanroom-rebuild/council.yaml
+# Council composition for cleanroom rebuilds. Verifier subagents run with
+# context-asymmetric framing: they see the artifact, the spec, and the consumes
+# list — never the implementer's reasoning prose. The dedicated
+# cleanroom-integrity-auditor is the wall's Layer 3 surface: it checks that no wall
+# breach occurred at every fire, and fires unconditionally at the spec->build
+# boundary (the moment the wall is crossed for real).
+
+convergence_rule: all-agree-or-escalate
+
+members:
+  - role: cleanroom-integrity-auditor
+    family_default: claude
+    # The wall's dedicated reviewer. Fires at project.activate (metadata-only:
+    # confirm the wall is structurally declared), at the spec->build boundary
+    # (critical: the moment build opens), and at build completion. Trigger-aware.
+    prompt_template_on_activate: |
+      You are reviewing the cleanroom WALL declaration before any work begins.
+      No observations or specs exist yet; evaluate metadata only.
+      Read OR-001.build_executor, wall_strictness, observation_oracle, and the
+      capability-gates wall_enforcement block.
+      Check:
+      - Is build_executor a LOCAL endpoint structurally incapable of reaching the
+        original (no app_driver / network-to-original capability)? Flag if it is the
+        orchestrator or any endpoint that can reach the original.
+      - Is wall_strictness declared (pure-black-box or decompilation-assisted)?
+      - Do the build-room task-kinds (build-from-spec, verify-against-oracle) declare
+        executor=local_model, forbidden_reads:[observed], no_smoke_run, no_peek?
+      Output a single line: PASS or FAIL: <wall-declaration gaps>.
+    prompt_template_on_output: |
+      You are auditing for a cleanroom WALL breach. This is the wall's Layer 3 surface.
+      Read the subject task's events, its consumes list, and its completion report.
+      FAIL on ANY of:
+      - A build-room task (build-from-spec, verify-against-oracle) that cites an OBS
+        artifact or references any path under observed/.
+      - A build-room task recorded as run on the orchestrator rather than
+        executor=local_model on OR-001.build_executor.
+      - Any record that the ORIGINAL was run to check behavior (smoke run), or its
+        binaries / decompilation read (peek), by a no_smoke_run / no_peek task.
+      - A task that wrote outside its declared write_zones (build -> observed/,
+        observation -> src/).
+      - A build code/test artifact that derives original behavior from anything other
+        than SPEC/BR (e.g., an F-* carrying from_observation).
+      You see the artifacts and the spec, not the implementer's chain-of-thought.
+      Output a single line: PASS or FAIL: <breach description with event/task id>.
+
+  - role: spec-fidelity-watcher
+    family_default: claude
+    prompt_template: |
+      You are reviewing SPEC/BR artifacts for spec-fidelity compliance (Tier 2).
+      For each SPEC/BR in the subject:
+      - Confirm derived_from cites at least one [OBS-NNN#hash] and that the spec's
+        claims are supported by those observations as paraphrased.
+      - For behavior-rules, confirm worked_examples and oracle_cases are present and
+        consistent with the rule_statement.
+      - Flag any SPEC body quoting original code or UI strings verbatim beyond
+        functional necessity that is NOT justified in verbatim_carryover.
+      Do not evaluate target-stack code quality; only spec fidelity to observation.
+      Output a single line: PASS or FAIL: <specs lacking provenance or over-quoting>.
+
+  - role: oracle-reality-calibrator
+    family_default: claude
+    # Reality member. At the build/verify stage, confirms PASS/FAIL is judged against
+    # the spec-derived oracle, never against the original.
+    prompt_template: |
+      You are reviewing whether verification is judged against the spec-derived ORACLE
+      and never against the original.
+      Read the test oracle (BR oracle_cases + T-009 oracle), the verify-against-oracle
+      task's events, and OR-001.data_strategy.
+      Check:
+      - Every behavior-rule has at least one oracle case; the built app's recorded run
+        passes every oracle case.
+      - No verification step ran the ORIGINAL or compared the new app to it directly.
+      - Captured-screen coverage: every OBS screen has a SPEC screen-spec.
+      Output a single line: PASS or FAIL: <uncovered rules/screens or original-compare>.
+
+  - role: rebuild-quality-reviewer
+    family_default: claude
+    optional: true
+    prompt_template: |
+      You are reviewing rebuild quality (Tier 3) for the built application.
+      Read the SPEC/BR the build task consumed and the produced src/ artifacts.
+      Check:
+      - The build implements the consumed SPEC/BR without undocumented deviation;
+        any deviation is recorded as a DEC-XXX with deviates_from_spec set.
+      - Data handling honors OR-001.data_strategy.
+      You see only SPEC/BR and src/ — never OBS (consuming OBS here would itself be a
+      wall breach). Output a single line: PASS or FAIL: <deviations / quality gaps>.
+
+triggers:
+  - event: project.activate
+    members: [cleanroom-integrity-auditor]
+    description: "Verification Checkpoint at bootstrap. Confirms the wall is structurally declared (build_executor isolation, walled build-room kinds) before observation begins."
+
+  - event: phase.complete
+    when: "phase == 'B'"
+    members: [spec-fidelity-watcher]
+    description: "After the Observation phase. Confirms captures are well-formed OBS before spec authoring begins (no build access involved yet)."
+
+  - event: phase.complete
+    when: "phase == 'C'"
+    members: [cleanroom-integrity-auditor, spec-fidelity-watcher, oracle-reality-calibrator, rebuild-quality-reviewer]
+    description: "THE SPEC->BUILD BOUNDARY (critical). The wall is crossed here. Full council confirms specs are pure, the oracle is complete, and the build room is structurally walled before it opens."
+
+  - event: task.complete
+    when: "task.risk_level == 'critical'"
+    members: [cleanroom-integrity-auditor, spec-fidelity-watcher, oracle-reality-calibrator, rebuild-quality-reviewer]
+    description: "Per-task council on critical work (test-oracle, build-from-spec, verify-against-oracle). cleanroom-integrity-auditor audits for breach on every fire."
+
+  - event: project.archive
+    members: [cleanroom-integrity-auditor, oracle-reality-calibrator, rebuild-quality-reviewer]
+    description: "Pre-archive verification. Final wall-breach audit + oracle pass confirmation."

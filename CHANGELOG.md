@@ -1,5 +1,59 @@
 # Changelog — HyperWorker
 
+## Unreleased (2026-07-03) — Eight field-derived project schemas
+
+Schemas-only change; no mechanism or substrate edits. Eight project schemas, all derived from real projects run on the harness, join the six defaults (fourteen total):
+
+- **`site-review-repair`**, **`site-seo`**, **`site-monetization`** — the website-repair family: per-site workstreams for post-incident triage/fix/verify, phased SEO recovery, and ad-revenue restoration. Report-first: the agent diagnoses and proposes; the operator executes anything requiring credentials or account actions. `site-monetization` ships with the later revision of its precedence tiers and rules (operator decisions are final; always commit to one recommended path).
+- **`gov-bid-hunt`**, **`opportunity-hunt`**, **`lead-mining`**, **`single-opportunity`** — the work-finder family, forked from `report-synthesis` and re-tooled for live revenue discovery: government bid hunting per service-line segment, channel-agnostic opportunity hunting, inbound-lead mining from the operator's own mailboxes, and a single deal run end-to-end. Curation applied at import: report-synthesis remnants removed (unused claim/contradiction templates and task files); `verification.yaml`, `artifact-extensions.yaml`, `precedence-tiers.yaml`, and `bootstrap-probe.md` — left as verbatim parent copies in the field versions — re-authored per schema so risk routing keys to each schema's actual task kinds and OR-001 requirements match each schema's bootstrap questions; client-specific names, paths, and addresses genericized.
+- **`cleanroom-rebuild`** — reproduce a legacy application on a modern stack from measured behavior, never its code, behind a structurally enforced observation/spec/build wall (capability gates + Tier 1 precedence + five Layer 1 wall checks + a dedicated integrity auditor). `bootstrap-probe.md` authored at import (observation-surface sweep).
+
+Docs updated to match: README schema table (six → fourteen), HARNESS.md §file structure and schema-match step, CONTRIBUTING.md and reference/VALIDATION.md reworded version-neutrally ("shipped defaults") so the count can't drift again.
+
+Not imported from the same field haul: `site-keyword-research` (a project-instance snapshot bound to one specific workbook, not a reusable schema) and `cleanroom-workbook-build` (incomplete four-file pack predating the full pack convention).
+
+## v5.2.1 (2026-06-09) — Pre-append validation, recitation band, toolchain anchor
+
+Four changes: a protocol fix (`hw add` no longer dirties the log to reject a bad citation), a semantic fix (recitation overlap becomes a two-sided band — the old floor-only threshold rewarded verbatim copying), one new primitive (`toolchain.anchor`), and a doc-drift sweep (including a location the v5.2.0.1 F7 audit missed). Two hypotheses added; both carry falsifiers.
+
+### `hw add` citation validation moved pre-append
+
+`core/SUBSTRATE.md` §`hw add`: citation checks are a read-only computation against `hashes.json`, so they now run as step 3, *before* anything is written. A broken or stale citation aborts with a structured error; nothing lands in the log. The previous flow appended the event first and reversed it with a supersede-to-null, leaving a rejection pair in the chain for every mistyped citation. The supersede-to-null path remains only for defects discovered after append. `core/VERIFICATION.md` §Layer 1 On-failure wording updated to match.
+
+### Recitation overlap: single threshold → two-sided band (H-T4)
+
+The v5.0–v5.2.0 check rejected paraphrases below a Jaccard threshold (default 0.7). Diagnosis: a high floor rewards the cheapest evasion — quoting the source back verbatim — which proves transcription, not processing, and defeats the attention-restoration purpose. The check is now a band: reject below `recitation_overlap_floor` (default 0.35; likely unread) AND above `recitation_overlap_ceiling` (default 0.90; verbatim echo).
+
+- `core/TYPED-ARTIFACTS.md` §Recitation rewritten; hypothesis H-T4 added with falsifier (in-band recitations still miss load-bearing constraints, or genuine paraphrases get rejected often enough that agents game the band).
+- `core/VERIFICATION.md` Layer 1 check 6 updated.
+- `templates/executor-prompt.md` recitation instruction updated (keep IDs, numbers, named constraints; recombine the prose).
+- All six `templates/models/*.yaml` profiles migrated to floor/ceiling (per-model tuning notes preserved); `templates/models/README.md` field table and override example updated; `reference/VALIDATION.md` symptom row updated.
+- Back-compat: a profile declaring only the legacy `recitation_overlap_threshold` gets the v5.2.1 defaults; the legacy field is ignored with WARNING `recitation_threshold_deprecated`.
+
+### Toolchain Anchor (H-V521-2, new primitive)
+
+Every hash the harness depends on requires running code; an agent cannot compute SHA-256 by generating tokens. Unspecified, each session improvises a fresh implementation — serialization divergence or fabricated hashes. New `toolchain.anchor` event kind pins the SHA-256 of every hash-computing tool (shipped or first-run-generated); sessions verify the pins before the first hash-computing operation. Silent drift is Layer 1 FAIL `toolchain_drift` (new check row 12); a hash-bearing workspace with no anchor is WARNING `toolchain_unanchored`. Deliberate tool changes re-anchor with a new event. See `core/SUBSTRATE.md` §Toolchain Anchor. Falsifier: anchored workspaces still produce inter-session hash divergence, or agents bypass the anchored tools.
+
+### `tools/hw-verify.py` event-kind sync
+
+`KNOWN_EVENT_KINDS` gains `operator_soul_anchor` (a v5.2.0 kind that was never added — every soul-anchored workspace produced unknown-kind warnings) and `toolchain.anchor`. `REQUIRED_PAYLOAD_FIELDS` entries added for both.
+
+### Doc-drift sweep
+
+- `README.md` schema table: "Five schemas" → "Six", `report-synthesis` row added. The v5.2.0.1 F7 audit fixed four five-vs-six locations but missed this one.
+- `README.md` "Not finished" bullet: version-pinned "v5.0 … retired in v5.1" → version-neutral wording.
+- `HARNESS.md` file structure: gains `schemas/projects/report-synthesis/`, `reference/VALIDATION.md`, and `tools/hw-verify.py` — all real files absent from the map.
+
+### README repositioning
+
+- **§Why this exists** — names the project's actual mission: built by an ADHD operator, for brains that don't keep state between interruptions; LLMs share ADHD-shaped failure modes (drift, session amnesia, novelty-driven scope creep), so the substrate is symmetrical by design — the same primitives scaffold the agent and the human.
+- **§Work the way you work** — surfaces the existing-but-buried `delegation_policy` / `execution_mode` fields as the answer to interruption fatigue: the operator declares their interruption budget once at bootstrap; the substrate enforces it. No new primitives; the README just stops hiding the ones v5.1/v5.2 shipped.
+- **§Works with** — repositioned Cowork-first (primary tested environment) while staying agent-agnostic; local-model row added with pointer to HyperFinch for empirical can-this-model-carry-the-protocol testing.
+- **§The Hyper ecosystem** — declares the add-on policy: harness core stays markdown permanently; capabilities needing code ship as sibling `Hyper<animal>` repos (HyperFinch shipped; voice capture planned).
+- **§Who this is for** — ADHD operators named explicitly.
+
+---
+
 ## v5.2.0.1 (2026-05-10) — Audit patch
 
 A coherence audit walk-through of v5.2.0 surfaced seven findings (F1–F7). Five fixed here; two deferred to v5.2.1 with documented intent.

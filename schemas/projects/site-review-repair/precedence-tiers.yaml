@@ -1,0 +1,45 @@
+# schemas/projects/site-review-repair/precedence-tiers.yaml
+tiers:
+  1:
+    name: LIVE-SITE-SAFETY
+    purpose: "Protect the live site and its data. Cannot be overridden."
+    examples:
+      - "No destructive change (delete/overwrite/bulk-edit) without operator approval AND a recorded rollback."
+      - "Never change DNS, hosting, file permissions, or user access."
+      - "Never permanently delete content or pages."
+      - "Do not perform hack/malware remediation — hand it to the Recovery program."
+      - "Credentials/payment/IDs are never entered by the agent; the operator does that."
+    scan_markers:
+      - "@@SCAN_1_1: State the rollback for any change this task makes."
+      - "@@SCAN_1_2: Confirm this change is non-destructive or operator-approved."
+  2:
+    name: SCOPE
+    purpose: "Stay in this site's Review & Repair workstream only."
+    examples:
+      - "Only the assigned site; never another site or program."
+      - "Review & Repair only — not Monetization, SEO, or DMCA (separate sub-chats)."
+      - "Scope changes require operator approval and a new DEC-XXX."
+    scan_markers:
+      - "@@SCAN_2_1: Confirm this work is Review & Repair for the assigned site."
+  3:
+    name: TECHNICAL
+    purpose: "Preserve SEO and verify changes."
+    examples:
+      - "Preserve URLs and redirects; a moved/renamed URL must 301 to its replacement."
+      - "Verify each fix on production (re-fetch) before marking done."
+      - "Back up a file before editing it."
+  4:
+    name: DOCUMENTATION
+    purpose: "Hygiene."
+    examples:
+      - "Keep STATUS.md current for the orchestrator."
+      - "Consistent naming for any new files."
+banned_tokens:
+  - banned: "approximately"
+    replacement: "<exact value>"
+    tier: 1
+    why: "Repairs require precise targets (exact URL, exact file)."
+  - banned: "should be fixed"
+    replacement: "is fixed (verified at <url>)"
+    tier: 1
+    why: "Claiming a fix without verification is the core failure mode."

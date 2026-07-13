@@ -1,0 +1,47 @@
+# schemas/projects/opportunity-hunt/capability-gates.yaml
+# Unlike report-synthesis (file-bound), opportunity-hunting is RESEARCH-bound:
+# it needs live web access and often a real browser for JS/login-gated sources
+# (partner portals, co-op marketplaces, grant program portals).
+
+task_capabilities:
+  registration-inventory:
+    required_tools: [file_read, file_write, web_search, web_fetch]
+    description: "Check membership/enrollment/registration status (co-op vendor awards, partner program enrollments, grant registrations); record eligibility gates in OR-001."
+
+  portal-inventory:
+    required_tools: [file_read, file_write, web_search, web_fetch]
+    description: "Enumerate the sources/programs that post this channel's opportunities; register each as a SRC artifact."
+
+  opportunity-sweep:
+    required_tools: [file_read, file_write, web_search, web_fetch, browser]
+    description: "Sweep live sources for open opportunities. Browser needed for JS/login-gated sources (partner portals, co-op marketplaces, grant program portals, lead platforms)."
+    delegation_recommended: true
+    rationale: "Per-source sweeps are hermetic; strong subagent fan-out fit. Give subagents web_search + web_fetch; escalate gated sources to a browser session."
+
+  qualify-and-prioritize:
+    required_tools: [file_read, file_write]
+    description: "Score each opportunity for fit/eligibility/effort; write Findings with pursuing/watch/excluded status."
+
+  capability-statement:
+    required_tools: [file_read, file_write]
+    description: "Draft reusable positioning assets / a 1-2 page capability statement for the channel."
+
+  bid-decision-and-draft:
+    required_tools: [file_read, file_write, web_fetch]
+    description: "Re-verify the top opportunity's deadline/requirements; write a pursue/skip Decision; draft the outreach/proposal/application."
+
+  tracker-update:
+    required_tools: [file_read, file_write]
+    description: "Update the channel's tracker and write the session handoff."
+
+not_required:
+  - shell_exec
+  - external_api
+
+# Capability gap behavior: if a delegation target lacks web_search/web_fetch,
+# refuse and emit capability_gap.md. Gated sources that defeat web_fetch are a
+# capability gap satisfied by a human-driven browser session, not a failure.
+
+scope_completeness:
+  required: true
+  allowed_terminal_states: [complete, deferred, excluded-after-discovery, escalated, watch]

@@ -1,0 +1,43 @@
+# schemas/projects/single-opportunity/capability-gates.yaml
+# Unlike report-synthesis (file-bound), a live pursuit is DEADLINE-bound: it
+# needs web access to re-verify the solicitation live, and everything that
+# leaves the building goes through the operator.
+
+task_capabilities:
+  qualify-the-deal:
+    required_tools: [file_read, file_write, web_fetch]
+    description: "Re-verify the opportunity live (deadline, requirements, eligibility, submission method, value); record a go/no-go recommendation."
+
+  requirements-and-stakeholders:
+    required_tools: [file_read, file_write]
+    description: "Extract every requirement/evaluation criterion into a compliance matrix; note stakeholders, contacts, questions to submit, pre-bid meetings."
+
+  solution-and-pricing:
+    required_tools: [file_read, file_write]
+    description: "Map a solution to each requirement; identify in-house vs partner delivery; draft the pricing approach (operator confirms actual numbers)."
+
+  proposal-draft:
+    required_tools: [file_read, file_write]
+    description: "Draft the proposal/response addressing every compliance-matrix item; assemble required forms/attachments; build a submission checklist; route to operator for review."
+
+  submit-and-followup:
+    required_tools: [file_read, file_write, web_fetch]
+    description: "Capture operator approval, then the OPERATOR submits (Claude never submits). Confirm receipt; set follow-up reminders; log Q&A/amendments."
+
+  close-and-retro:
+    required_tools: [file_read, file_write]
+    description: "Record outcome (win/loss/no-decision); capture retro anti-patterns/decisions; notify the source channel/orchestrator."
+
+not_required:
+  - shell_exec
+  - external_api
+
+# Capability gap behavior: if a delegation target lacks web_fetch, refuse and
+# emit capability_gap.md. Login-gated portals that defeat web_fetch are a
+# capability gap satisfied by a human-driven browser session, not a failure.
+# Submitting or sending anything externally is NEVER a Claude capability: it
+# is an operator action by design, gated on a recorded approval Decision.
+
+scope_completeness:
+  required: true
+  allowed_terminal_states: [complete, deferred, excluded-after-discovery, escalated]

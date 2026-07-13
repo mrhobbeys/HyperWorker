@@ -16,7 +16,8 @@ context_fill_thresholds:
   compact_at: 0.80
 
 council_default_size: 2
-recitation_overlap_threshold: 0.70
+recitation_overlap_floor: 0.35
+recitation_overlap_ceiling: 0.90
 
 # v5.1 model_selection_policy ranking fields. The default profile sits in the
 # middle of every axis — it makes no claim about cost/capability/speed and so

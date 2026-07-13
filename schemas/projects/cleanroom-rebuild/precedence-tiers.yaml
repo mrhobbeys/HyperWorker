@@ -1,0 +1,94 @@
+# schemas/projects/cleanroom-rebuild/precedence-tiers.yaml
+# Tiered rules for cleanroom reverse-engineer-and-rebuild projects.
+# Tier ordinal wins on conflict. Renaming a tier does not change ordinal precedence.
+# Tier 1 encodes THE CLEANROOM WALL — inviolable. The wall is also a capability
+# fact enforced in capability-gates.yaml + verification.yaml Layer 1; the tier
+# states it as a rule so the agent re-anchors on it before any state-changing action.
+
+tiers:
+  - tier: 1
+    name: CLEANROOM-WALL
+    purpose: |
+      The two-room separation is absolute and cannot be overridden by any later
+      tier, operator convenience, or schedule pressure. Build agents implement from
+      SPEC/BR ONLY. The build room has no path to the original: it never reads the
+      observed/ zone, never runs the original (no smoke run), never reads original
+      binaries or decompilation (no peek), and runs only on the declared
+      executor=local_model. Observation artifacts (source=original) never cross into
+      build context. Crossing the wall is a Layer 1 FAIL surfaced to the operator,
+      not a runtime judgment the agent may resolve.
+    examples:
+      - "No build-room task (build-from-spec, verify-against-oracle) may cite an OBS artifact or reference any path under observed/."
+      - "Build-room tasks declare executor=local_model bound to the build_executor endpoint; a build task run on the orchestrator (which CAN reach the original) is a wall breach."
+      - "No build-room task runs the ORIGINAL to check behavior (no_smoke_run). PASS/FAIL is judged against the spec-derived ORACLE, never against the original."
+      - "No build-room task reads the original's binaries, decompilation, or source (no_peek)."
+      - "A task writing outside its declared write_zones (e.g., a build task writing into observed/, or an observation task writing into src/) is a wall breach."
+      - "SPEC/BR are the ONLY original-derived inputs that may cross into the build zone; OBS never crosses."
+
+  - tier: 2
+    name: SPEC-FIDELITY
+    purpose: |
+      Every SPEC and behavior-rule re-expresses MEASURED behavior in our own words
+      and cites the OBS it derives from by hash. Specs make no claim the observations
+      do not support, and contain no verbatim original expression beyond functional
+      necessity (data-field names, protocol byte values). Behavior rules carry worked
+      input->output examples and oracle cases derived from black-box experiments, not
+      from reading code.
+    examples:
+      - "Every SPEC/BR cites at least one [OBS-NNN#hash] in its derived_from list."
+      - "A behavior rule states an algorithm PLUS worked input->output examples PLUS oracle cases; a rule with no oracle cases is incomplete."
+      - "A SPEC body quoting original code or UI strings verbatim beyond functional necessity is flagged for spec-author review."
+      - "Build code and tests cite SPEC/BR by hash; they never cite OBS (that would be a Tier 1 breach)."
+
+  - tier: 3
+    name: REBUILD-QUALITY
+    purpose: |
+      Target-stack correctness, coverage, and the spec-derived oracle hold. Every
+      captured screen has a screen spec; every measured rule has an oracle case; the
+      built app passes the oracle. Data strategy (migrate-in-place / fresh /
+      migrate-and-transform) declared in OR-001 is honored. No undocumented deviation
+      from SPEC/BR — deviations become Decisions, not silent edits.
+    examples:
+      - "Every captured screen (OBS screen artifact) is covered by a SPEC screen spec before build begins."
+      - "Every behavior rule has at least one oracle case in the test oracle; the built app passes all oracle cases."
+      - "Deviation from a SPEC/BR during build is recorded as a DEC-XXX, never an undocumented edit."
+      - "Data migration honors OR-001.data_strategy; schema changes are reversible where the strategy is migrate-in-place."
+
+  - tier: 4
+    name: STYLE
+    purpose: |
+      Target-stack code-style, naming, and presentation conventions for the rebuilt
+      application and the spec documents.
+    examples:
+      - "Follow the target-stack idiom declared in OR-001.target_stack."
+      - "Use the same citation format throughout: [OBS-NNN#hash] for observations, [SPEC-NNN#hash] for specs, [BR-NNN#hash] for behavior rules, [DEC-NNN#hash] for decisions, [F-NNN#hash] for findings."
+      - "Comments explain why, not what; spec documents state behavior, not implementation."
+
+scan_markers:
+  - tier: 1
+    marker: "@@SCAN_1_1"
+    question: "Is this a build-room task? If yes, confirm it cites only SPEC/BR (no OBS, no path under observed/)."
+  - tier: 1
+    marker: "@@SCAN_1_2"
+    question: "Is this a build-room task? If yes, confirm executor=local_model on the declared build_executor, not the orchestrator."
+  - tier: 1
+    marker: "@@SCAN_1_3"
+    question: "Did this task run the original system, or read its binaries / decompilation, in any step (yes / no)?"
+  - tier: 2
+    marker: "@@SCAN_2_1"
+    question: "Does every SPEC/BR you wrote cite at least one OBS by hash in derived_from?"
+  - tier: 2
+    marker: "@@SCAN_2_2"
+    question: "Does any SPEC body quote original code or UI strings verbatim beyond functional necessity?"
+  - tier: 3
+    marker: "@@SCAN_3_1"
+    question: "Has every captured screen / measured rule been turned into a SPEC/BR with an oracle case, or explicitly noted as deferred?"
+  - tier: 3
+    marker: "@@SCAN_3_2"
+    question: "Did any build step deviate from a SPEC/BR without recording a Decision?"
+
+# Note: cleanroom projects rarely have banned tokens at the schema level. The
+# operator may declare them in 00-REFERENCE-rules.md if original product names,
+# trademarks, or copyrighted UI strings must be kept out of the rebuilt app's
+# user-facing surface. Canonical facts (protocol byte values, data-field names
+# that must appear verbatim for interop) may be declared there too.

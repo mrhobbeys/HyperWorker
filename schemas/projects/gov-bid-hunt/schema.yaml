@@ -1,0 +1,83 @@
+# schemas/projects/gov-bid-hunt/schema.yaml
+# Project schema for hunting government bid opportunities for ONE service-line
+# segment of a multi-segment business. Used by:
+#   hw bootstrap --schema gov-bid-hunt --name <segment-id>
+#
+# Derived from report-synthesis 1.0 (reuses precedence/verification/artifact
+# substrate) but re-tooled for live opportunity discovery: it needs the browser
+# and web_fetch, treats each qualified opportunity as a Finding, each
+# portal/listing as a SRC artifact, and each bid/no-bid call as a Decision.
+
+schema_id: gov-bid-hunt
+schema_version: 1.0
+harness_version: "5.2.0"
+description: |
+  Find, qualify, and pursue government (federal / state / local / tribal /
+  cooperative) bid opportunities for a single service-line segment. Every
+  opportunity is a Finding with a fit rationale and an explicit
+  include/exclude/watch status; every monitored portal is a SRC artifact; every
+  bid/no-bid call is a Decision. Registration/eligibility gates (e.g. SAM.gov)
+  live in operating-reality so the project never recommends a bid the business
+  cannot legally submit yet.
+
+bootstrap_questions:
+  - id: project_name
+    prompt: "Segment project name? (e.g., 'Low Voltage', 'Solar', 'Cyber/MSP/Helpdesk')"
+    type: string
+    required: true
+  - id: segment_scope
+    prompt: "One sentence: which service lines are IN scope, and which related ones are explicitly OUT (routed elsewhere)?"
+    type: string
+    required: true
+  - id: routes_to
+    prompt: "Which company/brand/entity fulfills won work in this segment?"
+    type: string
+    required: true
+  - id: geographies
+    prompt: "Geographies in scope? (e.g., OK + TX/KS/AR/MO + federal remote-deliverable)"
+    type: list[string]
+    required: true
+  - id: registration_status
+    prompt: "Registration/eligibility status that gates bidding (SAM.gov? OK Supplier Portal? set-aside certs?). Be honest about what's NOT done."
+    type: object
+    required: true
+  - id: subcontracting
+    prompt: "Can capability/geography gaps be covered by a partner? (e.g., 'partner X can subcontract on-site work anywhere; do not disqualify a bid on capability/location alone', or null)"
+    type: string|null
+    required: false
+    default: null
+  - id: deliverable_path
+    prompt: "Where does this segment's running opportunity tracker live?"
+    type: string
+    required: true
+    default: "deliverables/opportunity-tracker.xlsx (this segment's tab)"
+  - id: cadence
+    prompt: "How often to sweep for new opportunities?"
+    type: string
+    required: false
+    default: "weekly"
+
+includes:
+  - precedence-tiers.yaml
+  - artifact-extensions.yaml
+  - capability-gates.yaml
+  - verification.yaml
+  - council.yaml
+  - project-template.md
+  - rules-template.md
+  - task-templates/
+  - README.md
+
+default_tasks:
+  description: |
+    6 tasks across 3 phases. Bootstrapping clones these into projects/<id>/tasks/.
+    Phase A (Setup): registration/eligibility + portal inventory (T-000)
+    Phase B (Discovery): live opportunity sweep (T-001), qualify & prioritize (T-002)
+    Phase C (Pursuit): capability statement (T-003), bid/no-bid + draft top response (T-004), tracker update + handoff (T-005)
+  templates:
+    - "00-registration-and-portal-inventory.md"
+    - "01-opportunity-sweep.md"
+    - "02-qualify-and-prioritize.md"
+    - "03-capability-statement.md"
+    - "04-bid-decision-and-draft.md"
+    - "05-tracker-update-and-handoff.md"

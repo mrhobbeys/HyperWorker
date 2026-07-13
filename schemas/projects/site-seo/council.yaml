@@ -1,0 +1,29 @@
+convergence_rule: all-agree-or-escalate
+members:
+  - role: seo-safety-reviewer
+    family_default: claude
+    prompt_template: |
+      Confirm no recommendation deindexes or harms rankings without operator approval + rollback, and
+      that the worker made NO live change. Output: PASS or FAIL: <reason>.
+  - role: server-handoff-reviewer
+    family_default: claude
+    prompt_template: |
+      If this phase surfaced server-side/dev work, confirm a SERVER-HANDOFF artifact was produced and
+      the worker did not self-perform server/docroot changes. Output: PASS or FAIL: <reason>.
+  - role: scope-guard
+    family_default: claude
+    prompt_template: |
+      Confirm this is SEO for the assigned site; sitemap/robots server fixes handed to Recovery; DMCA
+      kept to its late phase. Output: PASS or FAIL: <reason>.
+  - role: duplicate-evidence-reviewer
+    family_default: claude
+    optional: true
+    prompt_template: |
+      For any duplicate/stolen-content claim, confirm it is backed by Haiku-subagent evidence (the
+      copying URL + a verbatim match snippet), not assertion. Output: PASS or FAIL: <reason>.
+triggers:
+  - event: project.activate
+    members: [seo-safety-reviewer, scope-guard]
+  - event: task.complete
+    when: "task.risk_level in {elevated, critical}"
+    members: [seo-safety-reviewer, server-handoff-reviewer, scope-guard, duplicate-evidence-reviewer]

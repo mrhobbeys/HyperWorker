@@ -1,0 +1,46 @@
+# schemas/projects/gov-bid-hunt/capability-gates.yaml
+# Unlike report-synthesis (file-bound), bid-hunting is RESEARCH-bound: it needs
+# live web access and often a real browser for JS/login-gated procurement portals.
+
+task_capabilities:
+  registration-inventory:
+    required_tools: [file_read, file_write, web_search, web_fetch]
+    description: "Check SAM.gov / state / tribal registration status; record eligibility gates in OR-001."
+
+  portal-inventory:
+    required_tools: [file_read, file_write, web_search, web_fetch]
+    description: "Enumerate the portals/aggregators that post this segment's work; register each as a SRC artifact."
+
+  opportunity-sweep:
+    required_tools: [file_read, file_write, web_search, web_fetch, browser]
+    description: "Sweep live sources for open opportunities. Browser needed for JS/login-gated portals (BidNet, ESBD, Bonfire, Ionwave, BeaconBid, tribal boards)."
+    delegation_recommended: true
+    rationale: "Per-source sweeps are hermetic; strong subagent fan-out fit. Give subagents web_search + web_fetch; escalate gated portals to a browser session."
+
+  qualify-and-prioritize:
+    required_tools: [file_read, file_write]
+    description: "Score each opportunity for fit/eligibility/effort; write Findings with include/watch/exclude status."
+
+  capability-statement:
+    required_tools: [file_read, file_write]
+    description: "Draft a reusable 1-2 page capability statement for the segment."
+
+  bid-decision-and-draft:
+    required_tools: [file_read, file_write, web_fetch]
+    description: "Re-verify the top opportunity's deadline/requirements; write a bid/no-bid Decision; draft the response."
+
+  tracker-update:
+    required_tools: [file_read, file_write]
+    description: "Update the segment's tracker tab and write the session handoff."
+
+not_required:
+  - shell_exec
+  - external_api
+
+# Capability gap behavior: if a delegation target lacks web_search/web_fetch,
+# refuse and emit capability_gap.md. Gated portals that defeat web_fetch are a
+# capability gap satisfied by a human-driven browser session, not a failure.
+
+scope_completeness:
+  required: true
+  allowed_terminal_states: [complete, deferred, excluded-after-discovery, escalated, watch]

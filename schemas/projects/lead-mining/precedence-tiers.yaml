@@ -1,0 +1,67 @@
+# schemas/projects/lead-mining/precedence-tiers.yaml
+# Tiered rules for lead-mining projects. Tier ordinal wins on conflict.
+# Renaming a tier does not change ordinal precedence.
+
+tiers:
+  - tier: 1
+    name: INBOUND-INTEGRITY
+    purpose: |
+      Never invent a lead, and never let personal mailbox data leave the
+      project workspace. A contact is a lead ONLY if they emailed the
+      operator (inbound). This project builds a LIST — it never sends
+      outreach; the operator approves any future sends separately. The
+      operator's mailbox contents are private: contacts are not shared,
+      exported, or pasted into third-party tools beyond the minimum needed
+      to enrich a company name.
+    examples:
+      - "A contact the operator only cold-emailed, with no reply, is never a lead Finding — it is excluded-with-reason if captured at all."
+      - "Never fabricate a name, email address, company, role, or need; unverifiable fields are 'unconfirmed', never guessed."
+      - "Vendors/suppliers, newsletters/automated/no-reply senders, and internal staff + personal/family are excluded per OR-001 exclude_rules."
+      - "No draft or send of outreach email in this project; the deliverable is the master list only."
+      - "Enrichment queries use the public company/domain name, never message bodies or private thread content."
+
+  - tier: 2
+    name: MAILBOX-SCOPE
+    purpose: |
+      Mine only the mailboxes and date range the operator declared in
+      OR-001. Accounts discovered mid-run are surfaced to the operator,
+      never silently harvested. Current customers appear only if OR-001
+      includes them, and always flagged as upsell.
+    examples:
+      - "A shared or alias mailbox found during harvest is reported to the operator and added to OR-001 only on approval."
+      - "Messages outside the OR-001 date range are not harvested, even when the connector returns them."
+      - "A current customer appears in the list only when OR-001 include_current_customers is true, flagged 'current — upsell'."
+
+  - tier: 3
+    name: LEAD-QUALITY
+    purpose: |
+      One row per real lead; every lead traces back to its mailbox;
+      prioritization follows the declared ranking rule.
+    examples:
+      - "Every lead Finding cites its source mailbox ([SRC-NNN#hash]) plus a message/thread reference where possible."
+      - "Duplicates are merged by person AND by company/domain before the master list is compiled; exclusions are recorded with a reason, never silently dropped."
+      - "Prioritize by: clarity of need > recency > deal size potential > fit with our services."
+      - "Status (active / cold / current-customer) and last-contact date come from the mailbox record, not from memory."
+
+  - tier: 4
+    name: STYLE
+    purpose: |
+      Presentation and citation consistency for the master list and
+      handoff notes.
+    examples:
+      - "Use the same citation format throughout: [SRC-NNN#hash] for mailboxes, [F-NNN#hash] for leads, [DEC-NNN#hash] for include/exclude rules."
+      - "Master list column order matches T-005 acceptance criteria: name, email, company, role, need, status, source mailbox, last contact, priority."
+
+scan_markers:
+  - tier: 1
+    marker: "@@SCAN_1_1"
+    question: "Is every lead Finding you wrote an INBOUND contact (they emailed the operator), with no fabricated or guessed fields?"
+  - tier: 1
+    marker: "@@SCAN_1_2"
+    question: "Did any contact data leave the project workspace (shared, exported, or sent to a third-party tool) beyond a public company-name enrichment query?"
+  - tier: 2
+    marker: "@@SCAN_2_1"
+    question: "Did you harvest only the OR-001 mailboxes and date range, surfacing (not mining) any newly discovered accounts?"
+  - tier: 3
+    marker: "@@SCAN_3_1"
+    question: "Does every lead Finding cite its source mailbox, and is each real lead exactly one row after dedupe?"

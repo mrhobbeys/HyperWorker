@@ -1,0 +1,28 @@
+# schemas/projects/lead-mining/council.yaml
+convergence_rule: all-agree-or-escalate
+members:
+  - role: inbound-only-watcher
+    family_default: claude
+    prompt_template: |
+      Verify every lead Finding represents an INBOUND contact (the person emailed the operator).
+      Flag any contact that was only cold-emailed by the operator with no reply, or that looks fabricated.
+      Output one line: PASS or FAIL: <Finding IDs>.
+  - role: exclusion-watcher
+    family_default: claude
+    prompt_template: |
+      Verify exclude rules were applied: no vendors/suppliers, no newsletters/automated/no-reply,
+      no internal staff or personal/family in the lead list (unless OR-001 includes current customers).
+      Output one line: PASS or FAIL: <Finding IDs that should have been excluded>.
+  - role: dedupe-watcher
+    family_default: claude
+    prompt_template: |
+      Check for duplicate leads (same person or same company/domain appearing more than once).
+      Output one line: PASS or FAIL: <duplicate groups>.
+  - role: operator-goal-aligner
+    family_default: claude
+    prompt_template_on_activate: |
+      Review OR-001 before harvest: are the mailboxes + connector status, date range, exclude rules,
+      and verification scope all set? Output one line: PASS or FAIL: <missing fields>.
+    prompt_template_on_output: |
+      Review whether the master list serves the goal: a deduped, verified set of real inbound leads
+      with company/role, inferred need, and status. Flag gaps. Output one line: PASS or FAIL: <reasons>.

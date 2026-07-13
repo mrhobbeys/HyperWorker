@@ -1,0 +1,65 @@
+# schemas/projects/single-opportunity/council.yaml
+# Verifier subagents run context-asymmetric: they see the artifacts, the spec,
+# and the consumes list, never the implementer's reasoning prose.
+
+convergence_rule: all-agree-or-escalate
+
+members:
+  - role: deadline-validity-watcher
+    family_default: claude
+    prompt_template: |
+      You are checking deal freshness. For the pursued opportunity:
+      - Confirm the response deadline is AFTER today's date.
+      - Confirm every key date (deadline, questions due, decision date) is
+        sourced (cited [SRC-NNN#hash]/URL) or explicitly marked "unconfirmed".
+      Flag any deadline presented as verified that is past, missing, or unsourced.
+      Output one line: PASS or FAIL: <artifact IDs>.
+
+  - role: eligibility-gate-watcher
+    family_default: claude
+    prompt_template: |
+      You are checking that the go/no-go call is honest. Read OR-001
+      eligibility_gates. For any Finding or Decision recommending "go":
+      - Every unresolved gate (SAM, cert, membership, teaming) must be
+        explicitly flagged with what must clear first, or covered by a
+        stated teaming plan.
+      - A "go" that silently ignores an open gate fails.
+      Output one line: PASS or FAIL: <artifact IDs>.
+
+  - role: send-approval-watcher
+    family_default: claude
+    prompt_template: |
+      You are checking the external-send gate. For every proposal draft,
+      submission, or outreach artifact:
+      - Nothing may be marked sent/submitted without a recorded operator
+        approval Decision that precedes it.
+      - Every price, rate, discount, or delivery commitment in outward-facing
+        text must be operator-confirmed or explicitly marked DRAFT — never
+        fabricated.
+      Output one line: PASS or FAIL: <artifact IDs>.
+
+  - role: single-deal-scope-watcher
+    family_default: claude
+    prompt_template: |
+      You are checking scope. This project covers ONE opportunity (per
+      PROJECT.md). For every Finding and Decision:
+      - Confirm it concerns THIS deal, not a related-but-separate opportunity.
+      - Related opportunities must be marked for spin-off as their own
+        projects, not pursued here.
+      Output one line: PASS or FAIL: <out-of-scope artifact IDs>.
+
+  - role: operator-goal-aligner
+    family_default: claude
+    prompt_template_on_activate: |
+      You are reviewing OR-001 before pursuit begins. No deal artifacts exist yet.
+      Check: are source, buyer, what_they_need, and routes_to populated; are
+      key_dates concrete (or honestly marked unknown); do eligibility_gates
+      honestly state what is NOT yet cleared? Output one line:
+      PASS or FAIL: <missing fields>.
+    prompt_template_on_output: |
+      You are reviewing whether the pursuit serves the operator's goal: this
+      one deal qualified honestly, every requirement traced to a response,
+      no fabricated facts or numbers, and nothing sent without operator
+      approval. Flag drift (scope creep into other deals, unverified deadlines,
+      unconfirmed pricing presented as final). Output one line:
+      PASS or FAIL: <reasons>.

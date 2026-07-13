@@ -1,0 +1,59 @@
+# schemas/projects/single-opportunity/schema.yaml
+# Track ONE named opportunity end-to-end so it can't get lost: qualify ->
+# requirements -> solution & pricing -> proposal -> submit & follow-up -> close.
+schema_id: single-opportunity
+schema_version: 1.0
+harness_version: "5.2.0"
+description: |
+  A dedicated project for a single high-value opportunity the operator wants to
+  stay on top of. Captures the deal facts, requirements, solution/pricing,
+  proposal, submission, follow-ups, and outcome. Operator approves before any
+  send/submit.
+bootstrap_questions:
+  - id: project_name
+    prompt: "Opportunity name (short, e.g., 'City Schools Firewall RFP')."
+    type: string
+    required: true
+  - id: source
+    prompt: "Where did it come from? (which channel/segment/portal + link)"
+    type: string
+    required: true
+  - id: buyer
+    prompt: "Buyer / agency / company + key contact (if known)."
+    type: string
+    required: true
+  - id: what_they_need
+    prompt: "One-paragraph scope: what they need."
+    type: string
+    required: true
+  - id: routes_to
+    prompt: "Which company/brand/entity fulfills it?"
+    type: string
+    required: true
+  - id: key_dates
+    prompt: "Key dates (deadline, questions due, decision date) + value if known."
+    type: object
+    required: true
+  - id: eligibility_gates
+    prompt: "Anything that gates our ability to win it (SAM, cert, membership, teaming)?"
+    type: object
+    required: true
+includes:
+  - precedence-tiers.yaml
+  - artifact-extensions.yaml
+  - capability-gates.yaml
+  - verification.yaml
+  - council.yaml
+  - project-template.md
+  - rules-template.md
+  - task-templates/
+  - README.md
+default_tasks:
+  description: "6 tasks: qualify -> requirements -> solution/pricing -> proposal -> submit/follow-up -> close/retro."
+  templates:
+    - "00-qualify-the-deal.md"
+    - "01-requirements-and-stakeholders.md"
+    - "02-solution-and-pricing.md"
+    - "03-proposal-draft.md"
+    - "04-submit-and-followup.md"
+    - "05-close-and-retro.md"

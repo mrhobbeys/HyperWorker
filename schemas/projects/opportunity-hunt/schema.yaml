@@ -1,0 +1,77 @@
+# schemas/projects/opportunity-hunt/schema.yaml
+# General opportunity-hunting schema for ONE non-government revenue channel
+# (commercial/SMB direct, cooperative purchasing contracts, channel & partner
+# programs, grants & funded programs). Reuses the gov-bid-hunt substrate but
+# channel-agnostic: each opportunity = a Finding, each source = a SRC, each
+# pursue/skip call = a Decision.
+schema_id: opportunity-hunt
+schema_version: 1.0
+harness_version: "5.2.0"
+description: |
+  Find, qualify, and pursue revenue opportunities in one non-government channel.
+  Eligibility/membership gates (e.g., co-op vendor award, partner program
+  enrollment, grant program rules) live in operating-reality so the project
+  never pushes a pursuit the business can't actually execute on yet.
+bootstrap_questions:
+  - id: project_name
+    prompt: "Channel project name? (e.g., 'Commercial / SMB Direct', 'Cooperative Contracts')"
+    type: string
+    required: true
+  - id: channel
+    prompt: "Channel type: commercial-direct | cooperative-contracts | channel-partner | grants-funding"
+    type: string
+    required: true
+  - id: what_we_sell
+    prompt: "Which of your services/brands are sold through this channel?"
+    type: string
+    required: true
+  - id: target_buyers
+    prompt: "Who are the buyers/targets in this channel?"
+    type: string
+    required: true
+  - id: eligibility_gates
+    prompt: "What memberships/registrations/certs/enrollments gate this channel? (be honest about what's NOT done)"
+    type: object
+    required: true
+  - id: geographies
+    prompt: "Geographies in scope?"
+    type: list[string]
+    required: true
+  - id: subcontracting
+    prompt: "Can capability/geography gaps be covered by a partner? (e.g., 'partner X can subcontract/fulfill anywhere; do not disqualify on capability/location alone', or null)"
+    type: string|null
+    required: false
+    default: null
+  - id: deliverable_path
+    prompt: "Where does this channel's running opportunity tracker live?"
+    type: string
+    required: true
+    default: "deliverables/opportunity-tracker.xlsx (this channel's tab)"
+  - id: cadence
+    prompt: "How often to sweep for new opportunities?"
+    type: string
+    required: false
+    default: "weekly"
+includes:
+  - precedence-tiers.yaml
+  - artifact-extensions.yaml
+  - capability-gates.yaml
+  - verification.yaml
+  - council.yaml
+  - project-template.md
+  - rules-template.md
+  - task-templates/
+  - README.md
+default_tasks:
+  description: |
+    6 tasks across 3 phases (same shape as gov-bid-hunt, channel-neutral):
+    A: access/eligibility + source inventory (T-000)
+    B: opportunity sweep (T-001), qualify & prioritize (T-002)
+    C: positioning assets / capability statement (T-003), pursue + draft top (T-004), tracker + handoff (T-005)
+  templates:
+    - "00-registration-and-portal-inventory.md"
+    - "01-opportunity-sweep.md"
+    - "02-qualify-and-prioritize.md"
+    - "03-capability-statement.md"
+    - "04-bid-decision-and-draft.md"
+    - "05-tracker-update-and-handoff.md"

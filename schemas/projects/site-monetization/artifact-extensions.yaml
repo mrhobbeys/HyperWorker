@@ -1,0 +1,32 @@
+decision:
+  additional_fields:
+    - name: executor
+      type: string
+      required: true
+      default: "operator"
+      description: "operator | worker — who performs this step (sensitive steps = operator)."
+    - name: rollback_ref
+      type: string|null
+      required: false
+finding:
+  additional_fields:
+    - name: severity
+      type: string
+      required: true
+      default: "medium"
+    - name: revenue_lever
+      type: string|null
+      required: false
+operating-reality:
+  field_overrides:
+    - name: budget
+      required: false
+    - name: team
+      required: false
+  additional_fields:
+    - name: site_domain
+      type: string
+      required: true
+    - name: monetization_goal
+      type: string
+      required: true

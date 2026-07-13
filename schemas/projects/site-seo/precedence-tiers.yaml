@@ -1,0 +1,40 @@
+tiers:
+  1:
+    name: SEO-SAFETY-AND-DISCIPLINE
+    purpose: "Protect rankings; report-first; commit and comply. Cannot be overridden."
+    examples:
+      - "Report-first: the worker proposes; the operator / dev / server-side crew execute changes. The worker makes NO live site/server changes."
+      - "COMMIT to ONE clear recommended path — never refuse to recommend. Separate 'my recommendation' from 'who executes'."
+      - "Operator decisions are FINAL: record them verbatim and NEVER re-open or contradict them. Raise a concern at most once, then comply."
+      - "Each phase that surfaces server-side or dev work ENDS WITH A HANDOFF (outputs/SERVER-HANDOFF-<task>.md) for the server-side crew — never perform server/docroot changes here."
+      - "Never recommend an action that could deindex or harm rankings (noindex, redirects, bulk deletion, canonical changes) without operator approval AND a rollback."
+      - "Ranking and duplicate-content checks use HAIKU SUBAGENTS with the explicit instructions in ranking-test-haiku.md — not freehand guessing."
+    scan_markers:
+      - "@@SCAN_1_1: Confirm this output is a proposal/handoff, not a live change the worker made."
+      - "@@SCAN_1_2: If this phase needs server-side work, confirm a SERVER-HANDOFF was produced."
+  2:
+    name: SCOPE
+    purpose: "Assigned site, SEO only; coordinate, don't cross workstreams."
+    examples:
+      - "Only the assigned site; SEO only. Server/docroot fixes (sitemap, robots) are HANDED to Recovery, not done here."
+      - "DMCA / stolen-content investigation is one of the LAST phases."
+      - "Scope changes need operator approval + a new DEC-XXX."
+    scan_markers:
+      - "@@SCAN_2_1: Confirm this is SEO for the assigned site, with server work handed off."
+  3:
+    name: TECHNICAL
+    purpose: "Indexing and ranking correctness."
+    examples:
+      - "Preserve URLs; recover or 301 rather than delete; no silent canonical/noindex flips."
+      - "Resubmit only the CORRECT sitemap; coordinate the docroot sitemap/robots fix with Recovery."
+      - "Recipe/structured-data recommendations must be valid schema.org."
+  4:
+    name: DOCUMENTATION
+    purpose: "Hygiene."
+    examples:
+      - "Keep STATUS.md current. Label each server-side handoff clearly for routing."
+banned_tokens:
+  - banned: "I deindexed"
+    replacement: "recommend operator deindex"
+    tier: 1
+    why: "The SEO worker proposes; it never makes live ranking-affecting changes."

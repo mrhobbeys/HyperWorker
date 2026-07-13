@@ -1,0 +1,127 @@
+# schemas/projects/cleanroom-rebuild/schema.yaml
+# Cleanroom reverse-engineer-and-rebuild of a legacy application.
+# Observation room (may face the original) produces specs; build room (walled,
+# local models) implements from specs only. Authored for the CRE rebuild;
+# reusable for any "rebuild abandonware on a modern stack from our own data" job.
+
+schema_id: cleanroom-rebuild
+schema_version: 1.0
+harness_version: "5.2.0"
+description: |
+  Reproduce a legacy application on a modern stack WITHOUT copying its code.
+  A strict two-room wall separates OBSERVATION (drive the original, capture
+  behavior, screens, data-layer traces, hardware I/O) from BUILD (implement from
+  specification only). Observation artifacts (source=original) are NEVER readable
+  by build agents. Build executors run on isolated local models with no path to
+  the original — no smoke runs against it, no peeking at its code or decompilation.
+  Behavior is MEASURED (black-box: input->output experiments + data-layer traces),
+  re-expressed as specification, and verified against a spec-derived oracle —
+  never against the original at code or run level.
+
+bootstrap_questions:
+  - id: project_name
+    prompt: "What is this rebuild called?"
+    type: string
+    required: true
+  - id: legacy_system
+    prompt: "One line: what legacy system are we rebuilding, and on what stack does it run today?"
+    type: string
+    required: true
+  - id: target_stack
+    prompt: "Target stack for the rebuild (e.g., .NET 8 / C# WinForms, Blazor)."
+    type: string
+    required: true
+  - id: data_strategy
+    prompt: "What happens to the existing data? (migrate-in-place / fresh / migrate-and-transform)"
+    type: enum
+    values: [migrate-in-place, fresh, migrate-and-transform]
+    required: true
+  - id: wall_strictness
+    prompt: "Cleanroom strictness. pure-black-box = build never sees decompiled code and observation derives rules from behavior only. decompilation-assisted = observation room may read decompiled code; build still walled."
+    type: enum
+    values: [pure-black-box, decompilation-assisted]
+    default: pure-black-box
+    required: true
+  - id: build_executor
+    prompt: "Which executor runs WALLED build tasks? (local endpoint id, e.g. 'lmstudio:openai/gpt-oss-20b'). Must be structurally incapable of reaching the original."
+    type: string
+    required: true
+  - id: observation_oracle
+    prompt: "How do we drive/observe the original? (e.g., 'XP HTTP loop + AHK GUI driver + SQL Server trace + DB diff')"
+    type: string
+    required: true
+  - id: deliverable_path
+    prompt: "Where does the built application source live?"
+    type: string
+    default: "src/"
+    required: true
+  - id: excluded_scope
+    prompt: "Anything explicitly out of scope for the rebuild? (list or null)"
+    type: list[string]|null
+    required: false
+
+includes:
+  - precedence-tiers.yaml
+  - artifact-extensions.yaml
+  - capability-gates.yaml
+  - verification.yaml
+  - council.yaml
+  - project-template.md
+  - rules-template.md
+  - task-templates/
+  - artifact-templates/
+  - README.md
+
+# New artifact kinds (prefixes) this schema declares, beyond DEC/F/AP/OR:
+artifact_kinds:
+  - kind: observation
+    prefix: OBS
+    zone: observed
+    source: original
+    consumable_by_build: false
+    description: |
+      A captured fact about the ORIGINAL: a screen, a navigation edge, a SQL trace
+      of one action, a DB before/after diff, a hardware I/O byte sequence. Tagged
+      source=original. The wall forbids build agents from consuming OBS artifacts.
+  - kind: spec
+    prefix: SPEC
+    zone: spec
+    source: cleanroom
+    consumable_by_build: true
+    description: |
+      A cleanroom specification re-expressing behavior in our own words: screen
+      spec, data-dictionary entry, report spec. Derived from OBS but contains no
+      original expression. Build-consumable.
+  - kind: behavior-rule
+    prefix: BR
+    zone: spec
+    source: cleanroom
+    consumable_by_build: true
+    description: |
+      A MEASURED business rule (pricing, tax, discount, mix-match, rounding) stated
+      as algorithm + worked input->output examples + oracle cases. Derived from
+      black-box experiments, not from reading code.
+
+default_tasks:
+  description: |
+    Four phases. The wall falls between Phase C (spec) and Phase D (build).
+    Phase A Setup: target inventory (T-000), operating-reality + wall charter (T-001).
+    Phase B Observation (original-facing): screen/flow capture (T-002),
+      data-layer behavior trace (T-003), hardware I/O capture (T-004).
+    Phase C Spec (cleanroom authoring): data dictionary (T-005), behavior rules
+      (T-006), screen specs (T-007), hardware spec (T-008), test oracle (T-009).
+    Phase D Build (WALLED, local executor): implement-from-spec (T-010),
+      verify-against-oracle (T-011). No original access in Phase D.
+  templates:
+    - "00-target-inventory.md"
+    - "01-operating-reality-and-wall-charter.md"
+    - "02-screen-flow-capture.md"
+    - "03-data-layer-behavior-trace.md"
+    - "04-hardware-io-capture.md"
+    - "05-data-dictionary.md"
+    - "06-behavior-rules.md"
+    - "07-screen-specs.md"
+    - "08-hardware-spec.md"
+    - "09-test-oracle.md"
+    - "10-build-from-spec.md"
+    - "11-verify-against-oracle.md"

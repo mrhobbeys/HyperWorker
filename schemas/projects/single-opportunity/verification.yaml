@@ -1,0 +1,114 @@
+# schemas/projects/single-opportunity/verification.yaml
+# Risk → verification mapping. Single-opportunity Layer 2 checks emphasize
+# deadline validity, requirement traceability, honest pricing, and the
+# operator approval gate on anything external-facing.
+
+risk_levels:
+  standard:
+    layers: [1, 2]
+    layer2_checks:
+      - source_citation_completeness
+      - schema_validation
+    rationale: |
+      Requirements/stakeholder extraction and close/retro records — internal
+      artifacts built from already-registered documents. Layer 1 substrate
+      checks plus citation completeness.
+
+  elevated:
+    layers: [1, 2, 3]
+    council_size: 2
+    layer2_checks:
+      - source_citation_completeness
+      - schema_validation
+      - deadline_validity
+      - eligibility_gate_check
+      - pricing_confirmation_check
+    failure_scenarios_required: 2
+    rationale: |
+      Qualification (go/no-go) and solution/pricing. Council fires on
+      completion. Two failure scenarios required: one for "what if the
+      deadline or a key requirement was misread," one for "what if an
+      eligibility gate or pricing assumption is wrong."
+
+  critical:
+    layers: [1, 2, 3]
+    council_size: 4
+    layer2_checks:
+      - source_citation_completeness
+      - schema_validation
+      - deadline_validity
+      - eligibility_gate_check
+      - pricing_confirmation_check
+      - requirement_traceability
+      - operator_approval_gate
+      - operator_goal_drift_check
+    failure_scenarios_required: 3
+    operator_review_required: true
+    rationale: |
+      Proposal drafts and submission/follow-up — external-facing outputs that
+      commit real money and reputation. Full council fires. Operator review
+      required before the draft is treated as final; operator approval
+      required before anything is actually sent or submitted (the operator
+      performs the send — Claude never submits).
+
+# Layer 2 check definitions.
+layer2_check_definitions:
+  source_citation_completeness:
+    description: |
+      Every deal fact (requirement, date, stakeholder, eligibility gate) must
+      cite its source document by [SRC-NNN#hash] plus link, or be explicitly
+      marked "unconfirmed". Substrate counts uncited facts; >0 fails.
+
+  schema_validation:
+    description: |
+      All written artifacts validate against their declared schemas (default
+      kinds + extensions). Substrate-enforced; no agent judgment.
+
+  deadline_validity:
+    description: |
+      The response deadline (and each key date used for planning) is AFTER
+      today, sourced from a cited document or explicitly marked
+      "unconfirmed". A past deadline forces operator escalation; work may
+      not proceed as if the deal were open.
+
+  eligibility_gate_check:
+    description: |
+      No "go" recommendation or pursuit effort while an OR-001
+      eligibility_gates item is unresolved, unless the gate is explicitly
+      flagged with what must clear first or covered by a stated teaming
+      plan. Silent gates fail.
+
+  pricing_confirmation_check:
+    description: |
+      Every price, rate, discount, or delivery commitment in an
+      outward-facing artifact is operator-confirmed (Decision with
+      operator_confirmed: true) or explicitly marked DRAFT. Fabricated or
+      silently-estimated numbers fail.
+
+  requirement_traceability:
+    description: |
+      Every must/should requirement Finding in the compliance matrix maps to
+      a named response section in the proposal draft, and the submission
+      checklist covers every required form/attachment. Unmapped requirements
+      or missing checklist items fail.
+
+  operator_approval_gate:
+    description: |
+      Nothing may be marked sent/submitted without a recorded operator
+      approval Decision that precedes it. Substrate checks Decision ordering;
+      a send without a prior approval Decision fails.
+
+  operator_goal_drift_check:
+    description: |
+      Proposal and pursuit artifacts are sampled and checked for alignment
+      with OR-001 (what_they_need, routes_to, key_dates). Heuristic —
+      operator review is the canonical check at critical level.
+
+# Default per-task risk classification (operator may override).
+task_default_risks:
+  qualify-the-deal: elevated
+  requirements-and-stakeholders: standard
+  solution-and-pricing: elevated
+  proposal-draft: critical
+  submit-and-followup: critical
+  close-and-retro: standard

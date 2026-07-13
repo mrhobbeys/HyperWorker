@@ -1,0 +1,30 @@
+# schemas/projects/site-review-repair/council.yaml
+convergence_rule: all-agree-or-escalate
+members:
+  - role: site-safety-reviewer
+    family_default: claude
+    prompt_template: |
+      Review this change for live-site safety. Confirm it is non-destructive or operator-approved
+      and has a recorded rollback. Flag any DNS/hosting/permissions/delete action.
+      Output: PASS or FAIL: <reason>.
+  - role: scope-guard
+    family_default: claude
+    prompt_template: |
+      Confirm the work is Review & Repair for the assigned site only — not Monetization, SEO, DMCA,
+      another site, or hack remediation. Output: PASS or FAIL: <reason>.
+  - role: seo-preservation-reviewer
+    family_default: claude
+    prompt_template: |
+      Verify URLs and redirects are preserved: any moved/renamed URL 301s to its replacement and no
+      indexed URL is silently dropped. Output: PASS or FAIL: <reason>.
+  - role: regression-reviewer
+    family_default: claude
+    optional: true
+    prompt_template: |
+      Verify the fix did not break other pages/templates. Output: PASS or FAIL: <reason>.
+triggers:
+  - event: project.activate
+    members: [site-safety-reviewer, scope-guard]
+  - event: task.complete
+    when: "task.risk_level in {elevated, critical}"
+    members: [site-safety-reviewer, scope-guard, seo-preservation-reviewer, regression-reviewer]

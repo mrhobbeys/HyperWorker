@@ -243,6 +243,12 @@ The harness defines a closed set. Schema extensions must add kinds via the proje
 |---|---|
 | `operator_soul_anchor` | `{soul_path, soul_hash, version, fired_at}` — see §Operator Soul Anchor. Fired at bootstrap when the operator's soul.md exists. Mirrors the `brand_voice_anchor` pattern: anchors a Phase B task's first state-changing event behind the existence of the anchor on the log. |
 
+### Toolchain events (v5.2.1)
+
+| Kind | Payload |
+|---|---|
+| `toolchain.anchor` | `{tools: [{name, path, sha256}], source, spec_version, fired_at}` — see §Toolchain Anchor. Pins the hash of every script the agent will use for hash-computing operations. `source` ∈ `{shipped, generated}`. Re-anchoring on deliberate tool change is a new event; silent drift is a Layer 1 FAIL. |
+
 ---
 
 ## Projections
@@ -343,12 +349,12 @@ Append a typed-artifact event and regenerate its projection.
 **Steps.**
 1. Read `schemas/artifacts/<kind>.yaml` and the project's `artifact-extensions.yaml` (if present). Validate the input file's frontmatter against the merged schema. If validation fails, abort with a structured error; do not write.
 2. Determine `artifact_id`. If the input declares an `id`, use it (must be unique within kind). Otherwise generate the next ID for the kind: scan `events.jsonl` for `<kind>.add` events, find the highest numeric suffix, increment by one. Format: `<PREFIX>-<NNN>` where prefix is `DEC | F | AP | OR` for decision/finding/anti-pattern/operating-reality.
-3. Read the last line of `events.jsonl`; let `prev_hash` be its `hash` (or `sha256:0000…0000` if the log is empty).
-4. Build the event JSON object: `{id, ts, kind, actor, project, payload, prev_hash}` where `payload` contains the artifact frontmatter and body, and `id` is `EV-<next>`.
-5. Compute `hash` per the Hash computation rule above. Append the full event line (with `hash`) to `events.jsonl`.
-6. **Regenerate the artifact projection.** Render `projects/<project>/<kind>s/<artifact-id>.md` using the rendering protocol in `core/TYPED-ARTIFACTS.md`. The projection MUST be byte-identical to what a re-render from events would produce.
-7. Compute the projection's SHA-256, take the first 12 hex chars, and update `hashes.json` for that path.
-8. **Citation validation.** If the artifact body contains citations `[<KIND>-<ID>#<hash>]`, run Layer 1 citation checks (see `core/VERIFICATION.md` §Layer 1). Any broken or stale citation in the new artifact rejects the event — but the event is already appended. The harness emits `verify.layer1.fail` and immediately follows with a `<kind>.supersede` of the new event referring back to a `null` artifact (this records the rejection in the log; the projection is removed). The agent treats the original `hw add` as failed.
+3. **Citation validation (pre-append).** If the artifact body contains citations `[<KIND>-<ID>#<hash>]`, run Layer 1 citation checks (see `core/VERIFICATION.md` §Layer 1) against the current `hashes.json` *before* anything is written. Any broken or stale citation aborts with a structured error naming the citation and the artifact's current short-hash; nothing lands in the log. The agent corrects the citation and retries. (Changed in v5.2.1: earlier versions appended the event first and reversed it with a supersede-to-null, leaving a rejection pair in the chain for every mistyped citation. Citation checking is a read-only computation; there is no reason to dirty the log to perform it. The supersede-to-null path remains only for defects discovered *after* append — see `core/VERIFICATION.md` §Layer 1 On failure.)
+4. Read the last line of `events.jsonl`; let `prev_hash` be its `hash` (or `sha256:0000…0000` if the log is empty).
+5. Build the event JSON object: `{id, ts, kind, actor, project, payload, prev_hash}` where `payload` contains the artifact frontmatter and body, and `id` is `EV-<next>`.
+6. Compute `hash` per the Hash computation rule above. Append the full event line (with `hash`) to `events.jsonl`.
+7. **Regenerate the artifact projection.** Render `projects/<project>/<kind>s/<artifact-id>.md` using the rendering protocol in `core/TYPED-ARTIFACTS.md`. The projection MUST be byte-identical to what a re-render from events would produce.
+8. Compute the projection's SHA-256, take the first 12 hex chars, and update `hashes.json` for that path.
 9. Report: artifact ID, short hash, and the citation form (`[KIND-ID#hash]`) that downstream tasks should use.
 
 ### `hw write <task-id> --status <state>`
@@ -873,6 +879,25 @@ The substrate fix: a file-canonical operator-identity anchor (`soul.md` at works
 **Brand isolation.** Substrate ships `SOUL.template.md` (brand-clean structural stub) and `SOUL.example.md` (one filled-in example, with operator-specific names genericized). Operators copy the template, fill in their own content, and save as `soul.md` (operator-side, never committed to the harness substrate).
 
 **Hypothesis (under empirical evaluation in v5.2.0+).** A structural operator-identity anchor produces qualitatively different agent behavior than rules-based prose alone. Falsifier: `soul_consistency_watcher` never fires across 5+ real runs (the anchor is not load-bearing) OR fires constantly on every task (the anchor is poorly written and dilutes the Tier 1 boundary).
+
+---
+
+## Toolchain Anchor (v5.2.1)
+
+The failure mode `toolchain.anchor` addresses: every hash the harness depends on — event hashes, projection hashes, recitation overlap scores — requires *running code*. An agent cannot compute SHA-256 or stemmed Jaccard by generating tokens; it must write and execute a script. Left unspecified, every session improvises a fresh implementation: ad-hoc scripts with subtle serialization divergence (the exact divergence §Canonical Serialization warns about), or — the worst case — fabricated hashes that look plausible and were never computed at all. The substrate's entire integrity story rests on byte-identical serialization, and per-session reimplementation is exactly where it quietly breaks. The harness deliberately ships near-zero code so operators can review what they deploy; the cost of that choice is that the code gets written anyway, at runtime, unreviewed, N times.
+
+The substrate fix: generate (or adopt) the toolchain **once**, pin it, and verify it ever after.
+
+**Protocol.**
+
+1. **First run.** The agent assembles the minimal toolchain for hash-computing operations: an event appender, a projection regenerator, a recitation scorer, and the verifier. Where a reference implementation ships (`tools/hw-verify.py`), adopt it (`source: shipped`). Where none ships, generate it from the protocol specs in this file and write it to `.hyperworker/tools/` (`source: generated`).
+2. **Pin.** Compute the SHA-256 of each tool file's bytes. Emit `toolchain.anchor` with `{tools: [{name, path, sha256}], source, spec_version, fired_at}`.
+3. **Every subsequent session.** Before the first hash-computing operation, re-hash each pinned tool and compare against the most recent `toolchain.anchor` event. Match → proceed, using the pinned tools (never a fresh reimplementation). Mismatch → Layer 1 FAIL `toolchain_drift`; do not use the drifted tool; the operator inspects the diff and either restores the pinned version or deliberately re-anchors.
+4. **Deliberate change.** Improving a tool is legitimate; doing it silently is not. The operator (or agent, with operator visibility) emits a new `toolchain.anchor` after the change. The anchor chain records every toolchain the workspace has ever trusted.
+
+**Review surface.** This pattern preserves the no-shipped-code reviewability goal in a stronger form: instead of "no code exists" (false — it exists per-session, unreviewed), the contract becomes "exactly one copy of the code exists, it is small, its hash is in the log, and it never changes without an event." An operator audits the toolchain once per anchor, not never.
+
+**Hypothesis (under empirical evaluation in v5.2.1+).** Pinning generated tools eliminates per-session serialization divergence and fabricated-hash failures. Falsifier: a workspace with an anchored toolchain still produces inter-session hash divergence, OR agents observed bypassing the anchored tools to hand-roll hashing anyway.
 
 ---
 

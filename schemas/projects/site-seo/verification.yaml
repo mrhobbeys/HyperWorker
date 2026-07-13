@@ -1,0 +1,26 @@
+standard:
+  layers: [1, 2]
+  retry_budget: 3
+  layer2_checks: [acceptance_criteria, scan_compliance, recitation_completeness, banned_token_scan, output_presence]
+elevated:
+  layers: [1, 2, 3]
+  retry_budget: 2
+  council_size: 2
+  failure_scenarios_required: 2
+  layer2_checks: [acceptance_criteria, scan_compliance, recitation_completeness, banned_token_scan, output_presence, failure_scenario_evaluation]
+critical:
+  layers: [1, 2, 3]
+  retry_budget: 1
+  council_size: 3
+  operator_review_required: true
+  failure_scenarios_required: 3
+  layer2_checks: [acceptance_criteria, scan_compliance, recitation_completeness, banned_token_scan, output_presence, failure_scenario_evaluation]
+default_risk_by_kind:
+  audit: standard
+  diagnosis: elevated
+  ranking-test: elevated
+  content-plan: elevated
+  dmca-investigation: elevated
+auto_escalation_rules:
+  - condition: "Recommendation would deindex, redirect, or bulk-delete URLs."
+    risk_level: critical

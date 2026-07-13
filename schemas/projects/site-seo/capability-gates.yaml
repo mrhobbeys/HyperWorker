@@ -1,0 +1,24 @@
+task_kinds:
+  audit:
+    description: "Reading GSC / live site state (read-only)."
+    required_tools: [http_fetch, file_read, file_write]
+    delivery_modes: [constrained]
+  diagnosis:
+    description: "Categorizing index-exclusion / content issues."
+    required_tools: [http_fetch, file_read, file_write]
+    delivery_modes: [constrained]
+  ranking-test:
+    description: "Dispatching HAIKU subagents to test rankings + detect duplicate/scraped content (see ranking-test-haiku.md)."
+    required_tools: [subagent, web_search, file_write]
+    delivery_modes: [constrained]
+  content-plan:
+    description: "Proposing content prune/improve / structure / on-page changes."
+    required_tools: [file_write]
+    delivery_modes: [constrained]
+  dmca-investigation:
+    description: "Confirming stolen copies and assembling evidence for takedowns."
+    required_tools: [http_fetch, web_search, file_write]
+    delivery_modes: [constrained]
+scope_completeness:
+  required: true
+  allowed_terminal_states: [complete, deferred, excluded-after-discovery, escalated]

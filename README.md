@@ -9,6 +9,10 @@ Your AI agent starts strong — then forgets the plan, invents new scope, and br
 
 HyperWorker is a repo of markdown and YAML — not a CLI, not a package, not a hosted service. It's a file-system contract any AI agent reads and follows. The harness keeps long-running projects on track: no drift, no invented scope, no "mostly finished," no unproven claims of completion.
 
+## Why this exists
+
+HyperWorker was built by an operator with ADHD, for people whose brains don't keep state between interruptions — and it turns out that's also a precise description of an LLM. Drift, context loss between sessions, novelty-driven scope creep, no object permanence for decisions made twenty minutes ago: these are ADHD-shaped failure modes, and agents have all of them. So the harness is symmetrical on purpose. The same substrate that keeps the agent honest — externalized memory, one active project, structural enforcement instead of "please remember" — is an executive-function prosthesis for the human operating it. Lock is enforced single-tasking with a guilt-free capture slot for the shiny new idea (`hw log` — the idea survives without hijacking the current project). Typed artifacts are working memory that doesn't evaporate. Session handoff is re-entry after interruption. Nothing in this system relies on anyone — human or model — remembering anything.
+
 ---
 
 ## The four things that break
@@ -51,7 +55,7 @@ Then tell your AI agent:
 
 That's it. The agent reads HARNESS.md, asks you clarifying questions, scaffolds your project from the schema, runs a verification checkpoint, and begins execution.
 
-Five schemas ship as defaults:
+Fourteen schemas ship as defaults:
 
 | Schema | When to use |
 |---|---|
@@ -60,8 +64,34 @@ Five schemas ship as defaults:
 | `client-onboarding` | Repeatable onboarding flows; cross-client compounding |
 | `event-planning` | Real-world events with hard dates and physical vendors |
 | `compliance-audit` | SOC 2, ISO, HIPAA, PCI, internal-quality audit prep |
+| `report-synthesis` | Multi-source research distilled into a cited, contradiction-checked report |
+| `site-review-repair` | Broken-site triage after a migration or incident: crawl, diagnose, fix, verify |
+| `site-seo` | SEO recovery for an existing site, run as ordered deep-focus phases |
+| `site-monetization` | Audit and restore ad revenue: AdSense, Ezoic optimization, video programs |
+| `gov-bid-hunt` | Government bid discovery and pursuit for one service-line segment |
+| `opportunity-hunt` | Non-government revenue channels: commercial, co-op contracts, partners, grants |
+| `lead-mining` | Mine your own inboxes and accounts for inbound leads you already have |
+| `single-opportunity` | One specific deal end to end: qualify → propose → submit → close |
+| `cleanroom-rebuild` | Rebuild a legacy app from measured behavior — never its code — behind an enforced wall |
 
 If none fit, the agent scaffolds from default templates and offers to capture your derived schema after the project completes.
+
+## Work the way you work
+
+The most expensive thing an agent does to an operator is interrupt them — "yet another question" at every step burns more attention than the work saves, and for some operators each context-switch costs fifteen minutes of momentum. HyperWorker's position: **the harness asks you how you want to be asked, once, at bootstrap — then it stops asking.**
+
+These are existing substrate fields (declared in `OR-001`, see `core/ATOMICITY.md`), not aspirations:
+
+| You want | Declare |
+|---|---|
+| To approve every substantive move | `delegation_policy.mode: step-by-step` |
+| Check-ins at phase boundaries only | `delegation_policy.mode: hybrid` |
+| To be left alone until it's done or stuck | `delegation_policy.mode: run-to-completion` + `execution_mode: agent` |
+| Specific events to always pause, regardless | `pause_on: [<your triggers>]` |
+
+`execution_mode: agent` runs autonomously up to five non-negotiable safety floors (critical-risk completions, detected smoke-run language, exhausted retries, identity drift, your own mid-flow directives) — autonomy never means unsupervised mutation of things you can't undo. The point is that your interruption budget is a declared constraint the substrate enforces, not a personality trait the agent guesses at.
+
+There is no single right setting. An operator who thrives on tight loops and an operator who needs three uninterrupted hours are both first-class users; they fill in the same field differently.
 
 **Want to understand the system first?** Read in this order:
 
@@ -72,17 +102,25 @@ If none fit, the agent scaffolds from default templates and offers to capture yo
 
 ## Works with
 
-HyperWorker is agent-agnostic. Any AI that can read markdown, append to a file, and follow a documented protocol can operate the harness:
+**Cowork-first, agnostic always.** HyperWorker's primary tested environment is [Cowork](https://claude.com) (Anthropic's desktop agent) — point a Cowork session at the repo and say the bootstrap line above. But the harness is a file-system contract, not an integration: any AI that can read markdown, append to a file, and follow a documented protocol can operate it. Nothing in the substrate calls a vendor API.
 
-- **Claude (Opus / Sonnet / Haiku)** — see `templates/models/claude-*.yaml`
+- **Cowork / Claude (Opus / Sonnet / Haiku)** — see `templates/models/claude-*.yaml`
 - **GitHub Copilot CLI** — see `templates/models/github-copilot.yaml`
-- **Other capable LLMs** — start with `templates/models/default.yaml` and tune as you observe behavior
+- **Local models** (Ollama, LM Studio, llama.cpp, vLLM) — start with `templates/models/default.yaml` and tune as you observe behavior. Whether a given local model can carry the protocol — and at what token overhead — is an empirical question; [HyperFinch](HyperFinch/) exists to answer it with measurements instead of vibes.
 
 Per-model profiles document what each model does *differently*, not which is "better."
+
+## The Hyper ecosystem
+
+The harness core stays markdown and YAML, permanently. Capabilities that need code or hardware ship as sibling `Hyper<animal>` projects — self-contained repos that compose with the harness without bloating it:
+
+- **HyperFinch** (shipped) — variation → measurement → selection. Sweeps a task across prompt/condition/input variants on a local LLM and reports what actually performs, with honest variance.
+- **Voice add-on** (planned, separate repo) — voice-first capture for the moments typing loses the thought: `hw log` a backlog idea, dictate a mid-flow directive, file a friction entry at the speed of speech. An add-on, never a core dependency.
 
 ## Who this is for
 
 - Operators running long projects through AI agents who are tired of sessions that start strong and fall apart
+- Operators with ADHD — or anyone whose working memory shouldn't be a project's single point of failure
 - Teams using a two-tier setup (planner decomposes and reviews, executor follows instructions)
 - Anyone who's felt: "the agent was doing great and then it just... wasn't"
 
@@ -110,7 +148,7 @@ HyperWorker is not a replacement for prompting — it's what you add when prompt
 
 **Not for one-shot tasks.** If you're doing single-prompt work, you don't need a harness. This is infrastructure for real projects that span multiple sessions over days or weeks.
 
-**Not finished.** v5.0 is a working hypothesis (see [VISION.md](VISION.md)). Primitives that don't earn their place get retired in v5.1.
+**Not finished.** v5.x is a working hypothesis (see [VISION.md](VISION.md)). Primitives that don't earn their place get retired in the next minor version.
 
 **Not magic.** The agent still has to be capable enough to follow file-system instructions. HyperWorker gives the structure; the model has to read and follow it.
 

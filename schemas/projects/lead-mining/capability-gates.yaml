@@ -1,0 +1,35 @@
+# schemas/projects/lead-mining/capability-gates.yaml
+# Email-connector-bound + web enrichment. No outreach sending in this project.
+task_capabilities:
+  account-inventory:
+    required_tools: [file_read, file_write, email_search]
+    description: "Confirm mailboxes + connector access; lock filters/range; register SRC per mailbox."
+  inbound-harvest:
+    required_tools: [file_read, file_write, email_search]
+    description: "Pull inbound senders per account/time-window. Fan-out subagents per account or per quarter."
+    delegation_recommended: true
+    rationale: "Per-account/per-window harvest is hermetic; strong subagent fan-out fit. Each subagent needs email_search for that mailbox."
+  filter-and-dedupe:
+    required_tools: [file_read, file_write]
+    description: "Apply exclude rules; merge duplicate contacts by person + company/domain."
+  enrich-and-infer-need:
+    required_tools: [file_read, file_write, web_search, web_fetch]
+    description: "Add company/role/what-they-do; infer the need from the original email content."
+  verify-and-status:
+    required_tools: [file_read, file_write, email_search]
+    description: "Confirm valid external contact; status-check (active/cold/current customer); last-contact date."
+  master-list:
+    required_tools: [file_read, file_write]
+    description: "Compile + prioritize the master lead list; write handoff."
+
+connectors_needed:
+  - "Outlook / Microsoft 365 (for business mailboxes)"
+  - "Gmail / Google (for personal Gmail mailboxes)"
+
+not_required:
+  - shell_exec
+  - send_email   # this project does not send; operator approves outreach separately
+
+scope_completeness:
+  required: true
+  allowed_terminal_states: [complete, deferred, excluded-after-discovery, escalated]

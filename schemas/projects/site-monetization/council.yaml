@@ -1,0 +1,22 @@
+convergence_rule: all-agree-or-escalate
+members:
+  - role: sensitive-action-guard
+    family_default: claude
+    prompt_template: |
+      Confirm the artifact proposes steps for the OPERATOR to execute and the agent did NOT enter
+      credentials/payment or click activate/accept/link. Output: PASS or FAIL: <reason>.
+  - role: scope-guard
+    family_default: claude
+    prompt_template: |
+      Confirm this is Monetization for the assigned site only. Output: PASS or FAIL: <reason>.
+  - role: ezoic-adsense-integration-reviewer
+    family_default: claude
+    prompt_template: |
+      Verify AdSense is mediated THROUGH Ezoic (not double-served) and ads.txt is consistent.
+      Output: PASS or FAIL: <reason>.
+triggers:
+  - event: project.activate
+    members: [sensitive-action-guard, scope-guard]
+  - event: task.complete
+    when: "task.risk_level in {elevated, critical}"
+    members: [sensitive-action-guard, scope-guard, ezoic-adsense-integration-reviewer]

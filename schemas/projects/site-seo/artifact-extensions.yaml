@@ -1,0 +1,36 @@
+decision:
+  additional_fields:
+    - name: executor
+      type: string
+      required: true
+      default: "operator"
+      description: "operator | dev | server-side-crew | worker"
+    - name: rollback_ref
+      type: string|null
+      required: false
+finding:
+  additional_fields:
+    - name: severity
+      type: string
+      required: true
+      default: "medium"
+    - name: affects_urls
+      type: list[string]|null
+      required: false
+    - name: duplicate_source
+      type: string|null
+      required: false
+      description: "If a duplicate/scraped copy: the external URL that copied our content."
+operating-reality:
+  field_overrides:
+    - name: budget
+      required: false
+    - name: team
+      required: false
+  additional_fields:
+    - name: site_domain
+      type: string
+      required: true
+    - name: recovery_dependency
+      type: string
+      required: true

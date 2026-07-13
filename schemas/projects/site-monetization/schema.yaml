@@ -1,0 +1,59 @@
+# schemas/projects/site-monetization/schema.yaml
+schema_id: site-monetization
+schema_version: 1.0
+harness_version: "5.2.0"
+description: |
+  Per-site Monetization workstream. Audit and restore ad revenue: AdSense
+  (mediated THROUGH Ezoic on Ezoic sites), Ezoic optimization (identity
+  coverage, rewarded ads, placements, ads.txt), and video-program re-entry.
+  REPORT-FIRST: the worker proposes; the OPERATOR executes anything that needs
+  a login, credentials, payment, "activate", "accept terms", or account
+  linking. Review & Repair and SEO are separate sub-projects.
+
+bootstrap_questions:
+  - id: site_domain
+    prompt: "Which site? (domain)"
+    type: string
+    required: true
+  - id: adsense_pubid
+    prompt: "AdSense publisher ID (pub-...), or null."
+    type: string|null
+    required: true
+  - id: ezoic_id
+    prompt: "Ezoic site ID, or null."
+    type: string|null
+    required: true
+  - id: access_available
+    prompt: "Access available (AdSense login / Ezoic login / WP admin / Search Console)."
+    type: list[string]
+    required: true
+  - id: monetization_goal
+    prompt: "Goal / constraints (e.g., keep ads minimal while traffic is low)."
+    type: string
+    required: true
+  - id: known_state
+    prompt: "Known monetization state to carry in (AdSense step, /openvideo, video program), or null."
+    type: string|null
+    required: true
+
+includes:
+  - precedence-tiers.yaml
+  - artifact-extensions.yaml
+  - capability-gates.yaml
+  - verification.yaml
+  - council.yaml
+  - project-template.md
+  - rules-template.md
+  - task-templates/
+  - README.md
+
+default_tasks:
+  templates:
+    - "00-scope-access.md"
+    - "01-audit-monetization-state.md"
+    - "02-adsense-plan.md"
+    - "03-ezoic-optimization-plan.md"
+    - "04-video-program-plan.md"
+    - "05-operator-execution-checklist.md"
+    - "06-verify.md"
+    - "07-handoff.md"

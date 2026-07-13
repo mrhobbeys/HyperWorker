@@ -16,7 +16,8 @@ context_fill_thresholds:
   compact_at: 0.85
 
 council_default_size: 2
-recitation_overlap_threshold: 0.72       # tighter — Sonnet's terse style means lower-overlap paraphrases are more often actually-wrong
+recitation_overlap_floor: 0.40       # tighter floor — Sonnet's terse style means lower-overlap paraphrases are more often actually-wrong
+recitation_overlap_ceiling: 0.90
 
 # v5.1 model_selection_policy ranking fields. See templates/models/_ranking.yaml.
 relative_cost: 2

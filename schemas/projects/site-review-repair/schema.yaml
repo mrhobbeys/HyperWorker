@@ -1,0 +1,60 @@
+# schemas/projects/site-review-repair/schema.yaml
+schema_id: site-review-repair
+schema_version: 1.0
+harness_version: "5.2.0"
+description: |
+  Per-site Review & Repair workstream. Inventory the site, find what the
+  post-hack server migration broke (images, CSS, JS, internal links,
+  redirects), triage by impact, propose fixes as drafts for operator approval,
+  implement approved fixes, and verify on production. Monetization, SEO, and
+  DMCA are SEPARATE sub-projects (other chats). Hack remediation is a SEPARATE
+  Recovery program — coordinate, do not execute.
+
+bootstrap_questions:
+  - id: site_domain
+    prompt: "Which site? (domain)"
+    type: string
+    required: true
+  - id: platform
+    prompt: "Platform / CMS (e.g., WordPress)."
+    type: string
+    required: true
+  - id: access_available
+    prompt: "Which access is available for this site? (WP admin / cPanel / SFTP / DNS / Search Console)"
+    type: list[string]
+    required: true
+  - id: known_issues
+    prompt: "Known breakage from the migration (broken images / CSS / links), or null."
+    type: string|null
+    required: true
+  - id: definition_of_done
+    prompt: "What does 'repaired' mean for this site? (acceptance bar)"
+    type: string
+    required: true
+  - id: recovery_handoff
+    prompt: "How to hand suspected-malware / hack items to the separate Recovery program."
+    type: string|null
+    required: true
+
+includes:
+  - precedence-tiers.yaml
+  - artifact-extensions.yaml
+  - capability-gates.yaml
+  - verification.yaml
+  - council.yaml
+  - project-template.md
+  - rules-template.md
+  - task-templates/
+  - README.md
+
+default_tasks:
+  templates:
+    - "00-scope-access.md"
+    - "01-crawl-baseline.md"
+    - "02-render-audit.md"
+    - "03-broken-links-redirects.md"
+    - "04-triage-prioritize.md"
+    - "05-fix-plan.md"
+    - "06-implement.md"
+    - "07-verify.md"
+    - "08-handoff.md"

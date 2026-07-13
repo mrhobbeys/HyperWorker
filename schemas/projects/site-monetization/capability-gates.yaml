@@ -1,0 +1,20 @@
+task_kinds:
+  audit:
+    description: "Reading AdSense/Ezoic state (read-only)."
+    required_tools: [http_fetch, file_read, file_write]
+    delivery_modes: [constrained]
+  plan:
+    description: "Drafting monetization setup steps for operator execution."
+    required_tools: [file_write]
+    delivery_modes: [constrained]
+  checklist:
+    description: "Consolidated operator-execution checklist."
+    required_tools: [file_write]
+    delivery_modes: [constrained]
+  verify:
+    description: "Re-checking that ads serve / mediation is linked."
+    required_tools: [http_fetch, file_read, file_write]
+    delivery_modes: [constrained]
+scope_completeness:
+  required: true
+  allowed_terminal_states: [complete, deferred, excluded-after-discovery, escalated]

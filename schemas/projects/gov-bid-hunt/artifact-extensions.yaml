@@ -1,0 +1,162 @@
+# schemas/projects/gov-bid-hunt/artifact-extensions.yaml
+# Domain-specific artifact kinds and field extensions for bid-hunt projects.
+
+# New artifact kinds introduced by this schema.
+
+new_kinds:
+  - kind: source
+    description: |
+      A monitored portal, aggregator, or agency listing source. One source
+      artifact per portal. Created during 00-registration-and-portal-inventory;
+      access and registration status are updated as they change. Hash-citable.
+    schema:
+      - name: id
+        type: string
+        pattern: "SRC-\\d{3,}"
+        required: true
+      - name: title
+        type: string
+        required: true
+        description: "Portal / aggregator / agency name."
+      - name: url
+        type: string
+        required: true
+      - name: source_type
+        type: enum
+        values: [federal, state, local, tribal, cooperative, aggregator, utility]
+        required: true
+      - name: access
+        type: enum
+        values: [open, registration-required, js-gated, login-gated]
+        required: true
+      - name: registration_status
+        type: enum
+        values: [not-registered, registered, pending, not-applicable]
+        required: false
+        default: not-applicable
+      - name: cadence
+        type: string
+        required: false
+        description: "How often to check this source (e.g., weekly, 2x-week). Defaults to OR-001 cadence."
+      - name: weight
+        type: enum
+        values: [primary, secondary, contextual]
+        required: true
+        default: secondary
+        description: "Official portals are primary for deadline/number verification; aggregators are secondary."
+      - name: hash
+        type: string
+        required: true
+        description: "Content hash at registration time. Citation freshness check uses this."
+      - name: tags
+        type: list[string]
+        required: false
+
+# Extensions to default artifact kinds.
+
+finding:
+  # Each discovered opportunity is a Finding.
+  additional_fields:
+    - name: from_source
+      type: string
+      required: true
+      description: "[SRC-NNN#hash] of the portal/listing where the opportunity was found."
+    - name: listing_url
+      type: string
+      required: true
+    - name: issuer
+      type: string
+      required: true
+      description: "Agency / entity issuing the solicitation."
+    - name: solicitation_number
+      type: string|null
+      required: false
+      description: "Marked 'unconfirmed' until verified against the official portal."
+    - name: set_aside
+      type: string|null
+      required: false
+    - name: response_deadline
+      type: iso8601-date|null
+      required: false
+      description: "Marked 'unconfirmed' until verified. Must be after today for open status."
+    - name: opportunity_status
+      type: enum
+      values: [pursuing, watch, excluded, excluded-after-discovery]
+      required: true
+      description: "Set during qualification; excluded statuses carry a reason."
+    - name: eligibility_flag
+      type: string|null
+      required: false
+      description: "Gate blocking pursuit, if any (e.g., 'blocked: SAM.gov', 'teaming/sub required')."
+    - name: fit_rationale
+      type: string
+      required: true
+
+decision:
+  additional_fields:
+    - name: bid_role
+      type: enum|null
+      values: [bid-no-bid, scope-decision, weighting-rule, teaming-decision]
+      required: false
+      description: "What role this decision plays in the pursuit pipeline. Null if a general decision."
+    - name: opportunity
+      type: string|null
+      required: false
+      description: "[F-NNN#hash] of the opportunity this decision covers."
+
+anti-pattern:
+  additional_fields:
+    - name: wasted_effort_pattern
+      type: string|null
+      required: false
+      description: "The recurring dead-end this anti-pattern captures (e.g., a category of listing that is always out of segment)."
+
+operating-reality:
+  # Base operating-reality fields (budget, timeline, team, authority,
+  # operator_profile) are not asked by gov-bid-hunt bootstrap_questions.
+  # Segment scope, routing, geography, registration gates, and cadence carry
+  # the constraint set. Override the base template's required: true to make
+  # them optional for bid-hunt projects.
+  field_overrides:
+    - name: budget
+      required: false
+    - name: timeline
+      required: false
+    - name: team
+      required: false
+    - name: authority
+      required: false
+    - name: operator_profile
+      required: false
+  additional_fields:
+    - name: segment_scope
+      type: string
+      required: true
+      description: "One sentence: which service lines are IN scope, and which are explicitly OUT (routed elsewhere)."
+    - name: routes_to
+      type: string
+      required: true
+      description: "Which company/brand/entity fulfills won work in this segment."
+    - name: excluded_entities
+      type: list[string]|null
+      required: false
+      description: "Entities that must never receive routed work or registrations (e.g., sold or divested entities)."
+    - name: geographies
+      type: list[string]
+      required: true
+    - name: registration_status
+      type: object
+      required: true
+      description: "Registration/eligibility gates that block bidding (e.g., SAM.gov, state supplier portals, set-aside certs), with honest not-done status."
+    - name: subcontracting
+      type: string|null
+      required: false
+      description: "Whether capability/geography gaps can be covered by a partner."
+    - name: deliverable_path
+      type: string
+      required: true
+      description: "Where this segment's running opportunity tracker lives."
+    - name: cadence
+      type: string
+      required: false
+      default: weekly

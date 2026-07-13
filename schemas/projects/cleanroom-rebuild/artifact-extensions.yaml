@@ -1,0 +1,281 @@
+# schemas/projects/cleanroom-rebuild/artifact-extensions.yaml
+# Domain-specific artifact kinds and field extensions for cleanroom-rebuild projects.
+# The three new kinds (observation, spec, behavior-rule) carry the wall as data:
+# observation is source=original / NOT consumable_by_build; spec and behavior-rule
+# are source=cleanroom / consumable_by_build. Layer 1 wall_enforcement reads these
+# fields to detect a build event citing an OBS artifact.
+
+# New artifact kinds introduced by this schema.
+
+new_kinds:
+  - kind: observation
+    description: |
+      A captured fact about the ORIGINAL system: a screen, a navigation edge, a SQL
+      trace of one user action, a DB before/after diff, a hardware I/O byte sequence.
+      Tagged source=original, zone=observed. The wall forbids build agents from
+      consuming OBS artifacts — they are NOT consumable_by_build. Created during the
+      Observation phase (Phase B); immutable once captured. Hash-citable by SPEC/BR.
+    schema:
+      - name: id
+        type: string
+        pattern: "OBS-\\d{3,}"
+        required: true
+      - name: title
+        type: string
+        required: true
+      - name: observation_type
+        type: enum
+        values: [screen, navigation-edge, sql-trace, db-diff, hardware-io, report-output, error-state, other]
+        required: true
+        description: "What kind of original-system fact this captures."
+      - name: capture_method
+        type: enum
+        values: [gui-driver, screenshot, sql-trace, db-diff, io-monitor, http-loop, manual, other]
+        required: true
+        description: "How this fact was MEASURED. Black-box methods only — never decompilation/code-read."
+      - name: source_ref
+        type: string
+        required: true
+        description: "Where on the ORIGINAL this was captured (e.g., screen id, table name, action name, device name + timestamp)."
+      - name: zone
+        type: enum
+        values: [observed]
+        required: true
+        default: observed
+        description: "Filesystem zone. Always 'observed' for OBS. Capability gates forbid build read of this zone."
+      - name: source
+        type: enum
+        values: [original]
+        required: true
+        default: original
+        description: "Provenance. Always 'original'. The wall keys on this: source=original never crosses into build context."
+      - name: consumable_by_build
+        type: bool
+        required: true
+        default: false
+        description: "Always false. A build-room event citing an artifact with consumable_by_build:false is a Layer 1 wall breach."
+      - name: artifact_path
+        type: string|null
+        required: false
+        description: "Path under observed/ to the raw capture (screenshot, trace file, byte dump), if any."
+      - name: hash
+        type: string
+        required: true
+        description: "Content hash of the observation at capture time. SPEC/BR derived_from citations check freshness against this."
+      - name: tags
+        type: list[string]
+        required: false
+
+  - kind: spec
+    description: |
+      A cleanroom specification re-expressing observed behavior in our own words:
+      screen spec, data-dictionary entry, hardware spec, report spec. Derived from
+      OBS but contains no original expression beyond functional necessity. Tagged
+      source=cleanroom, zone=spec. Build-consumable — the ONLY original-derived input
+      (with behavior-rule) the build room may read. Created during the Spec phase
+      (Phase C).
+    schema:
+      - name: id
+        type: string
+        pattern: "SPEC-\\d{3,}"
+        required: true
+      - name: title
+        type: string
+        required: true
+      - name: spec_type
+        type: enum
+        values: [screen-spec, data-dictionary, report-spec, hardware-spec, navigation-spec, other]
+        required: true
+      - name: derived_from
+        type: list[string]
+        required: true
+        description: "List of [OBS-NNN#hash] citations this spec re-expresses. At least one required — a spec with no OBS provenance is unmoored from measurement."
+      - name: zone
+        type: enum
+        values: [spec]
+        required: true
+        default: spec
+        description: "Filesystem zone. Always 'spec'. The only original-derived zone the build room may read."
+      - name: source
+        type: enum
+        values: [cleanroom]
+        required: true
+        default: cleanroom
+        description: "Provenance. Always 'cleanroom' — re-expressed in our own words."
+      - name: consumable_by_build
+        type: bool
+        required: true
+        default: true
+        description: "Always true. SPEC is build-consumable."
+      - name: verbatim_carryover
+        type: list[string]|null
+        required: false
+        description: "Any original strings retained out of functional necessity (data-field names, protocol literals). Each entry justified; spec-purity check reviews this list."
+      - name: hash
+        type: string
+        required: true
+      - name: tags
+        type: list[string]
+        required: false
+
+  - kind: behavior-rule
+    description: |
+      A MEASURED business rule (pricing, tax, discount, mix-match, rounding, validation)
+      stated as an algorithm PLUS worked input->output examples PLUS oracle cases.
+      Derived from black-box experiments on the original, NOT from reading code. Tagged
+      source=cleanroom, zone=spec. Build-consumable. Created during the Spec phase
+      (Phase C); its oracle_cases feed the test oracle (T-009) and verification (T-011).
+    schema:
+      - name: id
+        type: string
+        pattern: "BR-\\d{3,}"
+        required: true
+      - name: title
+        type: string
+        required: true
+      - name: rule_statement
+        type: string
+        required: true
+        description: "The rule as an algorithm, in our own words. Precise enough to implement without seeing the original."
+      - name: worked_examples
+        type: list[object]
+        required: true
+        description: "Concrete input->output pairs MEASURED from the original. At least one required."
+        fields:
+          - name: input
+            type: string
+            required: true
+          - name: output
+            type: string
+            required: true
+          - name: measured_via
+            type: string|null
+            required: false
+            description: "[OBS-NNN#hash] of the experiment that produced this pair, if individually traceable."
+      - name: oracle_cases
+        type: list[object]
+        required: true
+        description: "Recorded input->expected-output cases the built app is verified against (T-011). At least one required."
+        fields:
+          - name: case_id
+            type: string
+            required: true
+          - name: input
+            type: string
+            required: true
+          - name: expected_output
+            type: string
+            required: true
+      - name: derived_from
+        type: list[string]
+        required: true
+        description: "List of [OBS-NNN#hash] (typically sql-trace / db-diff / report-output) the rule was measured from. At least one required."
+      - name: zone
+        type: enum
+        values: [spec]
+        required: true
+        default: spec
+      - name: source
+        type: enum
+        values: [cleanroom]
+        required: true
+        default: cleanroom
+      - name: consumable_by_build
+        type: bool
+        required: true
+        default: true
+      - name: hash
+        type: string
+        required: true
+      - name: tags
+        type: list[string]
+        required: false
+
+# Extensions to default artifact kinds.
+
+decision:
+  additional_fields:
+    - name: room
+      type: enum|null
+      values: [observation, spec, build, cross-room]
+      required: false
+      description: "Which room this decision governs. A build-room decision may not cite OBS."
+    - name: deviates_from_spec
+      type: string|null
+      required: false
+      description: "[SPEC-NNN#hash] or [BR-NNN#hash] if this decision records a deliberate deviation from a spec during build (Tier 3)."
+
+finding:
+  additional_fields:
+    - name: room
+      type: enum|null
+      values: [observation, spec, build, cross-room]
+      required: false
+    - name: from_observation
+      type: string|null
+      required: false
+      description: "[OBS-NNN#hash] if this finding originated from a captured observation. Findings carrying this field are observation/spec-room only — must not be consumed by build."
+
+anti-pattern:
+  additional_fields:
+    - name: room
+      type: enum|null
+      values: [observation, spec, build, cross-room]
+      required: false
+    - name: wall_relevant
+      type: bool
+      required: false
+      default: false
+      description: "True if this anti-pattern records a near-miss or breach of the cleanroom wall (e.g., 'almost cited OBS from a build task'). Surfaced to the cleanroom-integrity-auditor."
+
+operating-reality:
+  # Cleanroom rebuilds always have a target_stack, a build_executor (the walled local
+  # model), an observation_oracle (how we drive the original), and a data_strategy.
+  # budget/timeline/team/authority are often not load-bearing inside a rebuild scope;
+  # mark them optional like the other schemas do.
+  field_overrides:
+    - name: budget
+      required: false
+    - name: timeline
+      required: false
+    - name: team
+      required: false
+    - name: authority
+      required: false
+    - name: operator_profile
+      required: false
+  additional_fields:
+    - name: legacy_system
+      type: string
+      required: true
+      description: "One line: the legacy system being rebuilt and the stack it runs on today. Mirrors schema.yaml bootstrap_questions.legacy_system."
+    - name: target_stack
+      type: string
+      required: true
+      description: "Target stack for the rebuild. Mirrors bootstrap_questions.target_stack."
+    - name: data_strategy
+      type: enum
+      values: [migrate-in-place, fresh, migrate-and-transform]
+      required: true
+    - name: wall_strictness
+      type: enum
+      values: [pure-black-box, decompilation-assisted]
+      required: true
+      default: pure-black-box
+      description: "pure-black-box = observation derives rules from behavior only, build never sees decompiled code. decompilation-assisted = observation room may read decompiled code; build still walled."
+    - name: build_executor
+      type: string
+      required: true
+      description: "Local endpoint id running WALLED build tasks (e.g., 'lmstudio:openai/gpt-oss-20b'). Must be structurally incapable of reaching the original."
+    - name: observation_oracle
+      type: string
+      required: true
+      description: "How we drive/observe the original (e.g., 'XP HTTP loop + AHK GUI driver + SQL Server trace + DB diff')."
+    - name: deliverable_path
+      type: string
+      required: true
+      description: "Where the built application source lives. Mirrors bootstrap_questions.deliverable_path."
+    - name: excluded_scope
+      type: list[string]|null
+      required: false
+      description: "Anything explicitly out of scope for the rebuild. Use [] for confirmed-empty; null for not-asked."

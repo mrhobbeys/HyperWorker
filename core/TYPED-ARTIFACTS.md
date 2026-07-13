@@ -13,6 +13,7 @@ This mechanism replaces v4.1.1's Memory mechanism. The shape of the change: know
 | H-T1 | Decisions, findings, anti-patterns, and operating-reality, made addressable and hash-cited, replace mutable Memory without losing the captured-knowledge use case. | Operator reports needing the v4.1.1 DISCOVERIES → LEARNINGS pipeline to capture something the four kinds plus supersede cannot represent. |
 | H-T2 | Per-project schema customization preserves harness agnosticism while enabling domain fit. | Operator forced to override default schemas in ways the design did not anticipate. |
 | H-T3 | The consumption protocol (citation, recitation, SCAN) closes the gap between "the artifact exists" and "the agent's output reflects the artifact at the decision moment." | Cross-task carry-forward failures persist in observation. |
+| H-T4 (v5.2.1) | A two-sided recitation overlap band (floor + ceiling) catches both skim-restatements and verbatim echoes; a paraphrase inside the band reflects genuine processing. | Recitations inside the band still produce downstream outputs that miss load-bearing constraints, OR genuine paraphrases are rejected often enough that agents learn to game the band rather than read the source. |
 
 ---
 
@@ -253,9 +254,14 @@ The harness emits a `task.recite` event for each entry containing `{task_id, con
 
 - Tokenize paraphrase and the source artifact's title + body.
 - Compute Jaccard overlap on stemmed tokens (lowercase, drop stopwords, simple Porter-style stemming).
-- If overlap < `recitation_overlap_threshold` (declared in the active model profile; default 0.7) → reject the recitation. Re-paraphrase.
+- If overlap < `recitation_overlap_floor` (declared in the active model profile; default 0.35) → reject the recitation. Re-paraphrase.
+- If overlap > `recitation_overlap_ceiling` (declared in the active model profile; default 0.90) → reject the recitation. Re-paraphrase.
 
-Overlap below threshold often means the agent paraphrased something it didn't read. Above-threshold overlap means the agent's words and the source's words share enough lexicon to be plausibly the same content. This is a structural attention restoration check, not a meaning check; it does not catch all paraphrase failures, but it catches the ones where the agent skimmed and produced a generic restatement.
+The band is two-sided on purpose (changed in v5.2.1). Overlap below the floor often means the agent paraphrased something it didn't read — a generic restatement that could have been produced from the title alone. Overlap above the ceiling means the agent transcribed rather than processed: a near-verbatim echo proves the source was *copied*, not that its content passed through the agent's own representation. The original single high threshold (≥ 0.7) rewarded exactly that copying — the easiest way to pass was to quote the source back, which defeats the attention-restoration purpose. A paraphrase inside the band shares the source's load-bearing lexicon (IDs, numbers, named constraints) while recombining the prose in the agent's own words.
+
+This is a structural attention restoration check, not a meaning check; it does not catch all paraphrase failures, but it catches the two cheapest evasions: the skim-restatement and the verbatim echo.
+
+**Back-compat.** A model profile declaring only the legacy `recitation_overlap_threshold` field gets the v5.2.1 defaults (floor 0.35, ceiling 0.90); the legacy field is ignored and Layer 1 emits a WARNING with code `recitation_threshold_deprecated` on first use.
 
 ### SCAN markers
 

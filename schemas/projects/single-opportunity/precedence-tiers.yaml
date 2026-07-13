@@ -1,0 +1,67 @@
+# schemas/projects/single-opportunity/precedence-tiers.yaml
+# Tiered rules for single-opportunity pursuit projects. Tier ordinal wins on
+# conflict. Renaming a tier does not change ordinal precedence.
+
+tiers:
+  - tier: 1
+    name: DEAL-INTEGRITY
+    purpose: |
+      Never fabricate a deal fact, and never let anything leave the building
+      without the operator. Deadline and requirements are verified live
+      before drafting. Pricing and commitments are the operator's numbers,
+      not the agent's. Eligibility (or a teaming plan) is confirmed before
+      effort is committed, and the go/no-go call is honest about open gates.
+    examples:
+      - "Never fabricate a deadline, requirement, solicitation number, price, or delivery commitment; unverified fields are 'unconfirmed' and verified before any drafting effort."
+      - "Operator approval is required before any submission or outreach is sent; Claude never submits."
+      - "Every price, rate, or commitment in outward-facing text is operator-confirmed or explicitly marked DRAFT."
+      - "A 'go' recommendation with an unresolved eligibility gate (SAM, cert, membership) must flag the gate and what must clear first, or state the teaming plan."
+      - "The deal is 'open' only if its response deadline is AFTER today; a past deadline forces an immediate operator escalation, not silent continuation."
+
+  - tier: 2
+    name: SINGLE-DEAL-SCOPE
+    purpose: |
+      This project pursues ONE named opportunity end-to-end. Related but
+      separate opportunities discovered along the way are captured and spun
+      off as their own projects, never pursued here.
+    examples:
+      - "A second RFP from the same buyer is recorded and handed to the orchestrator for spin-off, not folded into this project."
+      - "Scope questions resolve toward the deal named in PROJECT.md; anything else is out."
+
+  - tier: 3
+    name: TRACEABILITY
+    purpose: |
+      Every deal fact cites its source document; every requirement traces to
+      a response section. The compliance matrix is the spine: requirements
+      flow from cited solicitation documents into proposal sections, and the
+      submission checklist covers every required form and attachment.
+    examples:
+      - "Every requirement, date, and stakeholder fact cites its solicitation/source document ([SRC-NNN#hash] plus link)."
+      - "Every must/should requirement in the compliance matrix maps to a named response section before the proposal is called complete."
+      - "Official solicitation documents beat portal summaries or third-party listings for verification."
+
+  - tier: 4
+    name: STYLE
+    purpose: |
+      Presentation and citation consistency for the compliance matrix,
+      proposal draft, and follow-up log.
+    examples:
+      - "Use the same citation format throughout: [SRC-NNN#hash] for documents, [F-NNN#hash] for requirements/facts, [DEC-NNN#hash] for go/no-go, pricing, and approval calls."
+      - "Match the operator's declared voice if a brand-voice anchor is in OR-001."
+
+scan_markers:
+  - tier: 1
+    marker: "@@SCAN_1_1"
+    question: "Is the response deadline verified live (cited) and AFTER today — or explicitly marked 'unconfirmed'?"
+  - tier: 1
+    marker: "@@SCAN_1_2"
+    question: "Is every number and commitment in outward-facing text operator-confirmed or explicitly marked DRAFT?"
+  - tier: 1
+    marker: "@@SCAN_1_3"
+    question: "Is a recorded operator approval Decision in place before anything you marked sent/submitted?"
+  - tier: 2
+    marker: "@@SCAN_2_1"
+    question: "Is everything you produced about THIS deal (per PROJECT.md), with related opportunities marked for spin-off?"
+  - tier: 3
+    marker: "@@SCAN_3_1"
+    question: "Does every requirement/date/stakeholder fact cite its source document, and does every requirement map to a response section?"

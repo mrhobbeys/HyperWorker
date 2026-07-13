@@ -6,7 +6,7 @@
 
 ## The Validation Test
 
-Pick a domain you know well that is *not* one of the six default schemas (marketing-campaign, software-feature-ship, client-onboarding, event-planning, compliance-audit, report-synthesis). Run through the steps below. Configuration-level adjustments are expected; mechanism-level changes mean v5.0 has a gap.
+Pick a domain you know well that is *not* one of the shipped default schemas (see the README schema table). Run through the steps below. Configuration-level adjustments are expected; mechanism-level changes mean v5.0 has a gap.
 
 ### Step 1: Structural Verification
 
@@ -73,7 +73,7 @@ Force a council invocation: bootstrap a critical-risk task or run `hw council <t
 |---|---|---|
 | Task frontmatter cannot express the dependency | The dependency is between artifacts, not tasks | Add the cited artifact to `consumes:`. |
 | Verification fails on a task that "should" pass | Acceptance criteria too vague / not observable | Rewrite criteria as pass/fail. |
-| Recitation overlap rejects a clearly-correct paraphrase | Profile threshold is wrong for your model | Tune `recitation_overlap_threshold` in the active model profile. |
+| Recitation overlap rejects a clearly-correct paraphrase | Profile band is wrong for your model | Tune `recitation_overlap_floor` / `recitation_overlap_ceiling` in the active model profile. |
 | Council never converges | Convergence rule too strict for the work | Switch from `all-agree-or-escalate` to `majority-or-escalate` in `council.yaml`. |
 | Capability gate refuses delegation when the agent has the tool | Agent profile `provides:` is incomplete | Add the missing capability to `.hyperworker/agents/<id>.yaml`. |
 | Layer 1 citation freshness fails on every task | The cited artifact was superseded; downstream `consumes:` not updated | Re-render projections (`hw project`) and update `consumes:` to current hashes. |

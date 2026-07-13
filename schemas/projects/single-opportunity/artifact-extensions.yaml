@@ -1,0 +1,152 @@
+# schemas/projects/single-opportunity/artifact-extensions.yaml
+# Domain-specific artifact kinds and field extensions for single-opportunity
+# pursuit projects.
+
+# New artifact kinds introduced by this schema.
+
+new_kinds:
+  - kind: source
+    description: |
+      A deal document or page: the base solicitation/RFP, amendments, Q&A
+      logs, required forms/attachments, portal pages, buyer communications,
+      pricing inputs. One source artifact per document. Created during
+      00-qualify-the-deal (seeded by the bootstrap probe); doc_version is
+      updated as amendments land. Hash-citable.
+    schema:
+      - name: id
+        type: string
+        pattern: "SRC-\\d{3,}"
+        required: true
+      - name: title
+        type: string
+        required: true
+        description: "Document / page name (e.g., 'RFP base solicitation')."
+      - name: url
+        type: string
+        required: true
+        description: "Document or portal URL, or local path if operator-provided."
+      - name: source_type
+        type: enum
+        values: [solicitation, amendment, qa-log, attachment-form, portal-page, buyer-communication, pricing-input, other]
+        required: true
+      - name: access
+        type: enum
+        values: [open, registration-required, login-gated, operator-provided]
+        required: true
+      - name: doc_version
+        type: string
+        required: false
+        description: "Which version of the document this is (original, amendment-1, ...)."
+      - name: weight
+        type: enum
+        values: [primary, secondary, contextual]
+        required: true
+        default: primary
+        description: "Official solicitation documents are primary for deadline/requirement verification; portal summaries and third-party listings are secondary/contextual."
+      - name: hash
+        type: string
+        required: true
+        description: "Content hash at registration time. Citation freshness check uses this."
+      - name: tags
+        type: list[string]
+        required: false
+
+# Extensions to default artifact kinds.
+
+finding:
+  # Each extracted requirement, evaluation criterion, stakeholder fact,
+  # key date, or eligibility gate is a Finding.
+  additional_fields:
+    - name: from_source
+      type: string
+      required: true
+      description: "[SRC-NNN#hash] of the document where this fact was found."
+    - name: finding_role
+      type: enum
+      values: [requirement, evaluation-criterion, stakeholder-fact, key-date, eligibility-gate, risk, other]
+      required: true
+    - name: requirement_strength
+      type: enum|null
+      values: [must, should, informational]
+      required: false
+      description: "For requirement/evaluation-criterion Findings; drives the compliance matrix."
+    - name: response_section
+      type: string|null
+      required: false
+      description: "Named proposal section where this requirement is addressed. Required for every must/should requirement before the proposal is complete (requirement_traceability)."
+    - name: verification_status
+      type: enum
+      values: [verified-live, document-sourced, unconfirmed]
+      required: true
+      description: "'verified-live' means re-checked against the live portal/document during qualification; never present 'unconfirmed' facts as verified."
+    - name: stakeholder
+      type: string|null
+      required: false
+      description: "Name/role/contact for stakeholder-fact Findings."
+
+decision:
+  additional_fields:
+    - name: decision_role
+      type: enum|null
+      values: [go-no-go, pricing, teaming, scope, submission-approval]
+      required: false
+      description: "What role this decision plays in the pursuit pipeline. Null if a general decision."
+    - name: operator_confirmed
+      type: bool
+      required: false
+      default: false
+      description: "Pricing and submission-approval Decisions must be operator_confirmed: true before any number is presented as final or anything is sent externally."
+    - name: covers
+      type: string|null
+      required: false
+      description: "[F-NNN#hash] Finding(s) this decision covers (e.g., the gate a go/no-go resolves)."
+
+anti-pattern:
+  additional_fields:
+    - name: retro_pattern
+      type: string|null
+      required: false
+      description: "The reusable lesson from close-and-retro (e.g., a proposal-section approach or qualification miss to avoid next deal)."
+
+operating-reality:
+  # Base operating-reality fields (budget, timeline, team, authority,
+  # operator_profile) are not asked by single-opportunity bootstrap_questions.
+  # The deal facts — source, buyer, scope, routing, key dates, eligibility
+  # gates — carry the constraint set. Override the base template's
+  # required: true to make the base fields optional for this schema.
+  field_overrides:
+    - name: budget
+      required: false
+    - name: timeline
+      required: false
+    - name: team
+      required: false
+    - name: authority
+      required: false
+    - name: operator_profile
+      required: false
+  additional_fields:
+    - name: source
+      type: string
+      required: true
+      description: "Where the deal came from (channel/segment/portal + link)."
+    - name: buyer
+      type: string
+      required: true
+      description: "Buyer / agency / company + key contact (if known)."
+    - name: what_they_need
+      type: string
+      required: true
+      description: "One-paragraph scope: what they need."
+    - name: routes_to
+      type: string
+      required: true
+      description: "Which company/brand/entity fulfills the work if won."
+    - name: key_dates
+      type: object
+      required: true
+      description: "Deadline, questions due, decision date + value if known. Each date is verified live or marked 'unconfirmed'."
+    - name: eligibility_gates
+      type: object
+      required: true
+      description: "Gates on our ability to win (SAM, cert, membership, teaming), with honest not-done status."

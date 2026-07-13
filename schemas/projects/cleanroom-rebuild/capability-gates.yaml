@@ -1,0 +1,97 @@
+# schemas/projects/cleanroom-rebuild/capability-gates.yaml
+# THE CLEANROOM WALL, ENFORCED STRUCTURALLY.
+# Each task-kind declares which filesystem ZONES it may read/write, which tools it
+# may use, and which it is FORBIDDEN. Build-room task-kinds cannot read the
+# `observed/` zone or reach the original system, and cannot use any tool that does.
+# Delegation is refused if a subagent's provides-set intersects a forbidden tool or
+# its read-scope exceeds the allowance. The wall is a capability fact, not a promise.
+
+zones:
+  observed: "Captured facts about the ORIGINAL (OBS artifacts, screenshots, traces). source=original."
+  spec:     "Cleanroom specifications (SPEC, BR). source=cleanroom. The ONLY original-derived input the build room may read."
+  src:      "The new application. Build-room output."
+
+task_capabilities:
+  # ---------- OBSERVATION ROOM (may face the original) ----------
+  target-inventory:
+    required_tools: [file_read, file_write, app_driver, sql_query]
+    read_zones: [observed, spec, src]
+    write_zones: [observed]
+    description: "Enumerate the original's surface: screen list, DB catalog, peripherals. Writes OBS + PROJECT scope."
+
+  screen-flow-capture:
+    required_tools: [file_write, app_driver, gui_driver, screenshot, vision_describe]
+    read_zones: [observed]
+    write_zones: [observed]
+    delegation_recommended: true
+    rationale: "Per-screen capture is hermetic. Vision description runs on a LOCAL VLM, keeping original imagery off any build context."
+    description: "Drive the original GUI (AHK), screenshot each state, describe via local vision model, build the navigation graph. Writes OBS."
+
+  data-layer-behavior-trace:
+    required_tools: [file_write, app_driver, sql_trace, sql_query]
+    read_zones: [observed]
+    write_zones: [observed]
+    description: "Run a SQL Server trace + DB before/after diff per user action — black-box measurement of what each screen does to data. Writes OBS."
+
+  hardware-io-capture:
+    required_tools: [file_write, app_driver, io_monitor]
+    read_zones: [observed]
+    write_zones: [observed]
+    description: "Capture printer / cash-drawer / MSR / sig-pad byte sequences and OPOS calls. Writes OBS."
+
+  # ---------- SPEC ROOM (reads OBS, writes the wall's clean output) ----------
+  spec-author:
+    required_tools: [file_read, file_write]
+    read_zones: [observed, spec]
+    write_zones: [spec]
+    description: |
+      Re-express OBS as SPEC/BR in our own words: data dictionary, screen specs,
+      behavior rules, hardware spec, test oracle. The ONLY task family that reads
+      observed/ AND writes spec/. Must introduce no verbatim original expression
+      beyond functional necessity (names of data fields, protocol byte values).
+
+  # ---------- BUILD ROOM (WALLED — no original, no observed/) ----------
+  build-from-spec:
+    executor: local_model            # runs on the declared build_executor (LM Studio); NOT the orchestrator
+    required_tools: [file_read, file_write]
+    read_zones: [spec, src]          # MAY NOT read observed/
+    write_zones: [src]
+    forbidden_tools: [app_driver, gui_driver, sql_trace, sql_query, screenshot, browser, web_fetch, vision_describe, decompiler]
+    forbidden_reads: [observed]      # hard wall: build context never contains original-derived imagery/code
+    no_smoke_run: true               # must not run the ORIGINAL to check behavior
+    no_peek: true                    # must not read original binaries / decompilation
+    delivery_modes: [constrained]
+    description: "Implement the target app from SPEC/BR ONLY, on an isolated local model. No path to the original exists in this context."
+
+  verify-against-oracle:
+    executor: local_model
+    required_tools: [file_read, file_write, test_run]
+    read_zones: [spec, src]          # oracle cases live in spec/; MAY NOT read observed/ or run the original
+    write_zones: [src]
+    forbidden_tools: [app_driver, gui_driver, sql_trace, browser, decompiler]
+    forbidden_reads: [observed]
+    no_smoke_run: true               # verification compares new app to the spec-derived ORACLE, never to the original
+    no_peek: true
+    delivery_modes: [prescribed]
+    description: "Run the built app against the spec-derived test oracle (recorded input->expected output). PASS/FAIL is judged vs the oracle, not vs the original."
+
+# Wall enforcement — Layer 1 structural checks the harness runs on every event:
+wall_enforcement:
+  - id: build-no-observed-read
+    rule: "No build-room task event (build-from-spec, verify-against-oracle) may cite an OBS artifact or reference a path under observed/. Violation = Layer 1 FAIL."
+  - id: build-executor-isolation
+    rule: "Build-room tasks MUST declare executor=local_model bound to the build_executor endpoint, which has no app_driver / network-to-original capability. A build task run on the orchestrator (which CAN reach the original) is a wall breach = Layer 1 FAIL."
+  - id: no-smoke-no-peek
+    rule: "Any event from a no_smoke_run/no_peek task recording that the original was run, or its binaries/decompilation read, = Layer 1 FAIL, surfaced to operator immediately."
+  - id: spec-purity
+    rule: "SPEC/BR are the only original-derived inputs crossing into the build zone. A SPEC body quoting original code or UI strings verbatim beyond functional necessity is flagged for spec-author review (non-blocking warning)."
+  - id: zone-write-discipline
+    rule: "A task writing outside its declared write_zones = Layer 1 FAIL (e.g., a build task writing into observed/, or an observation task writing into src/)."
+
+not_required:
+  - browser
+  - web_fetch
+
+scope_completeness:
+  required: true
+  allowed_terminal_states: [complete, deferred, excluded-after-discovery, escalated]
