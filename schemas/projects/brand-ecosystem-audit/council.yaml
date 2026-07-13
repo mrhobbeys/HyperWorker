@@ -1,0 +1,42 @@
+# council.yaml — context-asymmetric verifier subagents.
+convergence_rule: all-agree-or-escalate
+members:
+  - role: evidence-integrity-watcher
+    family_default: claude
+    prompt_template: |
+      Review for evidence integrity (Tier 1). For each asserted broken/works claim, confirm
+      the property-audit has verified_live: true. Confirm every ranking-check has a
+      neutral-account method_note. Confirm provenance tags present and no recommendation
+      rests on ASSUMED alone. Output one line: PASS or FAIL: <violations>.
+  - role: coverage-auditor
+    family_default: claude
+    prompt_template: |
+      Confirm every surface in OR.surfaces is either audited (a property-audit exists) or has
+      a property status of dead/missing/duplicate with a reason. List any surface with neither.
+      Output one line: PASS or FAIL: <orphan surfaces>.
+  - role: ranking-method-auditor
+    family_default: claude
+    prompt_template: |
+      Confirm all ranking-checks are restated on ONE common scale and each names a neutral,
+      non-personalized account method. Flag any personalized/logged-in ranking presented as
+      objective. Output one line: PASS or FAIL: <violations>.
+  - role: brand-goal-aligner
+    family_default: claude
+    prompt_template_on_activate: |
+      Review OR before work begins: is primary_goal one concrete goal, owned_hub_url set,
+      surfaces enumerated, dispatch_mode chosen (separate-chats if any social/login surface)?
+      Output one line: PASS or FAIL: <missing/vague OR fields>.
+    prompt_template_on_output: |
+      Confirm the master report's paths each serve OR.primary_goal, the owned hub is treated as
+      the intended center, and authority leaks off it are named. Output one line: PASS or FAIL: <misalignments>.
+  - role: paths-menu-auditor
+    family_default: claude
+    prompt_template: |
+      Confirm the synthesis is a MENU: >=3 strategic-path artifacts the operator can pick/combine/
+      sequence, >=1 marked foundational (do-regardless), plus a decision aid — NOT one forced plan.
+      Confirm >=1 disconfirming finding exists. Output one line: PASS or FAIL: <violations>.
+triggers:
+  - {event: project.activate, members: [brand-goal-aligner], description: "Bootstrap check."}
+  - {event: phase.complete, when: "phase == 'B'", members: [coverage-auditor, ranking-method-auditor], description: "After per-property fan-out."}
+  - {event: task.complete, when: "task.risk_level == 'critical'", members: [evidence-integrity-watcher, coverage-auditor, ranking-method-auditor, brand-goal-aligner, paths-menu-auditor], description: "On master synthesis."}
+  - {event: project.archive, members: [evidence-integrity-watcher, brand-goal-aligner, paths-menu-auditor], description: "Pre-archive."}

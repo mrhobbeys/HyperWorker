@@ -1,0 +1,110 @@
+# schemas/projects/market-gap-intelligence/schema.yaml
+# Project schema metadata. Used by `hw bootstrap --schema market-gap-intelligence`.
+
+schema_id: market-gap-intelligence
+schema_version: 1.0
+harness_version: "5.2.0"
+description: |
+  Given one client (or your own business) and a market question — "how do we
+  rank this", "niche vs generalist", "which vertical", "what content wins" —
+  produce evidence-graded competitive and gap intelligence and a target
+  recommendation. The spine is four intelligence questions, run in order:
+    Q1 Who is the REAL competitor? (discovered from live SERPs, not assumed)
+    Q2 What are they ranking for? (footprint: moat vs neglected gap)
+    Q3 What are people asking that nobody answers well? (demand + weak answer)
+    Q4 What should we rank for? (winnable × commercial × fit, with funnel math)
+  Every recommendation cites MEASURED or OBSERVED evidence by hash. No
+  recommendation may rest on ASSUMED inputs alone — those are hypotheses to test,
+  not conclusions to ship. The schema exists to kill the failure mode where an
+  agent reasons fluently from priors/news and produces a confident strategy never
+  checked against what competitors do or what buyers search.
+
+  One project per client. Client facts live in this project; the method lives in
+  the schema. That is the broad-storage / laser-focus split: any agent handed the
+  project operates as a focused specialist on exactly one client with no bleed.
+
+bootstrap_questions:
+  - id: project_name
+    prompt: "What is this engagement called? (usually the client/brand name)"
+    type: string
+    required: true
+  - id: decision_statement
+    prompt: "One sentence: what decision will this intelligence inform? (e.g., 'rank this MSP for its metro's managed-IT terms', 'choose niche vs generalist', 'which 3 pages to build')"
+    type: string
+    required: true
+  - id: client_url
+    prompt: "Client primary URL(s). Note if mid-rebuild (treat current pages as not-final)."
+    type: string
+    required: true
+  - id: geography
+    prompt: "Geography of the decision: a metro/city, a state/region, or 'national / no-geo'. Do not inherit any prior client's geo."
+    type: string
+    required: true
+  - id: buyer
+    prompt: "Buyer: B2C / B2B / both, plus the specific persona if known."
+    type: enum
+    values: [b2c, b2b, both]
+    required: true
+  - id: money_terms
+    prompt: "3-10 seed queries that, if won, produce leads/sales. If unknown, the agent derives them from the service list and confirms."
+    type: list[string]
+    required: false
+  - id: scope_mode
+    prompt: "Scope: 'page-rank' (win specific terms/pages), 'vertical-choice' (niche vs generalist / which market), or 'content-gap' (what to write)."
+    type: enum
+    values: [page-rank, vertical-choice, content-gap]
+    required: true
+  - id: brand_constraints
+    prompt: "Regulatory/brand limits on what may be claimed (health, legal, finance, ethics). List or 'none'."
+    type: list[string]|null
+    required: false
+  - id: available_tools
+    prompt: "Which live data tools are available this run? (Google Ads Keyword Planner login, Chrome/SERP access, Search Console, analytics, connectors). Drives how much is MEASURED vs OBSERVED."
+    type: list[string]
+    required: true
+  - id: confidence_floor
+    prompt: "Minimum confidence for shipped recommendations (provisional accepts unverified findings; validated requires operator promotion)."
+    type: enum
+    values: [provisional, validated]
+    default: provisional
+  - id: deliverable_path
+    prompt: "Where does the final intelligence report / recommendation go?"
+    type: string
+    required: true
+
+includes:
+  - precedence-tiers.yaml
+  - artifact-extensions.yaml
+  - capability-gates.yaml
+  - verification.yaml
+  - council.yaml
+  - project-template.md
+  - rules-template.md
+  - bootstrap-probe.md
+  - task-templates/
+  - README.md
+
+default_tasks:
+  description: |
+    Decomposes into 10 tasks across 4 phases. Tasks gated by scope_mode:
+    vertical-evaluation (T-004) runs only for scope_mode: vertical-choice;
+    target-selection always runs but weights differently per scope_mode.
+
+    Phase A (Frame): client dossier + operating-reality (T-000).
+    Phase B (Discover): competitor discovery Q1 (T-001), ranking footprint Q2
+      (T-002), gap mining Q3 (T-003).
+    Phase C (Evaluate): vertical evaluation (T-004, conditional), prior-direction
+      anti-pattern capture (T-005), target selection Q4 + funnel math (T-006).
+    Phase D (Recommend): channel-reality audit (T-007), recommendation synthesis
+      (T-008), evidence-integrity audit (T-009, critical + council).
+  templates:
+    - "00-client-dossier.md"
+    - "01-competitor-discovery.md"
+    - "02-ranking-footprint.md"
+    - "03-gap-mining.md"
+    - "04-vertical-evaluation.md"
+    - "05-anti-pattern-capture.md"
+    - "06-target-selection.md"
+    - "07-channel-reality-audit.md"
+    - "08-recommendation-synthesis.md"
+    - "09-evidence-integrity-audit.md"

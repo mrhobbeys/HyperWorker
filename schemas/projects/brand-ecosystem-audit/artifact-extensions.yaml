@@ -1,0 +1,94 @@
+# schemas/projects/brand-ecosystem-audit/artifact-extensions.yaml
+# Domain kinds for brand-ecosystem-audit. Reuses shared default kinds `manifest` and
+# `strategic-path`. YAML note: quote any type token containing '[' or '|'.
+
+new_kinds:
+  - kind: property
+    description: |
+      One brand surface (a unit of this engagement). Inventoried at bootstrap/T-000;
+      audited in T-001. Hash-citable.
+    schema:
+      - {name: id, type: string, pattern: "PROP-\\d{3,}", required: true}
+      - {name: name, type: string, required: true}
+      - {name: platform, type: string, required: true, description: "website | youtube | instagram | facebook | x | linkedin | amazon | goodreads | other"}
+      - {name: url_or_handle, type: string, required: true}
+      - name: role
+        type: enum
+        values: [owned-hub, owned-secondary, social, marketplace, review, other]
+        required: true
+      - name: status
+        type: enum
+        values: [live, dead, wrong-handle, duplicate, missing]
+        required: true
+        description: "live=works; dead=NXDOMAIN/broken; wrong-handle=typo/links to wrong place; duplicate=split accounts; missing=no presence."
+      - {name: provenance, type: enum, values: [MEASURED, OBSERVED], required: true}
+      - {name: captured_date, type: iso8601-date, required: true}
+      - {name: notes, type: string|null, required: false}
+      - {name: hash, type: string, required: true}
+
+  - kind: property-audit
+    description: |
+      The deep-dive for ONE property (T-001). What a real visitor sees, weighted toward
+      highest-impact-per-effort. One per property; self-contained.
+    schema:
+      - {name: id, type: string, pattern: "PA-\\d{3,}", required: true}
+      - {name: property, type: string, required: true, description: "[PROP-NNN#hash]"}
+      - {name: score, type: int, required: true, description: "1-5 health on the common scale."}
+      - {name: strengths, type: "list[string]", required: false, default: []}
+      - {name: issues, type: "list[string]", required: true, description: "Problems found, highest-impact first."}
+      - {name: goal_mechanics, type: string, required: true, description: "How this property does (or fails) its job toward primary_goal: conversion paths, CTAs, leaks."}
+      - {name: top_fixes, type: "list[string]", required: true, description: "Prioritized: fix-this-week / build-next / bigger-bet."}
+      - {name: verified_live, type: bool, required: true, description: "Confirmed in a rendered browser (not static HTML). Verify-before-assert."}
+      - {name: provenance, type: enum, values: [MEASURED, OBSERVED], required: true}
+      - {name: captured_date, type: iso8601-date, required: true}
+      - {name: hash, type: string, required: true}
+
+  - kind: ranking-check
+    description: |
+      A search-ranking observation for a property/term (T-002). MUST record the method —
+      neutral account, no personalization — so weak ranks are significant, not flattered.
+    schema:
+      - {name: id, type: string, pattern: "RC-\\d{3,}", required: true}
+      - {name: property, type: string, required: true, description: "[PROP-NNN#hash] the check is for."}
+      - {name: query, type: string, required: true}
+      - {name: where_it_lands, type: string, required: true, description: "On ONE common scale (e.g. 'pos 1 branded', 'page 2', 'Absent'). Restate all checks on the same scale."}
+      - name: query_kind
+        type: enum
+        values: [branded, title-or-product, topical-discovery, competitor]
+        required: true
+      - {name: method_note, type: string, required: true, description: "How the check was run — REQUIRED. e.g. 'neutral personal account, not subscribed, incognito-style; each item reviewed individually'."}
+      - {name: provenance, type: enum, values: [MEASURED, OBSERVED], required: true}
+      - {name: captured_date, type: iso8601-date, required: true}
+      - {name: hash, type: string, required: true}
+
+finding:
+  additional_fields:
+    - {name: provenance, type: enum, values: [MEASURED, OBSERVED, ESTIMATED, ASSUMED], required: true}
+    - {name: from_property, type: string|null, required: false, description: "[PROP-NNN#hash] if property-specific."}
+    - {name: captured_date, type: iso8601-date|null, required: false}
+    - name: audit_role
+      type: enum|null
+      values: [theme, visibility, identity, leak, disconfirming, context]
+      required: false
+      description: "'disconfirming' complicates the operator's assumption — Tier 3 wants >=1."
+
+decision:
+  additional_fields:
+    - {name: audit_role, type: enum|null, values: [positioning-backbone, naming-standard, path-selection, scope-decision], required: false}
+
+operating-reality:
+  field_overrides:
+    - {name: budget, required: false}
+    - {name: timeline, required: false}
+    - {name: team, required: false}
+    - {name: authority, required: false}
+    - {name: operator_profile, required: false}
+  additional_fields:
+    - {name: brand_identity, type: string, required: true}
+    - {name: owned_hub_url, type: string, required: true}
+    - {name: surfaces, type: "list[string]", required: true}
+    - {name: primary_goal, type: string, required: true}
+    - {name: audience, type: string|null, required: false}
+    - {name: dispatch_mode, type: enum, values: [single-agent, separate-chats], required: true}
+    - {name: confidence_floor, type: enum, values: [provisional, validated], default: provisional, required: false}
+    - {name: deliverable_path, type: string, required: true}

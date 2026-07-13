@@ -1,0 +1,40 @@
+# capability-gates.yaml — tool requirements per task kind.
+task_capabilities:
+  brand-dossier-and-inventory:
+    required_tools: [file_read, file_write, browser]
+    description: "Reads brand surfaces to inventory them as property artifacts + OR. Browser to confirm each surface exists/live."
+  property-deep-dive:
+    required_tools: [file_read, file_write, browser]
+    description: "Renders the property in a real browser, page-by-page, and writes a property-audit. ONE property per unit."
+    delegation_recommended: true
+    rationale: |
+      Hermetic (one property -> one report). BUT social/login surfaces (FB, LinkedIn, IG,
+      X, YouTube) require a sustained AGENT-DRIVEN browser with the human assisting only at
+      login / an irreducible click — subagents can't hold that session. Per dispatch_mode:
+      single-agent for <=4 low-risk surfaces; separate-chats (operator runs the templated
+      prompt per surface) otherwise and ALWAYS for social/login surfaces.
+  property-ranking-check:
+    required_tools: [file_read, file_write, browser]
+    description: "Runs neutral-account search-ranking checks; writes ranking-check artifacts with method_note."
+  link-handle-integrity:
+    required_tools: [file_read, file_write, browser]
+    description: "Verifies every owned link/handle resolves (catches NXDOMAIN typos, dead links, wrong handles)."
+  competitor-benchmark:
+    required_tools: [file_read, file_write, browser]
+    description: "Benchmarks vs true peers; writes findings."
+  build-manifest:
+    required_tools: [file_read, file_write]
+    description: "Indexes every produced report into a manifest artifact (file->unit->type->treatment + open items + skip). File-bound."
+  master-synthesis:
+    required_tools: [file_read, file_write]
+    description: "Reads the manifest + all audits/rankings, writes the master report = a menu of strategic-path artifacts + foundational fixes. File-bound."
+
+not_required: [shell_exec, external_api]
+
+# Capability gap: a property-deep-dive on a social/login surface delegated to a subagent
+# without a sustained interactive browser must REFUSE and emit capability_gap.md; the
+# operator runs it as a separate agent-driven chat instead (dispatch rule).
+
+scope_completeness:
+  required: true
+  allowed_terminal_states: [complete, deferred, excluded-after-discovery, escalated]

@@ -1,0 +1,37 @@
+# verification.yaml — risk -> verification mapping.
+risk_levels:
+  standard:
+    layers: [1, 2]
+    layer2_checks: [provenance_tag_completeness, schema_validation]
+    rationale: "Inventory, a single property audit, a ranking check."
+  elevated:
+    layers: [1, 2, 3]
+    council_size: 2
+    layer2_checks: [provenance_tag_completeness, schema_validation, neutral_account_ranking_check, verified_live_check]
+    failure_scenarios_required: 2
+    rationale: "Per-property audits + ranking checks + cross-brand. Council confirms method + verify-before-assert."
+  critical:
+    layers: [1, 2, 3]
+    council_size: 4
+    layer2_checks: [provenance_tag_completeness, schema_validation, neutral_account_ranking_check, verified_live_check, property_coverage, paths_menu_present, disconfirming_finding_present]
+    failure_scenarios_required: 3
+    operator_review_required: true
+    rationale: "Manifest + master synthesis. Full council. Operator review before archival."
+
+layer2_check_definitions:
+  provenance_tag_completeness: {description: "Every property/property-audit/ranking-check/finding carries a provenance tag."}
+  schema_validation: {description: "All artifacts validate against declared schemas + extensions."}
+  neutral_account_ranking_check: {description: "Every ranking-check has a non-empty method_note describing a neutral (non-personalized) account. Missing = fail."}
+  verified_live_check: {description: "Every property-audit asserting a broken/works mechanic has verified_live: true. Static-only claims fail."}
+  property_coverage: {description: "Every PROP in OR.surfaces has a property-audit OR a status in {dead, missing, duplicate} with reason. Orphans fail."}
+  paths_menu_present: {description: "The master synthesis emits >=3 strategic-path artifacts AND >=1 is_foundational. A single forced plan fails."}
+  disconfirming_finding_present: {description: ">=1 finding with audit_role: disconfirming. Zero at critical = under-looked = fail."}
+
+task_default_risks:
+  brand-dossier-and-inventory: standard
+  property-deep-dive: elevated
+  property-ranking-check: standard
+  link-handle-integrity: standard
+  competitor-benchmark: standard
+  build-manifest: standard
+  master-synthesis: critical

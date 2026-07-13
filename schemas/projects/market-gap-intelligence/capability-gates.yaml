@@ -1,0 +1,72 @@
+# schemas/projects/market-gap-intelligence/capability-gates.yaml
+# Tool requirements per task kind. Subagent delegation is gated by the
+# intersection of agent.provides and task.required_tools. Unlike report-synthesis
+# (file-bound), this schema's discovery phase REQUIRES live web tools — the entire
+# point is checking reality, not reasoning from memory. A discovery task delegated
+# to an agent without browser/web tools must refuse and emit capability_gap.md.
+
+task_capabilities:
+  client-dossier:
+    required_tools: [file_read, file_write, browser]
+    description: "Reads client site + listings to populate OR/dossier; browser to observe live pages and NAP. web_fetch acceptable for static pages."
+
+  competitor-discovery:
+    required_tools: [file_read, file_write, browser]
+    description: "Loads live SERPs / map pack / AI overview for each money term (client-rendered — fetch won't see them). Writes competitor artifacts."
+    delegation_recommended: true
+    rationale: "One money-term-cluster per branch is hermetic. Strong subagent fit IF the subagent has browser."
+
+  ranking-footprint:
+    required_tools: [file_read, file_write, browser]
+    description: "Inventories a competitor's pages (sitemap/crawl), SERP-verifies inferred targets, attaches volume/CPC. Writes footprint artifacts."
+    delegation_recommended: true
+    rationale: "One competitor per branch; hermetic."
+
+  gap-mining:
+    required_tools: [file_read, file_write, browser]
+    description: "Harvests PAA/autocomplete/forums/reviews, SERP-tests answer weakness, pulls Planner/Trends. Writes gap artifacts."
+
+  vertical-evaluation:
+    required_tools: [file_read, file_write, browser]
+    description: "Scores candidate verticals on six dimensions using competitor-discovery + keyword data. Writes findings + a vertical-posture Decision. CONDITIONAL: runs only when OR.scope_mode == vertical-choice."
+
+  anti-pattern-capture:
+    required_tools: [file_read, file_write]
+    description: "Reads prior reports/decisions in the project and registers earlier wrong-turns as anti-pattern artifacts. File-bound."
+
+  target-selection:
+    required_tools: [file_read, file_write]
+    description: "Reads competitor/footprint/gap artifacts + keyword findings, scores and ranks targets, writes target artifacts with funnel math. File-bound (consumes prior MEASURED evidence)."
+
+  channel-reality-audit:
+    required_tools: [file_read, file_write, browser]
+    description: "Confirms where the buyer actually decides (SERP ownership, LSA eligibility, software-vs-service intent, referral/directory reality) before content is recommended."
+
+  recommendation-synthesis:
+    required_tools: [file_read, file_write]
+    description: "Reads all artifacts, writes the cited decision report to deliverable_path. File-bound."
+
+  evidence-integrity-audit:
+    required_tools: [file_read]
+    description: "Audit only — no writes. Confirms every recommendation cites measured/observed by hash; council fires."
+
+# Keyword Planner / Trends / Search Console / analytics / connectors are accessed
+# THROUGH the browser tool (or a dedicated MCP if connected). Declare them in
+# OR.available_tools so the agent knows the realistic MEASURED reach this run.
+keyword_data_note: |
+  When a Google Ads Keyword Planner login is available, prefer the CSV-download
+  hand-off (exact volumes, every row) over on-screen scraping; see the
+  keyword-scanner skill. Without it, volumes are OBSERVED benchmarks, not MEASURED.
+
+not_required:
+  - shell_exec        # No code execution needed for the intelligence itself.
+  - external_api      # Beyond the data tools declared in OR.available_tools.
+
+# Capability gap behavior: if a discovery task is delegated to an agent whose
+# agent.provides lacks `browser`, REFUSE and emit capability_gap.md. Discovery
+# from memory is the exact failure this schema exists to prevent — never silently
+# downgrade a MEASURED task to an ASSUMED one.
+
+scope_completeness:
+  required: true
+  allowed_terminal_states: [complete, deferred, excluded-after-discovery, escalated]

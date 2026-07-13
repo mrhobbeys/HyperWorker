@@ -1,5 +1,5 @@
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
-![Version: 5.2.0](https://img.shields.io/badge/Version-5.2.0-blue.svg)
+![Version: 5.2.1](https://img.shields.io/badge/Version-5.2.1-blue.svg)
 
 # HyperWorker
 
@@ -55,7 +55,7 @@ Then tell your AI agent:
 
 That's it. The agent reads HARNESS.md, asks you clarifying questions, scaffolds your project from the schema, runs a verification checkpoint, and begins execution.
 
-Fourteen schemas ship as defaults:
+Sixteen schemas ship as defaults:
 
 | Schema | When to use |
 |---|---|
@@ -73,6 +73,8 @@ Fourteen schemas ship as defaults:
 | `lead-mining` | Mine your own inboxes and accounts for inbound leads you already have |
 | `single-opportunity` | One specific deal end to end: qualify → propose → submit → close |
 | `cleanroom-rebuild` | Rebuild a legacy app from measured behavior — never its code — behind an enforced wall |
+| `brand-ecosystem-audit` | Audit a brand across every surface it occupies; synthesize strategic paths, not one fixed plan |
+| `market-gap-intelligence` | Four ordered competitive-gap questions answered with MEASURED/OBSERVED evidence, not priors |
 
 If none fit, the agent scaffolds from default templates and offers to capture your derived schema after the project completes.
 

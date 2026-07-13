@@ -1,5 +1,13 @@
 # Changelog — HyperWorker
 
+## Unreleased (2026-07-13) — Two more field-derived schemas; validation-run merge; hygiene
+
+- **`brand-ecosystem-audit`**, **`market-gap-intelligence`** — the market-intelligence family, proven on a live brand-ranking engagement and imported genericized (pilot-engagement names replaced with the repo's standard placeholders). `brand-ecosystem-audit` evaluates a brand across every surface it occupies (owned site, social, marketplaces, review sites) and synthesizes a menu of strategic paths rather than one fixed plan. `market-gap-intelligence` answers four ordered competitive-gap questions with hash-cited MEASURED/OBSERVED evidence and requires at least one disconfirming finding before any recommendation ships. Both packs carry the YAML fixes their schema-test friction logs surfaced (quoted `"list[string]"` tokens in flow mappings; quoted `"yes"`/`"no"` enum values against YAML 1.1 boolean coercion). Sixteen schemas now ship as defaults; README table, `HARNESS.md` file structure, and schema-match step updated.
+- **From the CC-test1 validation run** — HyperFinch v0.2.0 (tool-call loop: trials can operate a real bootstrap, not just generate files) with the ceremony-cost experiment pack and findings; `tools/fixtures/golden-workspace` (a pinned 7-event reference project) plus `tools/make-golden-fixture.py` as a regression signal for any `hw verify` or projection-renderer reimplementation. Raw per-trial results intentionally not imported.
+- **Version drift fixed** — README badge and `HARNESS.md` header said 5.2.0 while v5.2.1 had shipped; both now say 5.2.1.
+- **Repo hygiene** — `.gitattributes` added (LF normalization: hash-cited artifacts must not change bytes because of a checkout on a different OS); `__pycache__/` gitignored.
+- **`reference/field-reports/`** — new home for per-machine field-gather reports: harness-applicable friction evidence collected from live deployments, genericized. First report covers the 2026-07 gather (lock strain under program-shaped work, recurring-cadence gap, amend tooling gap, and the checked-claims proposal). Evidence collection only; mechanism decisions remain deferred to the operator.
+
 ## Unreleased (2026-07-03) — Eight field-derived project schemas
 
 Schemas-only change; no mechanism or substrate edits. Eight project schemas, all derived from real projects run on the harness, join the six defaults (fourteen total):

@@ -1,0 +1,96 @@
+# schemas/projects/market-gap-intelligence/council.yaml
+# Council composition. Verifier subagents run with context-asymmetric framing:
+# they see the artifact, the spec, and the consumes list — never the
+# implementer's reasoning prose.
+
+convergence_rule: all-agree-or-escalate
+
+members:
+  - role: evidence-integrity-watcher
+    family_default: claude
+    prompt_template: |
+      You are reviewing this intelligence artifact for evidence integrity (Tier 1).
+      For every recommendation, target score, or asserted conclusion:
+      - Confirm it cites at least one [F/CMP/FP/GAP-NNN#hash] artifact, OR is an
+        ESTIMATED value whose formula inputs are themselves MEASURED/OBSERVED.
+      - Confirm no shipped recommendation rests only on ASSUMED-tagged inputs.
+      - Confirm every evidence-bearing artifact carries a provenance tag.
+      Do not evaluate strategic quality, only evidence integrity.
+      Output a single line: PASS or FAIL: <recommendations lacking measured/observed support>.
+
+  - role: competitor-discovery-auditor
+    family_default: claude
+    prompt_template: |
+      You are reviewing whether competitors were discovered, not assumed.
+      For each [CMP-NNN]:
+      - Confirm found_on names a real query the competitor surfaced on this run.
+      - Confirm comp_type is set (business / serp-trap / answer-engine).
+      Then: confirm the operator's originally-named rivals were each either
+      confirmed by a SERP appearance or explicitly demoted as not-an-SEO-threat.
+      Output a single line: PASS or FAIL: <competitors with no found_on, or untested operator assumptions>.
+
+  - role: channel-trap-auditor
+    family_default: claude
+    prompt_template: |
+      You are reviewing whether channel traps were surfaced, not sold as wins.
+      For each money term whose SERP is owned by software vendors, directories/
+      aggregators, national publishers, or forums:
+      - Confirm a finding or Decision with intel_role channel-call records that the
+        term is trap-owned and recommends the real path (local/GBP, different query
+        set, paid, partnerships) instead of head-on content.
+      - Confirm no target recommends writing content to "beat" a serp-trap.
+      Output a single line: PASS or FAIL: <trap-owned terms recommended as content wins>.
+
+  - role: client-alignment-aligner
+    family_default: claude
+    prompt_template_on_activate: |
+      You are reviewing OR-001 for sufficiency before any intelligence work begins.
+      No deliverable exists yet; evaluate metadata only.
+      Check:
+      - decision_statement is one concrete decision with a real context (not "do SEO").
+      - geography is specific and not silently inherited (flag if it matches a known
+        prior client's geo with no confirmation).
+      - buyer, services, scope_mode, available_tools are populated.
+      - brand_constraints is a populated list or explicit none (not null-by-omission)
+        for regulated domains (health/legal/finance).
+      Output a single line: PASS or FAIL: <missing or vague OR fields>.
+    prompt_template_on_output: |
+      You are reviewing whether the output serves THIS client's declared OR.
+      Read OR-001 (decision_statement, geography, buyer, services, brand_constraints,
+      scope_mode). Sample the output and check:
+      - Every recommendation is in the OR geo/buyer/scope.
+      - No competitor, fact, or target is borrowed from another client's project.
+      - Brand/regulatory constraints are honored in suggested pages/headlines.
+      Output a single line: PASS or FAIL: <out-of-scope or cross-client bleed>.
+
+  - role: hypothesis-challenger
+    family_default: claude
+    prompt_template: |
+      You are reviewing whether the run tested the operator's hypothesis or merely
+      confirmed it.
+      - Confirm at least one finding has intel_role: disconfirming (evidence that
+        complicates or contradicts the original premise).
+      - Confirm the recommendation acknowledges the strongest counter-evidence
+        rather than presenting a one-sided case.
+      If every finding points the same direction as the operator's prior, that is an
+      under-search signal.
+      Output a single line: PASS or FAIL: <no disconfirming evidence / one-sided recommendation>.
+
+triggers:
+  - event: project.activate
+    members: [client-alignment-aligner]
+    description: "Verification Checkpoint at bootstrap. Confirms OR-001 is sufficient and the geo/buyer/scope are real before discovery begins."
+
+  - event: phase.complete
+    when: "phase == 'B'"
+    members: [competitor-discovery-auditor, channel-trap-auditor]
+    description: "After discovery. Confirms competitors are SERP-sourced and channel traps are flagged before evaluation/targeting begins."
+
+  - event: task.complete
+    when: "task.risk_level == 'critical'"
+    members: [evidence-integrity-watcher, competitor-discovery-auditor, channel-trap-auditor, client-alignment-aligner, hypothesis-challenger]
+    description: "Per-task council on critical work (recommendation-synthesis, evidence-integrity-audit)."
+
+  - event: project.archive
+    members: [evidence-integrity-watcher, client-alignment-aligner, hypothesis-challenger]
+    description: "Pre-archive verification."

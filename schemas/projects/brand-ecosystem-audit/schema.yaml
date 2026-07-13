@@ -1,0 +1,56 @@
+# schemas/projects/brand-ecosystem-audit/schema.yaml
+# Used by `hw bootstrap --schema brand-ecosystem-audit`.
+
+schema_id: brand-ecosystem-audit
+schema_version: 1.0
+harness_version: "5.2.0"
+description: |
+  Evaluate a brand across ALL its surfaces — owned hub (website), social properties,
+  marketplaces/retailers, review sites — to see how it is currently SEEN and FOUND,
+  then synthesize a MENU of strategic paths the operator can pick/combine/sequence.
+  Method (proven on an Acme Corp-style author-brand run): audit one PROPERTY at a time in
+  its own focused chat with a templated prompt, run neutral-account ranking checks,
+  index everything in a manifest, then run one synthesis that separates "where things
+  are" (per-property ground truth) from "where things should be" (the paths menu).
+  Sibling to market-gap-intelligence: same fan-out -> manifest -> synthesis spine,
+  different unit (a brand surface, not a market vertical).
+
+bootstrap_questions:
+  - {id: project_name, prompt: "What is this brand evaluation called?", type: string, required: true}
+  - {id: brand_identity, prompt: "Who/what is the brand? Real name + any pen name/persona, and the one-line positioning.", type: string, required: true}
+  - {id: owned_hub_url, prompt: "The owned hub the ecosystem should center on (the site that SHOULD own the brand's name).", type: string, required: true}
+  - {id: surfaces, prompt: "List every property to audit: each as platform + url/handle (website, YouTube, Instagram, Facebook, X, LinkedIn, Amazon, Goodreads, secondary sites...).", type: "list[string]", required: true}
+  - {id: primary_goal, prompt: "What is the brand FOR? (sell books / generate leads / build an owned audience / book consultations / other)", type: string, required: true}
+  - {id: audience, prompt: "Who is the brand trying to reach/convert?", type: string, required: false}
+  - {id: dispatch_mode, prompt: "Run mode: 'single-agent' (<=4 surfaces, low risk) or 'separate-chats' (many surfaces, or social/login surfaces needing an agent-driven browser with human login assist). Default separate-chats when any social/login surface is present.", type: enum, values: [single-agent, separate-chats], required: true}
+  - {id: confidence_floor, prompt: "Minimum confidence for shipped recommendations.", type: enum, values: [provisional, validated], default: provisional}
+  - {id: deliverable_path, prompt: "Where does the master report go?", type: string, required: true}
+
+includes:
+  - precedence-tiers.yaml
+  - artifact-extensions.yaml
+  - capability-gates.yaml
+  - verification.yaml
+  - council.yaml
+  - project-template.md
+  - rules-template.md
+  - bootstrap-probe.md
+  - task-templates/
+  - README.md
+
+default_tasks:
+  description: |
+    Phase A (Frame): brand dossier + OR + surface inventory (decompose into properties) — T-000.
+    Phase B (Per-property fan-out): property deep-dive (T-001, one per property — branch or
+      separate-chat per dispatch_mode) + neutral-account ranking check (T-002, one per property).
+    Phase C (Cross-brand): link/handle integrity (T-003) + competitor benchmark (T-004).
+    Phase D (Synthesize): build the manifest (T-005), then the master synthesis to a
+      strategic-paths menu (T-006).
+  templates:
+    - "00-brand-dossier-and-inventory.md"
+    - "01-property-deep-dive.md"
+    - "02-property-ranking-check.md"
+    - "03-link-handle-integrity.md"
+    - "04-competitor-benchmark.md"
+    - "05-build-manifest.md"
+    - "06-master-synthesis.md"

@@ -1,0 +1,179 @@
+# schemas/projects/market-gap-intelligence/artifact-extensions.yaml
+# Domain-specific artifact kinds and field extensions for market-gap-intelligence.
+# Validation order: structural minimum (schemas/artifacts/*.yaml) → these extensions.
+#
+# YAML style note: type tokens containing '[' or '|' (e.g. list[string], string|null)
+# must be quoted in flow mappings, and bare yes/no in enum value lists must be quoted
+# (YAML 1.1 coerces them to booleans). See schema tests/.../FRICTION-LOG.md A-01/A-02.
+
+# ---------------------------------------------------------------------------
+# The provenance model. Every evidence-bearing artifact carries one tag. This is
+# the structural form of the methodology's cardinal rule (evidence before
+# inference). Layer 2 enforces that recommendations cite MEASURED/OBSERVED.
+#   MEASURED  — pulled from a live tool this run (Keyword Planner, a SERP you
+#               loaded, a fetched page, GBP, analytics). tool_source + date required.
+#   OBSERVED  — seen in a source but not a hard metric (a service list, a forum
+#               thread, a review complaint, a directory listing).
+#   ESTIMATED — derived by a stated formula from MEASURED/OBSERVED inputs. The
+#               formula and its inputs must be cited.
+#   ASSUMED   — a prior/benchmark/guess with no source this run. Allowed, labeled,
+#               and never the sole basis of a shipped recommendation.
+# ---------------------------------------------------------------------------
+
+new_kinds:
+  - kind: competitor
+    description: |
+      A competitor DISCOVERED from a live SERP/map-pack/AI-overview for a money
+      term — never an assumed rival. Answers Q1. Classified by type so beatable
+      business rivals are never confused with channel traps (software vendors,
+      directories, publishers, forums) you cannot or should not fight head-on.
+    schema:
+      - {name: id, type: string, pattern: "CMP-\\d{3,}", required: true}
+      - {name: name, type: string, required: true}
+      - {name: domain, type: string, required: true}
+      - name: comp_type
+        type: enum
+        values: [business, serp-trap, answer-engine]
+        required: true
+        description: "business = beatable same-service rival; serp-trap = ranks but is software/aggregator/publisher/forum (a channel finding, not a rival to copy); answer-engine = cited by the AI Overview."
+      - {name: found_on, type: "list[string]", required: true, description: "The money term(s) this competitor surfaced on."}
+      - {name: map_pack, type: string|null, required: false, description: "Map-pack position if local, else null."}
+      - {name: organic_rank, type: string|null, required: false}
+      - {name: runs_ads, type: bool|null, required: false}
+      - {name: ai_cited, type: bool|null, required: false}
+      - name: beatable
+        type: enum
+        values: ["yes", "hard", "no"]   # quoted: YAML 1.1 coerces bare yes/no to booleans
+        required: true
+        description: "Realistic chance THIS client outranks them head-on. serp-traps are typically 'no' — handle via different channel."
+      - name: provenance
+        type: enum
+        values: [MEASURED, OBSERVED]
+        required: true
+        description: "MEASURED if rank/position read off a live SERP this run; OBSERVED if from a listing/secondary source."
+      - {name: tool_source, type: string|null, required: false}
+      - {name: captured_date, type: iso8601-date, required: true}
+      - {name: notes, type: string|null, required: false}
+      - {name: hash, type: string, required: true}
+
+  - kind: footprint
+    description: |
+      One cluster of a competitor's ranking footprint — the page, the query
+      cluster it targets, whether it actually ranks, the demand/commercial value,
+      and whether the cluster is a defended MOAT or a neglected GAP. Answers Q2.
+    schema:
+      - {name: id, type: string, pattern: "FP-\\d{3,}", required: true}
+      - {name: competitor, type: string, required: true, description: "[CMP-NNN#hash] this footprint belongs to."}
+      - {name: cluster, type: string, required: true, description: "The query cluster / topic."}
+      - {name: page, type: string|null, required: false, description: "Competitor URL targeting it."}
+      - {name: ranks, type: string|null, required: false, description: "SERP-verified position, or 'inferred-not-verified', or 'no'."}
+      - {name: volume, type: string|null, required: false, description: "Keyword Planner range/number, or 'unknown'."}
+      - {name: cpc, type: string|null, required: false, description: "Top-of-page bid range = commercial-value signal."}
+      - {name: intent, type: enum, values: [commercial, local, informational, navigational], required: true}
+      - name: posture
+        type: enum
+        values: [moat, gap, contested]
+        required: true
+        description: "moat = they own/defend it; gap = demand they neglect or cover badly (the client's opening); contested = split."
+      - name: provenance
+        type: enum
+        values: [MEASURED, OBSERVED, ESTIMATED]
+        required: true
+      - {name: tool_source, type: string|null, required: false}
+      - {name: captured_date, type: iso8601-date, required: true}
+      - {name: hash, type: string, required: true}
+
+  - kind: gap
+    description: |
+      A demand-with-weak-answer opening. Answers Q3. A gap is valid ONLY with both
+      (a) evidence of demand and (b) evidence the current answer is weak/missing/
+      off-intent. A question nobody asks is not a gap; a well-answered question is
+      not a gap. Channel traps owning the SERP are recorded but flagged, not sold
+      as easy wins.
+    schema:
+      - {name: id, type: string, pattern: "GAP-\\d{3,}", required: true}
+      - {name: question, type: string, required: true, description: "The buyer's question in their own words (preserve phrasing)."}
+      - {name: demand_signal, type: string, required: true, description: "PAA / autocomplete / Planner volume / Trends-rising / forum frequency. Cite the source."}
+      - {name: current_answer, type: string, required: true, description: "Who currently answers and HOW WEAK (forum-only / aggregator / off-intent / thin AI overview / nobody)."}
+      - name: gap_type
+        type: enum
+        values: [money, trust, education, voice-of-customer]
+        required: true
+      - {name: source, type: "list[string]", required: true, description: "Where the question was harvested: PAA, autocomplete, planner, trends, reddit, quora, review-mining, sales-inbox."}
+      - {name: suggested_page, type: string|null, required: false}
+      - name: provenance
+        type: enum
+        values: [MEASURED, OBSERVED]
+        required: true
+      - {name: captured_date, type: iso8601-date, required: true}
+      - {name: hash, type: string, required: true}
+
+  - kind: target
+    description: |
+      A selected target cluster the client should pursue. Answers Q4. Scored on
+      four axes, each axis backed by a tagged evidence citation. Ranked by
+      Demand × Commercial × Winnability × Fit. Top targets carry funnel math.
+    schema:
+      - {name: id, type: string, pattern: "TGT-\\d{3,}", required: true}
+      - {name: cluster, type: string, required: true}
+      - {name: demand_score, type: int, required: true, description: "1-5. Cite [F-NNN#hash] or [FP/GAP] evidence (volume/trend)."}
+      - {name: commercial_score, type: int, required: true, description: "1-5. CPC / buyer intent."}
+      - {name: winnability_score, type: int, required: true, description: "1-5. vs SERP owners + domain strength + effort."}
+      - {name: fit_score, type: int, required: true, description: "1-5. Matches what the client sells/wants. Confirm with client (often ASSUMED until then)."}
+      - {name: evidence, type: "list[string]", required: true, description: "Citations backing the scores: [F-NNN#hash], [FP-NNN#hash], [GAP-NNN#hash], [CMP-NNN#hash]."}
+      - {name: funnel_math, type: string|null, required: false, description: "ESTIMATED cost-per-job = CPC ÷ LP-conv ÷ close; show inputs + low/mid/high band. Top targets only."}
+      - {name: suggested_action, type: string, required: true, description: "Page to build / GBP move / channel. Concrete."}
+      - {name: rank_score, type: int, required: true, description: "Product of the four axis scores; sort key."}
+      - {name: hash, type: string, required: true}
+
+# ---------------------------------------------------------------------------
+# Extensions to default artifact kinds.
+# ---------------------------------------------------------------------------
+
+finding:
+  additional_fields:
+    - name: provenance
+      type: enum
+      values: [MEASURED, OBSERVED, ESTIMATED, ASSUMED]
+      required: true
+      description: "The cardinal rule made structural. ESTIMATED findings must cite their formula+inputs; ASSUMED findings may not be the sole basis of a target/decision."
+    - {name: tool_source, type: string|null, required: false, description: "Tool + query that produced a MEASURED finding (e.g., 'Keyword Planner, geo=<metro>, <date>')."}
+    - {name: captured_date, type: iso8601-date|null, required: false}
+    - {name: geo, type: string|null, required: false}
+    - name: intel_role
+      type: enum|null
+      values: [demand, commercial, winnability, channel, disconfirming, context]
+      required: false
+      description: "'disconfirming' findings complicate the operator hypothesis — Tier 3 requires at least one."
+
+decision:
+  additional_fields:
+    - name: intel_role
+      type: enum|null
+      values: [competitor-scope, target-selection, vertical-posture, channel-call, inclusion-exclusion, scope-decision, weighting-rule]
+      required: false
+
+anti-pattern:
+  additional_fields:
+    - {name: prior_direction, type: string|null, required: false, description: "The wrong turn (e.g., 'led brand on a regulatory-news urgency without checking competition')."}
+    - {name: superseding_direction, type: string|null, required: false, description: "[DEC-NNN#hash] or [F-NNN#hash] of the corrected direction."}
+
+operating-reality:
+  field_overrides:
+    - {name: budget, required: false}
+    - {name: timeline, required: false}
+    - {name: team, required: false}
+    - {name: authority, required: false}
+    - {name: operator_profile, required: false}
+  additional_fields:
+    - {name: decision_statement, type: string, required: true, description: "One sentence: what is being decided, for whom."}
+    - {name: client_identity, type: string, required: true, description: "Legal + brand name, domain(s), founder, NAP. Flag any inconsistency (NAP errors / name collisions are ranking blockers)."}
+    - {name: geography, type: string, required: true}
+    - {name: buyer, type: enum, values: [b2c, b2b, both], required: true}
+    - {name: services, type: "list[string]", required: true, description: "What the client actually sells, priority order, money pages mapped."}
+    - {name: money_terms, type: "list[string]", required: false}
+    - {name: scope_mode, type: enum, values: [page-rank, vertical-choice, content-gap], required: true}
+    - {name: brand_constraints, type: "list[string]|null", required: false}
+    - {name: available_tools, type: "list[string]", required: true, description: "Live data tools available this run; governs MEASURED vs OBSERVED reach."}
+    - {name: confidence_floor, type: enum, values: [provisional, validated], default: provisional, required: false}
+    - {name: deliverable_path, type: string, required: true}

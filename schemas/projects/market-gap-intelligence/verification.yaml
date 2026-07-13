@@ -1,0 +1,72 @@
+# schemas/projects/market-gap-intelligence/verification.yaml
+# Risk → verification mapping. Layer 2 checks emphasize provenance integrity,
+# competitor-discovery honesty, and channel-trap surfacing.
+
+risk_levels:
+  standard:
+    layers: [1, 2]
+    layer2_checks:
+      - provenance_tag_completeness
+      - schema_validation
+    rationale: "Dossier, single-cluster competitor discovery, footprint inventory. Substrate checks + provenance tags present."
+
+  elevated:
+    layers: [1, 2, 3]
+    council_size: 2
+    layer2_checks:
+      - provenance_tag_completeness
+      - schema_validation
+      - competitor_source_check
+      - channel_trap_surfacing
+      - gap_evidence_completeness
+    failure_scenarios_required: 2
+    rationale: |
+      Gap mining, vertical evaluation, target selection. Council fires. Two
+      failure scenarios: one for 'what if the SERP is owned by a channel trap we
+      missed', one for 'what if a target's winnability score is wishful'.
+
+  critical:
+    layers: [1, 2, 3]
+    council_size: 4
+    layer2_checks:
+      - provenance_tag_completeness
+      - schema_validation
+      - competitor_source_check
+      - channel_trap_surfacing
+      - gap_evidence_completeness
+      - recommendation_evidence_floor
+      - client_scope_isolation
+      - disconfirming_finding_present
+    failure_scenarios_required: 3
+    operator_review_required: true
+    rationale: "Recommendation synthesis + evidence-integrity audit. Full council. Operator review before archival."
+
+layer2_check_definitions:
+  provenance_tag_completeness:
+    description: "Every competitor/footprint/gap/finding artifact carries a provenance tag from its allowed enum. Substrate-counted; any untagged artifact fails."
+  schema_validation:
+    description: "All written artifacts validate against declared schemas (default kinds + extensions). Substrate-enforced; no agent judgment."
+  competitor_source_check:
+    description: "Every competitor artifact has a non-empty found_on (the live query it surfaced on). A competitor with no found_on is an assumed rival and fails — the schema forbids memory-sourced competitors."
+  channel_trap_surfacing:
+    description: "For each money term, if the SERP is dominated by serp-trap entities (software/aggregator/publisher/forum), a finding or Decision with intel_role channel-call must exist. Recommending content on a trap-owned term without that call fails."
+  gap_evidence_completeness:
+    description: "Every gap artifact has BOTH a demand_signal and a current_answer weakness. Either missing fails."
+  recommendation_evidence_floor:
+    description: "Every target artifact and every recommendation in the deliverable cites ≥1 MEASURED/OBSERVED artifact by hash, or an ESTIMATED value whose inputs cite MEASURED/OBSERVED. A recommendation citing only ASSUMED inputs fails (must be relabeled a hypothesis)."
+  client_scope_isolation:
+    description: "No artifact or deliverable section references another client's project path or facts. Cross-client bleed fails."
+  disconfirming_finding_present:
+    description: "At least one finding with intel_role: disconfirming exists. Zero means the run only confirmed the hypothesis (under-search signal) and fails at critical."
+
+task_default_risks:
+  client-dossier: standard
+  competitor-discovery: standard
+  ranking-footprint: standard
+  gap-mining: elevated
+  vertical-evaluation: elevated
+  anti-pattern-capture: standard
+  target-selection: elevated
+  channel-reality-audit: elevated
+  recommendation-synthesis: critical
+  evidence-integrity-audit: critical

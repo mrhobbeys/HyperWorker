@@ -1,0 +1,61 @@
+# schemas/projects/market-gap-intelligence/precedence-tiers.yaml
+# Tiered rules for market-gap-intelligence. Tier ordinal wins on conflict.
+
+tiers:
+  - tier: 1
+    name: EVIDENCE-INTEGRITY
+    purpose: |
+      Every recommendation rests on MEASURED or OBSERVED evidence cited by hash,
+      or on ESTIMATED values whose inputs are themselves MEASURED/OBSERVED. A
+      recommendation supportable only by ASSUMED inputs is a hypothesis to test,
+      labeled as such — never shipped as a conclusion. Every evidence-bearing
+      artifact carries a provenance tag. Fluency is not evidence.
+    examples:
+      - "Each target's four scores cite [F/FP/GAP/CMP-NNN#hash] evidence; no score is asserted bare."
+      - "A finding sourced from training/news with no live check this run is tagged ASSUMED and cannot solely justify a target."
+      - "ESTIMATED funnel math shows its formula and MEASURED inputs (CPC, conversion, close) and a low/mid/high band."
+      - "If a needed tool was unavailable, the affected section is marked a hypothesis-to-verify, not presented as fact."
+
+  - tier: 2
+    name: CLIENT-ALIGNMENT
+    purpose: |
+      The intelligence serves THIS client's declared OR — geography, buyer,
+      services, brand/regulatory constraints. No fact, competitor, or target from
+      another client's project bleeds in. Out-of-scope opportunities are noted but
+      not recommended.
+    examples:
+      - "Geo is the OR geo; do not inherit a prior client's metro by reflex."
+      - "Brand_constraints (e.g., health-claim limits) gate every suggested page and headline."
+      - "No artifact references another client's project; client facts live only in this project."
+      - "A high-value target the client can't deliver or claim is flagged as a capability gap, not recommended."
+
+  - tier: 3
+    name: INTELLIGENCE-QUALITY
+    purpose: |
+      Competitors are discovered from live SERPs, not assumed. Channel traps
+      (software/aggregator/publisher/forum-owned results) are flagged, never sold
+      as beatable. Gaps require demand AND a weak answer. At least one disconfirming
+      finding exists (if everything confirms the hypothesis, the run under-searched).
+    examples:
+      - "Every competitor artifact names the query it surfaced on and its comp_type."
+      - "A money term owned by software/directories yields a channel call, not a list of rivals to copy."
+      - "Every gap carries a demand_signal AND a current_answer weakness note."
+      - "The run produces ≥1 finding with intel_role: disconfirming."
+
+  - tier: 4
+    name: STYLE
+    purpose: |
+      Voice, formatting, citation consistency for the deliverable.
+    examples:
+      - "Match the operator/brand voice anchor if declared in OR-001."
+      - "Citation format: [F-NNN#hash] findings, [CMP/FP/GAP/TGT-NNN#hash] domain artifacts, [DEC-NNN#hash] decisions."
+      - "Report leads with the decision and the evidence, not with methodology."
+
+scan_markers:
+  - {tier: 1, marker: "@@SCAN_1_1", question: "Does every recommendation in your last output cite MEASURED/OBSERVED evidence by hash (or ESTIMATED on measured inputs)?"}
+  - {tier: 1, marker: "@@SCAN_1_2", question: "Is any shipped recommendation supported only by ASSUMED inputs? If so, relabel it a hypothesis."}
+  - {tier: 2, marker: "@@SCAN_2_1", question: "Is anything in the last step out of the OR geo/buyer/scope, or borrowed from another client?"}
+  - {tier: 2, marker: "@@SCAN_2_2", question: "Did a brand/regulatory constraint apply to anything you suggested, and did you honor it?"}
+  - {tier: 3, marker: "@@SCAN_3_1", question: "Was every competitor discovered from a live SERP and tagged with comp_type?"}
+  - {tier: 3, marker: "@@SCAN_3_2", question: "Did you flag SERP channel traps instead of listing them as beatable rivals?"}
+  - {tier: 3, marker: "@@SCAN_3_3", question: "Do you have at least one disconfirming finding? If not, you under-searched."}

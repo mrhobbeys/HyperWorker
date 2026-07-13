@@ -1,0 +1,45 @@
+# precedence-tiers.yaml — tiered rules for brand-ecosystem-audit. Lower ordinal wins.
+tiers:
+  - tier: 1
+    name: EVIDENCE-INTEGRITY
+    purpose: |
+      Every claim is grounded in what was actually seen/measured. Verify-before-assert:
+      render the page in a real browser before stating a fact (forms that need JS,
+      payment/reCAPTCHA, popups). Ranking checks record their method and run from a
+      NEUTRAL account (no personalization) so weak ranks are significant, not flattered.
+      Provenance-tag everything; no recommendation rests on ASSUMED alone.
+    examples:
+      - "A 'form is broken' claim is confirmed in a rendered browser, not from static HTML."
+      - "Every ranking-check artifact has a method_note naming the neutral-account setup."
+      - "Login-required data that wasn't accessible is an OPEN ITEM, never a guess."
+  - tier: 2
+    name: BRAND-TRUTH
+    purpose: |
+      Serve the brand's real declared goal and real identity. The owned hub should own the
+      brand's name; the rest support it. Don't invent positioning the operator didn't ask
+      for; surface options. Respect real-name vs pen-name exposure.
+    examples:
+      - "Recommendations advance OR.primary_goal; out-of-goal tangents are dropped or flagged."
+      - "Authority that should land on the owned hub but lands on a marketplace/social is named as a leak."
+  - tier: 3
+    name: AUDIT-QUALITY
+    purpose: |
+      Every declared surface is audited live OR explicitly accounted for (dead/missing/
+      duplicate/open). One property per unit (no cross-contamination). All rankings restated
+      on ONE common scale. >=1 disconfirming finding (if everything confirms the operator's
+      assumption, the audit under-looked).
+    examples:
+      - "Coverage: every PROP has a property-audit, or a status of dead/missing/duplicate with reason."
+      - "All ranking-checks use the same where_it_lands scale."
+  - tier: 4
+    name: STYLE
+    purpose: "Voice, formatting, citation format ([PROP/PA/RC-NNN#hash], [F/DEC/MAN/PATH-NNN#hash])."
+    examples:
+      - "Master report leads with the bottom line + evidence inventory, then the paths menu."
+
+scan_markers:
+  - {tier: 1, marker: "@@SCAN_1_1", question: "Did you verify each 'broken/works' claim in a rendered browser before stating it?"}
+  - {tier: 1, marker: "@@SCAN_1_2", question: "Does every ranking-check record its neutral-account method, and is login-missing data marked as an open item?"}
+  - {tier: 2, marker: "@@SCAN_2_1", question: "Does each recommendation serve OR.primary_goal, and did you name where authority leaks off the owned hub?"}
+  - {tier: 3, marker: "@@SCAN_3_1", question: "Is every declared surface audited or explicitly accounted for, and all rankings on one common scale?"}
+  - {tier: 3, marker: "@@SCAN_3_2", question: "Do you have >=1 disconfirming finding?"}
