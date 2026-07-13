@@ -1,0 +1,126 @@
+# schemas/projects/book-edit-test/capability-gates.yaml
+# Per-task tool requirements for book-edit projects. Most tasks are file-bound
+# (file_read + file_write only). The single exception is T-003 ai-indicator-
+# research which needs web access and is the only task in the project that
+# does. Phase B chapter-edit-pass tasks use delivery_mode: live-edit (borrowed
+# from marketing-campaign) and require external_state.read_back per pass.
+
+task_capabilities:
+  corpus-inventory:
+    required_tools: [file_read, file_write]
+    description: "T-000. Reads input/archive folders, writes chapter-source artifacts."
+
+  chapter-split:
+    required_tools: [file_read, file_write, docx_handling]
+    description: "T-001. Opens canonical manuscript docx, identifies chapter boundaries, writes per-chapter files, records assembly-map artifact."
+
+  voice-anchor-extraction:
+    required_tools: [file_read, file_write, docx_handling]
+    description: "T-002. Reads representative chapter passages, writes voice-anchor artifact."
+    delegation_recommended: true
+    rationale: "Voice extraction benefits from a hermetic subagent that sees only the corpus, not the operator dialog. Per model_selection_policy this routes to opus directly."
+
+  ai-indicator-research:
+    required_tools: [file_read, file_write, web_fetch, web_browse]
+    description: "T-003. Web-researches current AI-indicator patterns. ONLY task in the project with web access."
+    delegation_recommended: true
+    rationale: "Hermetic subagent with web tools. Output is a candidate banned-pattern list for operator approval."
+
+  candidates-evaluation:
+    required_tools: [file_read, file_write, docx_handling]
+    description: "T-004. Reads candidate-content files (notes, extra-content), compares against manuscript, surfaces fold-in / discard recommendations per item."
+    delegation_recommended: true
+
+  unfinished-bits-scan:
+    required_tools: [file_read, file_write, docx_handling]
+    description: "T-005. Scans manuscript for placeholder markers, incomplete sentences, internal references; writes finding artifacts."
+    delegation_recommended: true
+
+  edit-philosophy-per-chapter:
+    required_tools: [file_read, file_write]
+    description: "T-006. Operator-driven; agent writes Decision artifacts capturing per-chapter philosophy choices."
+
+  chapter-edit-pass:
+    required_tools: [file_read, file_write, docx_handling]
+    description: "T-007. ONE per chapter (branched). Reads chapter source-of-truth, voice-anchor, banned-patterns, preservation-rules, philosophy DEC. Writes edit_proposal artifact and (after operator promotion) live-edits the chapter file."
+    delivery_modes: [live-edit, bounded-iteration]
+    delegation_recommended: true
+    rationale: "Hermetic per-chapter subagent. Subagent sees its chapter file + voice anchor + banned-patterns + preservation-rules + philosophy DEC + summaries-only of prior-chapter edit_proposals. Does NOT see other chapters' prose."
+
+  continuity-scan:
+    required_tools: [file_read, file_write, docx_handling]
+    description: "T-008. Cross-chapter pass. Reads ALL post-edit chapter files. Surfaces character/term/reference/example inconsistencies as contradiction artifacts."
+
+  continuity-resolution:
+    required_tools: [file_read, file_write, docx_handling]
+    description: "T-009. Reads contradictions, writes Decisions resolving each. May trigger targeted re-passes on specific chapters."
+
+  assembly:
+    required_tools: [file_read, file_write, docx_handling]
+    description: "T-010. Reads assembly-map artifact + per-chapter files; reassembles into Edited Completed Book.docx."
+
+  voice-guidelines-doc:
+    required_tools: [file_read, file_write]
+    description: "T-011. Reads run events log; assembles Voice & Editing Guidelines.md from voice-anchor, banned-patterns, preservation-rules, edit-philosophy decisions, common spelling/grammar patterns."
+
+  final-read:
+    required_tools: [file_read, file_write, docx_handling]
+    description: "T-012. Full-manuscript read-through pass. Reads assembled manuscript; writes finding artifacts for any remaining issues."
+
+  print-ready-formatting:
+    required_tools: [file_read, file_write, docx_handling, pdf_render]
+    description: "T-013. Trim size, margins, page numbers, front matter, back matter, chapter heading styling, widow/orphan control, image resolution check."
+
+# What this schema does NOT need (broadly).
+not_required_globally:
+  - shell_exec
+  - external_api    # outside of T-003's web access
+  - browser_screenshot
+
+# Capability gap behavior:
+# If a delegation target's agent.provides lacks file_read or file_write, refuse
+# the delegation and emit capability_gap.md per substrate protocol. For
+# docx_handling, the subagent must declare it can open and write .docx files
+# (typically via python-docx or equivalent); if not, the parent runs the task
+# in-line.
+
+# v5.1.1 — scope-completeness Layer 1 check.
+scope_completeness:
+  required: true
+  allowed_terminal_states: [complete, deferred, excluded-after-discovery, escalated]
+
+# v5.1.1 — external_state.read_back required for tasks that mutate state on
+# files outside events.jsonl. Phase B chapter-edit-pass tasks live-edit the
+# chapter docx files; pre/post hashes captured per pass.
+external_state_readback:
+  required_for:
+    - "tasks with delivery_mode: live-edit"
+    - "task pattern: chapter-edit-pass"
+    - "task pattern: continuity-resolution (when it triggers a chapter re-pass)"
+    - "task pattern: assembly"
+    - "task pattern: print-ready-formatting"
+  default_equality_method: "file-hash"          # pre/post sha256 of the .docx bytes
+  fallback_equality_method: "manual-attestation"
+  notes: |
+    file-hash is a book-edit-specific equality_method (not in the marketing-
+    campaign default set of [visual-diff, rest-roundtrip, manual-attestation]).
+    The pre_state_ref is the sha256 of the chapter's pre-pass bytes; post_state_ref
+    is the sha256 after live-edit lands. divergence_detected is true if the
+    post hash equals the pre hash (i.e., the live-edit didn't actually change
+    the file, which is a structural failure for any pass with declared
+    edit_candidates).
+
+    For richer equality (did the file change ONLY in the regions the proposal
+    declared?), Phase E may upgrade to a docx-XML diff equality method. v0.1
+    of this schema uses simple file-hash; the friction log will surface
+    whether that's sufficient.
+
+# v5.1.1 — bootstrap inventory_sweep config (per Patch 3).
+bootstrap_probe:
+  default_method: filesystem-listing
+  extension_filter: [".docx", ".doc", ".md", ".txt", ".rtf", ".pdf", ".html"]
+  notes: |
+    The corpus is .docx-heavy. Other extensions are included in case the
+    operator drops in additional formats. The probe walks input_folder,
+    archive_folders, and candidates_folder; the canonical manuscript at
+    source_manuscript_path is registered explicitly (not via probe walk).

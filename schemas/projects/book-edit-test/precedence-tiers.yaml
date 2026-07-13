@@ -1,0 +1,83 @@
+# schemas/projects/book-edit-test/precedence-tiers.yaml
+# Tiered rules for book-edit projects. Tier ordinal wins on conflict.
+
+tiers:
+  - tier: 1
+    name: PRESERVATION-FIDELITY
+    purpose: |
+      The author's voice is preserved. Real-world examples, case studies,
+      anecdotes, and direct quotes are quoted verbatim — not paraphrased,
+      restructured, or composited. Banned patterns (operator-declared, e.g.,
+      em dash; AI-indicator phrases the author has rejected) do not survive
+      any chapter pass. Source content the author considers canonical (specific
+      framework names, dates, URLs, brand names, product names) appears
+      verbatim wherever it appears at all.
+    examples:
+      - "Every chapter pass cites the voice-anchor artifact in consumes:."
+      - "Every chapter pass cites every banned-pattern artifact (the full operator-approved list)."
+      - "An edit_proposal that paraphrases a real example fails Tier 1; quote verbatim or leave the example untouched."
+      - "An em dash in any chapter's post-pass file fails Layer 1; the pass is rejected."
+      - "AI-indicator phrases on the operator-approved removal list (Phase A T-003 output) do not survive any chapter pass."
+
+  - tier: 2
+    name: OPERATOR-ALIGNMENT
+    purpose: |
+      Each chapter pass adheres to its declared edit philosophy (light-copyedit
+      | substantive-edit | structural-rewrite). Per-pass changes stay under
+      the configured max_line_delta_pct (default 30%). Excluded topics from
+      OR-001 do not get introduced even if a subagent thinks the chapter
+      would benefit. Operator-declared preservation rules are honored verbatim.
+    examples:
+      - "A light-copyedit pass that ships a 50% line-delta fails Layer 2; surface for operator review before applying."
+      - "A pass that adds new examples not present in the source rejects under examples-preservation Tier 1."
+      - "Operator preservation rules captured as DECs with synthesis_role: preservation-rule are consumed by every pass."
+
+  - tier: 3
+    name: EDIT-QUALITY
+    purpose: |
+      Spelling correction is the floor — every pass corrects every spelling
+      error it identifies. Grammar correction follows the chapter's edit
+      philosophy. Internal consistency: each chapter's references to other
+      chapters resolve correctly; characters, terms, framework names, and
+      examples used in multiple chapters appear consistently. Unfinished bits
+      that the operator decided to leave are noted as such; bits decided to
+      cut are gone; bits decided to expand are filled.
+    examples:
+      - "A pass that ships a chapter with surviving misspellings fails Layer 2."
+      - "A reference 'as we'll see in Chapter 7' must resolve to actual content in Chapter 7; tracked at Phase C."
+      - "An unfinished bit with disposition 'expand' must have content where the placeholder was; verified at Phase C."
+
+  - tier: 4
+    name: STYLE
+    purpose: |
+      Voice consistency, formatting, sentence-rhythm signature, vocabulary
+      register. Tier 4 is overridden by Tier 1 if any conflict surfaces (it
+      shouldn't — preservation-fidelity rules are absolute, voice consistency
+      is about the rest of the prose).
+    examples:
+      - "If the operator declared 'no em dash; use parentheses or ellipses,' the replacement rule is Tier 4 STYLE; the prohibition itself is Tier 1."
+      - "Sentence-rhythm signature documented in the voice-anchor artifact applies as Tier 4 guidance to every pass."
+      - "Citation format throughout chapter passes: [SRC-NNN#hash] for sources, [DEC-NNN#hash] for decisions, [F-NNN#hash] for findings, [VA-NNN#hash] for voice-anchor, [BP-NNN#hash] for banned-pattern."
+
+scan_markers:
+  - tier: 1
+    marker: "@@SCAN_1_1"
+    question: "Did your pass preserve the voice anchor (every excerpt the chapter cited remained verbatim)?"
+  - tier: 1
+    marker: "@@SCAN_1_2"
+    question: "Did any banned pattern survive your pass? (em dash, AI-indicator phrases on the approved list, operator-declared others)"
+  - tier: 1
+    marker: "@@SCAN_1_3"
+    question: "Did your pass paraphrase, restructure, or composite any real example, case study, or direct quote?"
+  - tier: 2
+    marker: "@@SCAN_2_1"
+    question: "Did your pass introduce any content beyond what the chapter's edit philosophy authorizes?"
+  - tier: 2
+    marker: "@@SCAN_2_2"
+    question: "Did your pass exceed max_line_delta_pct?"
+  - tier: 3
+    marker: "@@SCAN_3_1"
+    question: "Did your pass leave any spelling errors uncorrected?"
+  - tier: 3
+    marker: "@@SCAN_3_2"
+    question: "Did your pass create or worsen any internal-reference inconsistency (e.g., 'see Chapter 7' that no longer resolves)?"

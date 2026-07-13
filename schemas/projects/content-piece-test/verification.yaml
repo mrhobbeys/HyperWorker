@@ -1,0 +1,50 @@
+# schemas/projects/content-piece-test/verification.yaml
+# Risk-level → verification-layer mapping. Adapted from report-synthesis,
+# tuned for piece work (interview turn-by-turn checks, ab-variant differentiation,
+# voice fidelity).
+
+risk_levels:
+  standard:
+    layers: [1, 2]
+    layer2_checks: [schema_validation, voice_anchor_referenced]
+    rationale: "T-000 source-inventory, T-001 corpus-scan, T-003 draft-capture. Substrate + voice-anchor consume confirms."
+
+  elevated:
+    layers: [1, 2, 3]
+    council_size: 2
+    layer2_checks: [schema_validation, voice_anchor_referenced, interpretation_density, question_budget_compliance]
+    failure_scenarios_required: 2
+    rationale: "T-002 interview. Council fires at phase.complete-B (interpretation-watcher + thinness-watcher). Two failure scenarios: 'corpus is thinner than thought,' 'operator pushes back on agent's reading of an answer.'"
+
+  critical:
+    layers: [1, 2, 3]
+    council_size: 5
+    layer2_checks:
+      - schema_validation
+      - voice_anchor_referenced
+      - verbatim_keeper_freshness
+      - format_native_structure
+      - paywall_cliff_marker_present  # substack-longform only
+      - chunk_standalone_terminable    # x-longform only
+      - leadin_per_framing             # youtube-leadins: one per controversy/curiosity/utility
+    failure_scenarios_required: 3
+    operator_review_required: true
+    rationale: "T-004 ab-variant format generation. Full council fires (all five members). Operator approves all three variants before hw wrap."
+
+layer2_check_definitions:
+  schema_validation: "All written artifacts validate against declared schemas (default + content-piece-test extensions). Substrate-enforced."
+  voice_anchor_referenced: "Output's consumes list includes OR-001; recitation paraphrase mentions voice_anchor."
+  interpretation_density: "Each finding paragraph adds at least one interpretive move (framing, compression, contextual judgment) beyond restating the operator's input."
+  question_budget_compliance: "T-002 interview turns each contain ≤2 agent questions (per capability-gates.yaml interview_question_budget.max_per_turn)."
+  verbatim_keeper_freshness: "Every VK-NNN with operator_approved:true and keep_verbatim:true appears byte-for-byte in at least one variant in vk.applies_to_formats."
+  format_native_structure: "Each variant matches the structure declaration in OR-001.formats[<id>].structure (substack: hook→free→insight→close; x: standalone-terminable chunks; youtube: 3 lead-ins, 3-5 sentences each, three framings)."
+  paywall_cliff_marker_present: "substack-longform variant contains exactly one HTML comment <!-- PAYWALL CLIFF: <reason> --> at the cliff between free and paywalled sections."
+  chunk_standalone_terminable: "x-longform's chunks each end at a point where stopping would not feel like a cliffhanger; no 'but wait, there's more' bait."
+  leadin_per_framing: "youtube-leadins variant contains exactly three sub-options, one per declared framing in OR-001.formats[youtube-leadins].framings."
+
+task_default_risks:
+  source-inventory: standard
+  corpus-scan: standard
+  interview: elevated
+  draft-capture: standard
+  format-generation: critical

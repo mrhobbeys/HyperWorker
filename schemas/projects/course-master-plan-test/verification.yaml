@@ -1,0 +1,94 @@
+# schemas/projects/course-master-plan-test/verification.yaml
+# Risk → verification mapping for course-master-plan L1.
+
+risk_levels:
+  standard:
+    layers: [1, 2]
+    layer2_checks:
+      - schema_validation
+      - lens_fidelity_basic
+    rationale: |
+      Source inventory (T-000), platform familiarization (T-001), spawn-protocol
+      mechanics. Layer 1 substrate checks plus schema-validation and a basic
+      lens-fidelity heuristic.
+
+  elevated:
+    layers: [1, 2, 3]
+    council_size: 2
+    layer2_checks:
+      - schema_validation
+      - lens_fidelity_basic
+      - corpus_coverage_check
+      - or_alignment_drift
+    failure_scenarios_required: 2
+    rationale: |
+      Curriculum corpus scan (T-002), master-plan updates, tier-move decisions.
+      Council fires on completion. Two failure scenarios: "what if a primary
+      source is wrong" + "what if operator's stated premise contradicts the
+      corpus signal."
+
+  critical:
+    layers: [1, 2, 3]
+    council_size: 4
+    layer2_checks:
+      - schema_validation
+      - lens_fidelity_basic
+      - corpus_coverage_check
+      - or_alignment_drift
+      - reorder_redirect_coverage
+      - spawned_project_registry_consistency
+    failure_scenarios_required: 3
+    operator_review_required: true
+    rationale: |
+      Reorder decisions (DEC-001 supersedes), wrap, schema saves. Full council
+      fires. Operator review required before reorder-redirect propagation.
+
+# Layer 2 check definitions.
+layer2_check_definitions:
+  schema_validation:
+    description: "All written artifacts validate against their declared schemas (default kinds + course-master-plan extensions). Substrate-enforced."
+
+  lens_fidelity_basic:
+    description: |
+      Output prose is sampled and compared against OR-001.lens_anchor[0]. A
+      heuristic — voice match is not deterministic — but catches obvious drift
+      (e.g., generic course-instructor voice when the lens is "I tried, learned,
+      teaching you"). Operator confirms at critical level.
+
+  corpus_coverage_check:
+    description: |
+      Every registered source (SRC-NNN) has been read (at least at section-summary
+      level) by T-002 or has explicit excluded-after-discovery status. Sources
+      with status null fail the audit.
+
+  or_alignment_drift:
+    description: |
+      Master plan prose is sampled and checked for alignment with
+      OR-001.synthesis_purpose-equivalent (course_name + lens_anchor + cross_project_scope).
+      Heuristic; operator review canonical at critical level.
+
+  reorder_redirect_coverage:
+    description: |
+      For DEC-001 supersedes (curriculum reorders): every published or in-flight
+      lesson with a cross-reference to a moved module must have a paired
+      redirect_implications entry with status applied OR planned. Inherited from
+      marketing-campaign redirect_coverage_report pattern.
+
+  spawned_project_registry_consistency:
+    description: |
+      Every spawned-project artifact's status reflects current state (registry
+      list matches projects/ directory listing); no orphan child projects;
+      every child has a paired child_project.scaffolded + (resources_ready |
+      resources_skipped) chain.
+
+# Default per-task risk classification.
+task_default_risks:
+  source-inventory: standard
+  platform-familiarization: standard
+  curriculum-corpus-scan: elevated
+  spawn-protocol: standard
+  master-plan-update: standard
+  reorder-decision: critical
+  tier-move-decision: elevated
+  wrap: critical
+  schema-save: critical

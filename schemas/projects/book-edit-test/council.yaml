@@ -1,0 +1,242 @@
+# schemas/projects/book-edit-test/council.yaml
+# Council composition. Members run with context-asymmetric framing: they see
+# the artifact + the spec + the consumes list, never the implementer's
+# reasoning prose.
+
+convergence_rule: all-agree-or-escalate
+
+members:
+  - role: voice-preservation-watcher
+    family_default: claude
+    prompt_template: |
+      You are reviewing a chapter edit_proposal artifact for voice-preservation
+      compliance (Tier 1 PRESERVATION-FIDELITY). You see:
+      - The edit_proposal (edit_candidates, create_candidates, delete_candidates).
+      - The voice-anchor artifact [VA-NNN#hash] this pass consumed.
+      - The chapter's pre-pass source [SRC-NNN#hash] (you may quote from it).
+      You do NOT see the subagent's reasoning prose.
+
+      Check, against the voice-anchor's tone_descriptors, sentence_rhythm_notes,
+      vocabulary_register, voice_dont_list, and operator_overrides:
+      - Do the proposed_text strings preserve the voice anchor's tone?
+      - Do the proposed_text strings drift into a register the voice anchor
+        explicitly excludes (e.g., voice anchor says "informal first-person",
+        proposal ships "the practitioner should consider...")?
+      - Does any proposed_text introduce phrasings on the voice_dont_list?
+      - Does any proposed_text remove or paraphrase a sentence-rhythm
+        signature element the anchor flagged as characteristic?
+
+      Output a single line: PASS or FAIL: <comma-separated list of
+      proposed_text indices that violate, with one-phrase reason each>.
+
+  - role: preservation-rule-watcher
+    family_default: claude
+    prompt_template: |
+      You are reviewing a chapter edit_proposal for preservation-rule
+      compliance (Tier 1). You see:
+      - The edit_proposal.
+      - All Decision artifacts with synthesis_role: preservation-rule
+        cited in proposal.consumed_preservation_rules.
+      - The chapter's pre-pass source [SRC-NNN#hash].
+      You do NOT see the subagent's reasoning prose.
+
+      Check:
+      - For every preservation rule (examples preservation, named-entity
+        preservation, framework-name preservation, etc.), does the proposal
+        violate it?
+      - For every edit_candidate whose original_text contains an example,
+        case study, direct quote, or named entity protected by a preservation
+        rule, does the proposed_text preserve that element verbatim?
+      - For every delete_candidate whose original_text contains a
+        preservation-protected element, is the deletion authorized by an
+        unfinished-bit-disposition Decision (cut)?
+
+      Output a single line: PASS or FAIL: <list of violated rule citations
+      with the proposal indices that violated>.
+
+  - role: edit-philosophy-aligner
+    family_default: claude
+    prompt_template: |
+      You are reviewing a chapter edit_proposal for edit-philosophy alignment
+      (Tier 2 OPERATOR-ALIGNMENT). You see:
+      - The edit_proposal (line_delta_pct, edit_candidates, create_candidates,
+        delete_candidates).
+      - The Decision artifact with synthesis_role: chapter-edit-philosophy
+        for this chapter (or the project default from OR-001 if no chapter
+        override).
+      - The schema's max_line_delta_pct (project default 30, chapter override
+        if any).
+
+      Check:
+      - Does the proposal's edit-candidate count and shape match the declared
+        philosophy? A light-copyedit pass shipping 40 substantive
+        restructuring candidates fails. A substantive-edit pass shipping
+        only 3 comma corrections also fails (under-fit to the philosophy).
+      - Is line_delta_pct within the cap? If over, is there a chapter-scoped
+        override DEC?
+      - Does the proposal include create_candidates or delete_candidates
+        not authorized by unfinished-bit-disposition decisions?
+
+      Output a single line: PASS or FAIL: <reason>.
+
+  - role: banned-pattern-enforcer
+    family_default: claude
+    prompt_template: |
+      You are reviewing a chapter edit_proposal for banned-pattern compliance
+      (Tier 1). You see:
+      - The edit_proposal.
+      - All banned-pattern artifacts cited in proposal.consumed_banned_patterns.
+
+      For each banned-pattern, scan every proposed_text in edit_candidates and
+      create_candidates. If the pattern survives anywhere in the post-pass
+      surface (i.e., proposed_text contains an instance), FAIL.
+
+      Note: this check is also a Layer 2 substrate check; the council member
+      role is to catch cases the Layer 2 heuristic missed (e.g., regex
+      patterns that should match but didn't due to encoding edge cases).
+
+      Output a single line: PASS or FAIL: <pattern citation + index where it
+      survived>.
+
+  - role: chapter-coverage-auditor
+    family_default: claude
+    prompt_template: |
+      You are reviewing whether every chapter in the source manuscript has
+      been processed. Fires at Phase B end and at project.archive.
+
+      For each chapter declared in the assembly-map [AM-NNN#hash]:
+      - Confirm a chapter-edit-pass task exists (and completed) for it.
+      - Confirm an edit_proposal artifact exists for the chapter, with
+        applied: true and a paired external_state.read_back event.
+      - OR confirm a deferral / excluded-after-discovery decision exists
+        for the chapter explicitly.
+
+      A chapter without any of those statuses is a coverage gap.
+      Output a single line: PASS or FAIL: <list of chapter_ids without
+      terminal status>.
+
+  - role: continuity-watcher
+    family_default: claude
+    prompt_template: |
+      You are reviewing post-edit chapter files for cross-chapter continuity.
+      Fires at Phase C end and at project.archive. You see:
+      - All post-edit chapter source artifacts.
+      - All Phase C contradiction artifacts and their resolution Decisions.
+
+      Check:
+      - Character / term / framework-name / product-name consistency across
+        chapters.
+      - Internal-reference resolution: every "see Chapter N", "as we'll see
+        later", "as discussed earlier" resolves to actual present content.
+      - Examples consistency: when the same example is used in multiple
+        chapters, the wording matches.
+
+      Output a single line: PASS or FAIL: <inconsistencies found, citing
+      chapter_ids and the inconsistent token>.
+
+  - role: scope-shrink-watcher
+    family_default: claude
+    optional: true
+    triggers:
+      - "task proposal includes both edit_candidates and create_candidates"
+      - "task proposal drops any create_candidate without paired deferral or excluded-after-discovery decision"
+    fail_condition: "any create_candidate or delete_candidate is silently dropped from the actuation plan"
+    pass_condition: "every enumerated candidate is either actuated, deferred with reason, or excluded-after-discovery with reason"
+    context_asymmetry: "this member reviews the proposal artifact only; does not see the live asset state"
+    prompt_template: |
+      You are reviewing a live-edit chapter pass proposal for scope-shrink bias.
+      The proposal enumerates edit_candidates, create_candidates, and
+      delete_candidates; the actuation plan is a subset of that enumeration.
+
+      Confirm every enumerated candidate is either:
+      - Actuated (will land in the live edit), OR
+      - Deferred (with one-sentence reason), OR
+      - Marked excluded-after-discovery (with one-sentence reason).
+
+      Silently dropped candidates FAIL.
+
+      Output a single line: PASS or FAIL: <reason naming the candidate(s)
+      that lack disposition>.
+
+  - role: operator-goal-aligner
+    family_default: claude
+    prompt_template_on_activate: |
+      You are reviewing OR-001 for sufficiency before any editing begins. No
+      chapter passes have run; do not look for them. Evaluate metadata only.
+
+      Read OR-001.book_metadata, source_manuscript_path, input_folder,
+      voice_anchor_strategy, edit_philosophy_default, banned_patterns_seed,
+      examples_preservation, deliverable_path, print_ready_required, and
+      voice_guidelines_path. Read the file inventory of input_folder,
+      archive_folders, and candidates_folder (filenames + sizes only).
+
+      Check:
+      - Does book_metadata identify a real, specific book (title + ASIN or
+        equivalent identifier)?
+      - Does source_manuscript_path point at a single canonical file (not
+        a folder, not multiple candidates)?
+      - Is voice_anchor_strategy consistent with the corpus (e.g., extract-
+        from-corpus only works if there are chapters with stable voice to
+        extract from)?
+      - Is the bootstrap_questions banned_patterns_seed populated with at
+        least one pattern (or explicitly empty [])? Null fails.
+      - Are deliverable_path and voice_guidelines_path declared and
+        non-overlapping with source paths (so writes don't overwrite
+        sources)?
+
+      Output a single line: PASS or FAIL: <misalignments>.
+
+    prompt_template_on_output: |
+      You are reviewing whether the polished manuscript serves the OR-001
+      declared goal. Read OR-001.book_metadata, voice_anchor [VA-NNN#hash],
+      banned-pattern list, preservation-rule decisions. Sample the assembled
+      manuscript at the relevant trigger (Phase D draft, final-read output,
+      or print-ready file).
+
+      Check:
+      - Does the polished manuscript still feel like the same book? (Voice
+        preserved; examples intact; chapter shape unchanged.)
+      - Are the operator-declared rules (em dash, AI-indicator removal,
+        examples preservation) honored at the document level?
+      - Does the final-read pass surface anything the chapter passes missed?
+
+      Output a single line: PASS or FAIL: <misalignments>.
+
+triggers:
+  - event: project.activate
+    members: [operator-goal-aligner]
+    description: "Verification Checkpoint at bootstrap. Confirms OR-001 is sufficient before Phase A begins."
+
+  - event: phase.complete
+    when: "phase == 'A'"
+    members: [operator-goal-aligner, chapter-coverage-auditor]
+    description: "After Phase A. Confirms voice anchor extracted, banned patterns approved, candidates evaluated, unfinished bits dispositioned, philosophies declared, and chapter-split produced one post-split-chapter artifact per chapter."
+
+  - event: task.complete
+    when: "task.kind == 'chapter-edit-pass'"
+    members: [voice-preservation-watcher, preservation-rule-watcher, edit-philosophy-aligner, banned-pattern-enforcer]
+    description: "Per-chapter pass council. Fires on every chapter-edit-pass task completion."
+
+  - event: task.complete
+    when: "task.delivery_mode == 'live-edit'"
+    members: [scope-shrink-watcher]
+    description: "v5.1.1 — fires on every live-edit task to catch scope-shrink in enumeration→actuation."
+
+  - event: phase.complete
+    when: "phase == 'B'"
+    members: [chapter-coverage-auditor]
+    description: "After Phase B. Confirms every chapter has a terminal-state edit_proposal applied OR an explicit deferral/excluded-after-discovery decision."
+
+  - event: phase.complete
+    when: "phase == 'C'"
+    members: [continuity-watcher]
+    description: "After continuity scan + resolution. Confirms cross-chapter consistency."
+
+  - event: task.complete
+    when: "task.risk_level == 'critical'"
+    members: [voice-preservation-watcher, preservation-rule-watcher, chapter-coverage-auditor, continuity-watcher, operator-goal-aligner]
+    description: "Per-task council on critical work (assembly, final-read, print-ready)."
+
+  - event: project.archive
+    members: [operator-goal-aligner, voice-preservation-watcher, chapter-coverage-auditor, continuity-watcher]
+    description: "Pre-archive verification."

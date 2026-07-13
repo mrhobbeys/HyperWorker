@@ -1,0 +1,61 @@
+# schemas/projects/content-piece-test/precedence-tiers.yaml
+# Tiered rules for creator-content pieces. Tier ordinal wins on conflict.
+
+tiers:
+  - tier: 1
+    name: SOURCE-AND-VOICE-FIDELITY
+    purpose: |
+      Operator's voice (OR-001.voice_anchor) is non-negotiable. Operator's
+      verbatim lines (verbatim_keeper artifacts) are not silently rewritten.
+      Source material from inputs/ is referenced honestly: claims attributed,
+      paraphrase markers used per the v5.0.1 verbatim-quotation principle,
+      no fabricated quotes or anecdotes the operator did not give.
+    examples:
+      - "Output paragraphs that quote the operator do so verbatim, with [paraphrase: ...] markers when summarizing."
+      - "VK-NNN keepers appear byte-for-byte in at least one variant (verbatim-keeper-fidelity council member)."
+      - "No invented anecdote that operator did not share in interview or rough draft."
+
+  - tier: 2
+    name: OPERATOR-RULES
+    purpose: |
+      The operator's verbatim ground rules (interview question budget, no list-dump
+      summaries, add interpretation, format-announce, refuse-rather-than-pad) are
+      structurally enforced. See 00-REFERENCE-rules.md Tier 2 for the full set.
+    examples:
+      - "Interview turns ≤2 agent questions (capability-gates.yaml interview_question_budget)."
+      - "Findings add interpretation, not just restatement (interpretation-watcher council)."
+      - "Agent announces format before each variant output."
+      - "Thin material → anti_pattern artifact + STOP, not pad."
+
+  - tier: 3
+    name: QUALITY-AND-FORMAT-NATIVE
+    purpose: |
+      Each variant matches its declared format structure (Substack longform with
+      paywall cliff; X chunks standalone-terminable; YouTube lead-ins as 3-5
+      spoken-voice sentences across three framings). The three variants
+      differentiate meaningfully on the publication_format axis.
+    examples:
+      - "Substack has paywall cliff marked with <!-- PAYWALL CLIFF: <reason> -->."
+      - "X chunks each end at a point where stopping is acceptable."
+      - "YouTube lead-ins cover controversy, curiosity, and utility framings."
+      - "variant-comparison-watcher PASSes pairwise."
+
+  - tier: 4
+    name: STYLE
+    purpose: |
+      Citation format consistency, formatting consistency. Voice details from
+      OR-001.voice_anchor.
+    examples:
+      - "Citation format: [SRC-NNN#hash], [F-NNN#hash], [DEC-NNN#hash], [VK-NNN#hash], [OR-001#hash]."
+      - "Match operator's declared sentence length and register."
+
+scan_markers:
+  - {tier: 1, marker: "@@SCAN_1_1", question: "Does every quote of the operator in your output appear verbatim or carry a [paraphrase: ...] marker?"}
+  - {tier: 1, marker: "@@SCAN_1_2", question: "Are all approved verbatim_keeper VK-NNN appearing byte-for-byte in at least one applicable variant?"}
+  - {tier: 1, marker: "@@SCAN_1_3", question: "Did you invent any anecdote, quote, or claim the operator did not provide?"}
+  - {tier: 2, marker: "@@SCAN_2_1", question: "Did your most recent interview turn contain ≤2 questions?"}
+  - {tier: 2, marker: "@@SCAN_2_2", question: "Did the most recent finding you wrote add interpretation, not just restate input?"}
+  - {tier: 2, marker: "@@SCAN_2_3", question: "Did you announce which format you were producing before outputting it?"}
+  - {tier: 2, marker: "@@SCAN_2_4", question: "If material was thin, did you refuse-and-stop rather than pad?"}
+  - {tier: 3, marker: "@@SCAN_3_1", question: "Does each variant match its OR-001.formats[id].structure?"}
+  - {tier: 3, marker: "@@SCAN_3_2", question: "Pairwise: do the three variants differ format-natively, not just paraphrase each other?"}

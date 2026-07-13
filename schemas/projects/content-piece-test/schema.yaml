@@ -1,0 +1,80 @@
+# schemas/projects/content-piece-test/schema.yaml
+# Working schema for one piece of creator content. Inherited from
+# `report-synthesis` and rewritten for the creator-content-pipeline use case.
+# Saved as the generic `content-piece` schema after `hw wrap` if the run validates.
+
+schema_id: content-piece-test
+schema_version: 0.1
+harness_version: "5.1.1"
+inherited_from: report-synthesis
+description: |
+  Take raw inputs (tweets, voice memos, notes, originating articles), an operator
+  voice anchor, and an optional central angle (or a default lens for surfacing
+  one), and produce three publication-format-native variants in one ab-variant
+  pass: Substack longform, X longform, YouTube lead-ins. The schema is
+  brand-clean: per-piece OR-001 carries the operator's voice and lens verbatim;
+  the schema declares only field shapes, not the operator's content.
+
+bootstrap_questions:
+  - id: piece_slug
+    prompt: "Short kebab-case slug for this piece. Becomes the project ID."
+    type: string
+    required: true
+  - id: piece_topic
+    prompt: "≤1 sentence: what is this piece about? (Set during intake; supersedable after interview.)"
+    type: string
+    required: true
+  - id: voice_anchor
+    prompt: "Operator's voice description verbatim. List form; first-listed dominates on conflict."
+    type: list[string]
+    required: true
+  - id: default_lens
+    prompt: "Operator's recurring lens for finding angles when none is explicitly supplied. Verbatim. Optional."
+    type: string|null
+    required: false
+  - id: central_angle_supplied
+    prompt: "Did the operator supply an explicit central angle for this piece? If yes, capture as DEC-002 verbatim."
+    type: bool
+    required: true
+  - id: input_folder
+    prompt: "Per-piece inputs folder path (default: projects/<slug>/inputs/). Created at scaffold-time empty; operator populates post-kickoff."
+    type: string
+    required: false
+    default: "projects/<slug>/inputs/"
+  - id: deliverable_path
+    prompt: "Per-piece outputs folder path (default: outputs/<slug>/ at the workspace's parent — the Cowork project root)."
+    type: string
+    required: false
+    default: "../outputs/<slug>/"
+
+includes:
+  - precedence-tiers.yaml
+  - artifact-extensions.yaml
+  - capability-gates.yaml
+  - verification.yaml
+  - council.yaml
+  - project-template.md
+  - rules-template.md
+  - task-templates/
+  - artifact-templates/
+  - README.md
+  - bootstrap-probe.md
+
+default_tasks:
+  description: |
+    Phase A — Setup: source inventory (T-000), corpus scan with optional lens (T-001).
+    Phase B — Interview: interactive turn-by-turn interview (T-002) — runs in parent context, NOT subagent.
+    Phase C — Draft capture: operator pastes rough draft, agent flags verbatim_keepers (T-003).
+    Phase D — Format generation: ab-variant single-task three-variant pass (T-004).
+    Phase E — Council & wrap: five-member council on T-004; on PASS, hw schema save extracts content-piece schema.
+
+    The interactive interview phase is the one significant departure from
+    the report-synthesis subagent-everywhere pattern: T-002 runs in the
+    parent so question-budget Layer 1 and interpretation-watcher checks
+    have turn-by-turn visibility.
+  templates:
+    - "00-source-inventory.md"
+    - "01-corpus-scan.md"
+    - "02-interview.md"
+    - "03-draft-capture.md"
+    - "04-format-generation.md"

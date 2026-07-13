@@ -1,0 +1,115 @@
+# schemas/projects/content-piece-test/artifact-extensions.yaml
+# Inherited from report-synthesis. Drops `claim` and `contradiction` kinds (not
+# load-bearing for creator-content work). Retains `source` (raw inputs registered
+# at T-000). Adds `verbatim_keeper` (new kind, prefix VK). Adds OR fields.
+
+new_kinds:
+  - kind: source
+    description: |
+      Represents an input registered for the piece — a tweet, a voice-memo
+      transcript, an originating article draft, a notes file. One source per
+      logically distinct input. Created during T-000; immutable once registered.
+    schema:
+      - {name: id, type: string, pattern: "SRC-\\d{3,}", required: true}
+      - {name: title, type: string, required: true}
+      - {name: file_path, type: string, required: true}
+      - name: source_type
+        type: enum
+        values: [tweet, x-article, voice-memo-transcript, notes, draft, originating-post, other]
+        required: true
+      - {name: round, type: enum, values: [single, draft, correction, final], required: true, default: single}
+      - {name: supersedes, type: "string|null", required: false}
+      - {name: superseded_by, type: "string|null", required: false}
+      - {name: author, type: "string|null", required: false}
+      - {name: date, type: "iso8601-date|null", required: false}
+      - {name: weight, type: enum, values: [primary, secondary, contextual], required: true, default: secondary}
+      - {name: hash, type: string, required: true}
+      - {name: tags, type: "list[string]", required: false}
+
+  - kind: verbatim_keeper
+    description: |
+      A line in the operator's rough draft (or interview response) that "sounds
+      especially like the operator" and should survive into at least one variant
+      byte-for-byte. Layer 1 hash-citation freshness blocks any variant where a
+      VK hash is mismatched (i.e., the line was silently rewritten). Operator
+      approves the keeper list before T-004 begins.
+    schema:
+      - {name: id, type: string, pattern: "VK-\\d{3,}", required: true}
+      - {name: text, type: string, required: true, description: "The line, exactly."}
+      - name: source_finding_or_draft
+        type: string
+        required: true
+        description: "[F-NNN#hash] from interview, or [SRC-NNN#hash] for a draft line. The origin."
+      - {name: keep_verbatim, type: bool, required: true, default: true}
+      - name: applies_to_formats
+        type: list[string]
+        required: false
+        description: "Which variants must contain this line verbatim. Default: any of substack-longform OR x-longform; YouTube lead-ins are exempt unless the keeper is a hook line."
+        default: [substack-longform, x-longform]
+      - {name: operator_approved, type: bool, required: true, default: false}
+      - {name: tags, type: "list[string]", required: false}
+
+decision:
+  additional_fields:
+    - name: synthesis_role
+      type: "enum|null"
+      values: [scope-decision, weighting-rule, inclusion-exclusion, output-structure, central-angle, voice-rule]
+      required: false
+    - {name: verbatim_source, type: "string|null", required: false, description: "Operator's exact words when the decision captures a directive verbatim."}
+
+finding:
+  additional_fields:
+    - {name: from_source, type: "string|null", required: false}
+    - name: synthesis_role
+      type: "enum|null"
+      values: [interview-answer, evidence, edge-case, prior-art]
+      required: false
+    - name: turn_id
+      type: "string|null"
+      required: false
+      description: "T-002 interview turn this finding came from. Used by the interpretation-watcher council member for turn-by-turn audit."
+
+anti-pattern:
+  additional_fields:
+    - {name: from_source, type: "string|null", required: false}
+    - {name: superseding_direction, type: "string|null", required: false}
+
+operating-reality:
+  field_overrides:
+    - {name: budget, required: false}
+    - {name: timeline, required: false}
+    - {name: team, required: false}
+    - {name: authority, required: false}
+    - {name: operator_profile, required: false}
+  additional_fields:
+    - {name: piece_slug, type: string, required: true}
+    - {name: piece_topic, type: string, required: true}
+    - name: voice_anchor
+      type: list[string]
+      required: true
+      description: |
+        Operator's voice description, captured verbatim. List form; first-listed
+        dominates on conflict (multi-source voice composition pattern from v5.1
+        marketing-campaign brand_voice_anchor widening).
+    - name: default_lens
+      type: "string|null"
+      required: false
+      description: |
+        Operator's recurring lens for finding angles when no explicit central
+        angle is supplied. Verbatim. T-001 applies the lens to the corpus when
+        DEC-002 (central angle) is absent at scan time.
+    - {name: central_angle_supplied, type: bool, required: true}
+    - name: formats
+      type: list[object]
+      required: true
+      description: |
+        Publication-format definitions. Each: {id, structure, audience, framings?}.
+        ab-variant axis at T-004 ranges over formats[].id.
+    - name: interview_constraints
+      type: object
+      required: true
+      description: "max_questions_per_turn, no_list_dump, add_interpretation, flag_verbatim_keepers."
+    - {name: thinness_protocol, type: enum, values: [refuse-rather-than-pad], required: true}
+    - {name: input_folder, type: string, required: true}
+    - {name: deliverable_path, type: string, required: true}
+    - {name: friction_log_scope, type: enum, values: [workspace, project], required: false, default: project}

@@ -1,0 +1,156 @@
+# schemas/projects/course-master-plan-test/council.yaml
+# Council composition. Verifier subagents run with context-asymmetric framing.
+
+convergence_rule: all-agree-or-escalate
+
+members:
+  - role: course-charter-aligner
+    family_default: claude
+    description: |
+      Reviews OR-001 sufficiency at project.activate and master-plan output
+      alignment with OR at later triggers. Equivalent to report-synthesis's
+      operator-goal-aligner, adapted for course-master-plan fields.
+
+    prompt_template_on_activate: |
+      You are reviewing OR-001 for sufficiency before any L1 work begins.
+      No master plan exists yet; do not look for one. Evaluate OR metadata only.
+
+      Read: course_name, course_url, platform, lens_anchor (full list),
+      cross_project_scope, tier_policy.policy_mode, promotion_scope,
+      curriculum_discovery_mode, slug_premise_pause.enforce,
+      platform_actuation.browser_codename, platform_actuation.guide_path.
+
+      Read the file inventory of <project root>/inputs/ (filenames + sizes only;
+      do not open contents).
+
+      Check:
+      - Is course_name a concrete handle (a real proposed title), or vague
+        ("MSP Stuff")? It is supersedable, so a draft handle is fine; complete
+        absence is not.
+      - Is lens_anchor[0] a real frame the operator has stated, or a generic
+        instructor voice? "I tried the thing, learned this, teaching you" is a
+        real frame; "We will explore the concepts of X" is generic — fail.
+      - Does cross_project_scope identify a recognizable scope name (not
+        empty, not "default")?
+      - Is platform_actuation.browser_codename set? (Operator selects at A.2;
+        a placeholder is acceptable — flag as PASS-with-deferred if so.)
+      - Does the inputs/ file inventory plausibly contain material to inform a
+        curriculum corpus scan? Flag obvious mismatches (e.g., course_name
+        suggests technical curriculum, inputs/ is all marketing copy) — do
+        NOT certify the corpus is sufficient (that needs content-read at A.3).
+
+      Output a single line: PASS or FAIL: <misalignments>.
+
+    prompt_template_on_output: |
+      You are reviewing whether the L1 master plan output (or DEC-001 / DEC-002)
+      serves the OR-001 declared course identity.
+
+      Read OR-001 (course_name, lens_anchor, cross_project_scope, tier_policy).
+      Sample the artifact under review (master plan section, DEC-001 sequence,
+      DEC-002 tier policy update).
+
+      Check:
+      - Does the artifact advance the declared course identity? Cite specific
+        module titles or sequence positions that do or do not.
+      - Does it reflect lens_anchor[0]'s framing in voice and stance?
+      - For DEC-001: are module premises stated as operator-learned content,
+        not lens-fitted inferences?
+      - For DEC-002 supersedes: is movement_history append-only and is the
+        reason concrete (not "feels right")?
+
+      Output a single line: PASS or FAIL: <misalignments>.
+
+  - role: spawn-protocol-watcher
+    family_default: claude
+    description: |
+      Verifies slug-premise-pause invariant. Fires at any task.complete or
+      session.handoff in L1.
+
+    prompt_template: |
+      You are reviewing whether the slug-premise-pause invariant held during
+      this L1 session.
+
+      Read the events.jsonl tail and the spawned-project registry. For every
+      `spawned-project` artifact in `status: in-flight | complete`:
+
+      - Confirm a `child_project.scaffolded` event exists in the chain.
+      - Confirm a paired `child_project.resources_ready` OR
+        `child_project.resources_skipped` event exists, with
+        operator_confirmed: true.
+      - Confirm no T-001 (or first-work-task) of any child project fired
+        before the paired resources event.
+
+      If any spawn skipped the pause, output FAIL with the child_project_id.
+      Otherwise PASS.
+
+  - role: lens-coherence-watcher
+    family_default: claude
+    description: |
+      Verifies cross-project lens propagation. Samples L2/L3 artifacts (when
+      cross_project_subscriptions are populated) for lens_anchor[0]
+      alignment. Optional; fires only when L2/L3 projects exist.
+
+    optional: true
+
+    prompt_template: |
+      You are reviewing whether the lens propagated from L1 to active L2/L3
+      child projects.
+
+      Read OR-001.lens_anchor[0] (the dominant frame).
+
+      For each spawned-project artifact in status: in-flight, sample one
+      recently-emitted artifact from the child project. Check whether voice
+      and framing reflect lens_anchor[0].
+
+      Output a single line: PASS or FAIL: <child_project_ids whose recent
+      artifact reads off-lens>.
+
+  - role: scope-shrink-watcher
+    family_default: claude
+    description: |
+      Inherits the marketing-campaign role. At L1 level, applies to the
+      curriculum sequence (DEC-001) — checks that no candidate module from the
+      corpus scan was silently dropped without paired deferral or
+      excluded-after-discovery decision. Fires on T-002 (corpus scan) completion
+      and on DEC-001 supersedes.
+
+    prompt_template: |
+      You are reviewing whether candidate modules from the curriculum corpus
+      scan were silently dropped.
+
+      Read T-002's completion report (the 2-3 candidate structures the agent
+      surfaced) and the chosen DEC-001 (or, if reviewing a supersede, both old
+      and new DEC-001 + the supersede reason).
+
+      For each candidate module in the surfaced structures:
+      - Confirm it appears in DEC-001, OR
+      - Has a paired Decision artifact with synthesis_role:
+        inclusion-exclusion and a reason, OR
+      - Has a paired excluded-after-discovery scope-completeness entry.
+
+      Silently-dropped candidates fail.
+
+      Output a single line: PASS or FAIL: <dropped candidate names>.
+
+triggers:
+  - event: project.activate
+    members: [course-charter-aligner]
+    description: "Verification Checkpoint at L1 bootstrap. Confirms OR-001 is sufficient before T-000 begins."
+
+  - event: phase.complete
+    when: "phase == 'A'"
+    members: [course-charter-aligner, scope-shrink-watcher]
+    description: "After Phase A. DEC-001 + DEC-002 are now declared; check alignment with OR and that no corpus-surfaced candidate was silently dropped."
+
+  - event: task.complete
+    when: "task.risk_level == 'critical'"
+    members: [course-charter-aligner, scope-shrink-watcher, spawn-protocol-watcher]
+    description: "Per-task council on critical work (reorder decisions, wrap, schema saves)."
+
+  - event: session.handoff
+    members: [spawn-protocol-watcher]
+    description: "Session-handoff check. Verifies slug-premise-pause invariant held throughout the closing session."
+
+  - event: project.archive
+    members: [course-charter-aligner, spawn-protocol-watcher, lens-coherence-watcher, scope-shrink-watcher]
+    description: "Pre-archive verification. Wraps the L1 run before hw schema save."
