@@ -1,0 +1,7 @@
+# HyperClam local data quarantine — NEVER commit real data
+testdata/raw/
+testdata/corpus/
+triggers.yaml
+*.mapping.json
+*.scrubbed.txt
+__pycache__/

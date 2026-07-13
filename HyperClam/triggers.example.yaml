@@ -1,0 +1,23 @@
+# HyperClam triggers — copy to triggers.yaml, fill in, and KEEP LOCAL.
+# This file encodes what only you know is sensitive. It is itself sensitive:
+# gitignore it. (triggers.example.yaml is the shareable shape; triggers.yaml
+# with real client names must never reach a public repo.)
+
+always_scrub:                     # literals or `re:`-prefixed regex; category TRIGGER
+  - "Acme Holdings"               # client names
+  - "project kingfisher"          # internal codenames
+  - 're:\bACC-\d{6}\b'            # account-number shapes your patterns don't cover
+  - 're:\b[a-z0-9-]+\.internal\b' # internal hostnames
+
+context_escalators:               # pattern counts as PII only near a cue word
+  - cue: "born|DOB|birth"
+    pattern: 're:\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b'
+    window: 40
+    category: DOB
+  - cue: "badge|employee id|emp\\.?\\s*#"
+    pattern: 're:\b\d{4,8}\b'
+    window: 30
+    category: EMPLOYEE_ID
+
+allowlist:                        # never scrub, even on pattern match
+  - "support@yourcompany.com"     # your own public contact points
