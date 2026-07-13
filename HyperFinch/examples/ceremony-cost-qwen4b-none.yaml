@@ -1,0 +1,40 @@
+# qwen3-4b-thinking, no-harness cell ONLY. The multi-turn cells (lightweight,
+# full) are latency-bound on CPU and time out (see CEREMONY-COST-COMPARISON.md);
+# this isolates the single-turn no-harness floor so the thinking layer can be
+# compared apples-to-apples against gpt-oss-20b's no-harness cell (779 tokens,
+# 6 reasoning) on the identical task.
+
+finch: 1
+name: ceremony-cost-qwen4b-none
+mode: one-at-a-time
+trials_per_cell: 3
+
+endpoint:
+  base_url: "http://localhost:1234/v1"
+  model: "qwen/qwen3-4b-thinking-2507"
+  api_key: null
+
+params:
+  temperature: 0.2
+  max_tokens: 4096
+  seed: 42
+
+budget:
+  max_turns: 4
+  max_seconds_per_trial: 600
+
+tools: hyperworker
+
+task:
+  prompt_file: ceremony-none.md
+  inputs:
+    topic: "Event-sourced state beats mutable files for multi-writer agent work"
+
+axes: []
+
+scoring:
+  structural: auto
+  checks:
+    - {id: completed,    type: structural, metric: task_complete,            min: 1, weight: 3.0}
+    - {id: activated,    type: structural, metric: "kind:project.activate",  min: 1, weight: 1.0}
+    - {id: clean_layer1, type: structural, metric: layer1_fail,              max: 0, weight: 1.0}

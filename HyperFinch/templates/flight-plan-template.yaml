@@ -17,8 +17,13 @@ params:
   seed: 42                        # passed through; many local backends ignore it
 
 budget:
-  max_turns: 1                    # >1 enables the bounded file-block agentic loop
+  max_turns: 1                    # >1 enables the bounded agentic loop (file-block or tool-call)
   max_seconds_per_trial: 120
+
+# tools: hyperworker              # v0.2: enable the OpenAI tool-call loop + built-in harness
+#                                 # toolset (hw_append_event computes the hash chain for the
+#                                 # model). Omit for the v0.1 file-block loop. See FINCH.md
+#                                 # §Tool-Call Loop. Needs max_turns > 1.
 
 workspace:
   copy: []                        # e.g. ["../HyperWorker"] to give each trial a fresh harness checkout
@@ -49,5 +54,9 @@ scoring:
     - {id: has_subject, type: regex,          pattern: "^Subject:",  weight: 2.0}
     - {id: short,       type: word_count_max, value: 300,            weight: 1.0}
     - {id: no_hype,     type: not_contains,   pattern: "guaranteed", weight: 1.0}
+    # v0.2 structural check: score a metric off the trial's events.jsonl.
+    # metric ∈ {events, layer1_fail, layer2_fail, task_complete, council_escalated,
+    #           recite_reject} or "kind:<event.kind>"; tested against min/max/equals.
+    # - {id: completed, type: structural, metric: task_complete, min: 1, weight: 3.0}
   structural: auto                # auto | off — HyperWorker events.jsonl metrics when present
   judge: null                     # reserved for v0.3 (paired-comparison judging)

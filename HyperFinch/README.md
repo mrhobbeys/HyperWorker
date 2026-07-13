@@ -1,5 +1,5 @@
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
-![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-blue.svg)
+![Version: 0.2.0](https://img.shields.io/badge/Version-0.2.0-blue.svg)
 
 # HyperFinch
 
@@ -41,7 +41,8 @@ results/<plan-name>/
 ## What it measures
 
 - **Mechanical checks** — regex, contains, word-count windows, file-exists, declared in the plan with weights. Pass/fail per trial, no judgment calls.
-- **Structural metrics** — if a trial workspace contains a HyperWorker `.hyperworker/events.jsonl`, Finch automatically counts Layer 1/2 failures, recitation rejections, and completion events. A harness run becomes a scoreable object for free.
+- **Structural metrics** — if a trial workspace contains a HyperWorker `.hyperworker/events.jsonl`, Finch automatically counts Layer 1/2 failures, recitation rejections, and completion events (plus a per-kind histogram). A harness run becomes a scoreable object for free. As of v0.2 these are promotable into scoring via the `structural` check type.
+- **Tool-call loop (v0.2)** — set `tools: hyperworker` and a trial drives a real OpenAI function-calling loop with a built-in toolset (`hw_append_event`, `hw_write_file`, `hw_verify`, …). The model *operates* a HyperWorker bootstrap — the `hw_append_event` tool computes the canonical hash chain, so a small model never hand-rolls SHA-256. See `FINCH.md` §Tool-Call Loop and `examples/ceremony-cost-plan.yaml` (the first real sweep: *can a small model operate the harness at all?*).
 - **Judge (optional)** — a second model scores 1–5 against a declared rubric. Off by default; judges are noisy and the rubric is always visible in the plan, never implicit.
 
 ## What it refuses to do

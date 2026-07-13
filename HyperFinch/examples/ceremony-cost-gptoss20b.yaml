@@ -1,0 +1,42 @@
+# Ceremony-cost sweep — gpt-oss-20b (no/low reasoning layer).
+# Pairs with ceremony-cost-qwen4b.yaml for the thinking-layer comparison.
+# Results land in results/ceremony-cost-gptoss20b/.
+
+finch: 1
+name: ceremony-cost-gptoss20b
+mode: one-at-a-time
+trials_per_cell: 5
+
+endpoint:
+  base_url: "http://localhost:1234/v1"
+  model: "openai/gpt-oss-20b"        # probe: ~33s/turn, ~6 reasoning tokens/call
+  api_key: null
+
+params:
+  temperature: 0.2
+  max_tokens: 2048
+  seed: 42
+
+budget:
+  max_turns: 14
+  max_seconds_per_trial: 300
+
+tools: hyperworker
+
+task:
+  prompt_file: ceremony-lightweight.md
+  inputs:
+    topic: "Event-sourced state beats mutable files for multi-writer agent work"
+
+axes:
+  - id: prompt
+    target: prompt_file
+    levels: ["ceremony-full.md", "ceremony-none.md"]
+
+scoring:
+  structural: auto
+  checks:
+    - {id: completed,    type: structural, metric: task_complete,                  min: 1, weight: 3.0}
+    - {id: activated,    type: structural, metric: "kind:project.activate",        min: 1, weight: 1.0}
+    - {id: scope_locked, type: structural, metric: "kind:bootstrap.scope_locked",  min: 1, weight: 1.0}
+    - {id: clean_layer1, type: structural, metric: layer1_fail,                    max: 0, weight: 1.0}

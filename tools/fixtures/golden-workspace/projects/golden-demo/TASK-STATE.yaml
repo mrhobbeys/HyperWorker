@@ -1,0 +1,14 @@
+project: "golden-demo"
+last_event: "EV-0007"
+phases:
+  1:
+    name: "Foundation"
+    checkpoint: null
+    tasks:
+      - id: T-001
+        title: "Synthesize the golden reference note"
+        status: complete
+        risk_level: standard
+        depends_on: []
+        consumes: ["[DEC-001#50b5472bf5fc]"]
+        completed_at: "2026-06-09T10:45:00Z"

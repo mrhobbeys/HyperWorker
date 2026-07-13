@@ -1,4 +1,4 @@
-# HyperFinch — Design Spec (v0.1.0)
+# HyperFinch — Design Spec (v0.2.0)
 
 > One task. One endpoint. A declared set of variations. N trials per variant. Mechanical scores. A leaderboard that admits its own noise. Read this file to understand the design; read `README.md` to run a sweep.
 
@@ -33,6 +33,7 @@ A second motivation: HyperWorker (the sibling project this was split from) defin
 3. **Render the prompt.** `task.prompt_file` text with `{{key}}` placeholders substituted from `task.inputs`, after cell overrides are applied.
 4. **Call the endpoint.** OpenAI-compatible `/chat/completions`. `endpoint.base_url: mock` short-circuits to a deterministic built-in responder so the machinery is testable without a model.
 5. **Agentic turns (bounded).** If `budget.max_turns > 1`, the model may emit fenced file blocks (` ```file:relative/path `) which Finch materializes into the trial workspace, then it is reprompted to continue. The loop stops at `FINCH_DONE` in the response or at `max_turns`, whichever comes first. Bounded by construction — there is no "until it works".
+   - **Tool-call loop (v0.2).** When the plan declares `tools:` (e.g. `tools: hyperworker`), Finch instead passes an OpenAI `tools` array to the endpoint and runs a real function-calling loop: parse `tool_calls` from the assistant message, execute each against the trial workspace, append `role: tool` results, reprompt. The loop ends when the model calls `finch_done`, emits `FINCH_DONE`, or hits `max_turns`. This lets a trial *operate* a HyperWorker bootstrap rather than just emit files. See §Tool-Call Loop.
 6. **Score.** Run every check against the final response text and the trial workspace. Collect structural metrics if `.hyperworker/events.jsonl` is present.
 7. **Record.** Append one JSON line to `results.jsonl` per trial: cell, overrides, turns, seconds, per-check results, score, paths. The log is append-only across re-runs; a re-run extends history rather than overwriting it.
 8. **Report.** Regenerate `LEADERBOARD.md` from `results.jsonl` (the leaderboard is a projection; the JSONL is canonical — one idea worth keeping from the sibling project).
@@ -95,11 +96,40 @@ scoring:
   judge: null                      # optional: {model: "...", rubric: "...", weight: 1.0}
 ```
 
-Check types in v0.1.0: `regex`, `contains`, `not_contains`, `word_count_max`, `word_count_min`, `file_exists`. Each is decidable by inspection; if a desired criterion needs judgment, it belongs in `judge`, with the rubric stated in the plan where reviewers can see it.
+Check types: `regex`, `contains`, `not_contains`, `word_count_max`, `word_count_min`, `file_exists`, and (v0.2) `structural`. Each is decidable by inspection; if a desired criterion needs judgment, it belongs in `judge`, with the rubric stated in the plan where reviewers can see it.
+
+A **`structural`** check (v0.2) reads a metric off the trial's `.hyperworker/events.jsonl` and tests it against `min` / `max` / `equals`. This *promotes* the structural metrics below from recorded-only into scored predicates:
+
+```yaml
+- {id: completed,    type: structural, metric: task_complete,             min: 1, weight: 3.0}
+- {id: activated,    type: structural, metric: "kind:project.activate",   min: 1, weight: 1.0}
+- {id: clean_layer1, type: structural, metric: layer1_fail,               max: 0, weight: 1.0}
+```
+
+`metric` is one of the named counts (`events`, `layer1_fail`, `layer2_fail`, `task_complete`, `council_escalated`, `recite_reject`) or `kind:<event.kind>` for an arbitrary event-kind count. A missing log reads as `0`, so a trial that never operated the harness simply fails its structural checks rather than erroring.
 
 ## Structural metrics (HyperWorker integration, optional)
 
-When a trial workspace ends with `.hyperworker/events.jsonl`, Finch records per trial: total events, `verify.layer1.fail` count, `verify.layer2.fail` count, `task.recite` rejection count, `task.complete` count, `council.escalated` count. These are *recorded* alongside the score, not folded into it by default — the plan may reference them via checks in a later version. This is the property that makes harness primitives testable: a harness run leaves a mechanical trace, and Finch compares traces across variants.
+When a trial workspace ends with `.hyperworker/events.jsonl`, Finch records per trial: total events, `verify.layer1.fail` count, `verify.layer2.fail` count, `task.recite` rejection count, `task.complete` count, `council.escalated` count, plus a `by_kind` histogram of every event kind. These are *recorded* alongside the score; as of v0.2 they are also **promotable into scoring** via the `structural` check type (above). This is the property that makes harness primitives testable: a harness run leaves a mechanical trace, and Finch compares traces across variants.
+
+## Tool-Call Loop (v0.2)
+
+The v0.1 file-block loop lets a model *write* files but not *operate* a harness — appending a hash-chained event requires computing a canonical SHA-256, which a model cannot do by generating tokens. v0.2 closes this with a real OpenAI tool-calling loop and a built-in `hyperworker` toolset.
+
+**Enabling.** Set `tools: hyperworker` in the plan (or a list to subset). With tools active, Finch passes the OpenAI `tools` array and `tool_choice: auto`, then loops: read `tool_calls`, execute each against the trial workspace, append `role: tool` results, reprompt — until `finch_done`, `FINCH_DONE`, or `max_turns`.
+
+**The `hyperworker` toolset.**
+
+| Tool | Effect |
+|---|---|
+| `hw_read_file(path)` | Read a workspace file (schema, `bootstrap-probe.md`, template). |
+| `hw_list_dir(path)` | List a workspace directory. |
+| `hw_append_event(kind, actor, project, payload)` | Append one event to `.hyperworker/events.jsonl`. **The tool assigns `EV-NNNN`, `ts`, `prev_hash`, and computes the canonical hash.** The model supplies only the four fields. |
+| `hw_write_file(path, content)` | Write a projection or Mutable-Surface file. |
+| `hw_verify()` | Replay the log; recompute every event hash; report `tamper`, `chain_breaks`, PASS/FAIL. |
+| `finch_done(summary)` | End the trial. |
+
+`hw_append_event` is the load-bearing tool. It is the toolchain-anchor idea from `core/SUBSTRATE.md` made concrete: exactly one implementation of the canonical serialization exists, the model calls it rather than improvising, and the resulting chain is valid by construction. (Verified: a chain produced by a model driving this loop passes the reference `tools/hw-verify.py` with zero tamper and zero chain breaks.) Every tool is bounded — writes are confined to the trial workspace, and a malformed argument returns an error result rather than crashing the trial.
 
 ## Hypothesis Map
 
@@ -113,7 +143,7 @@ HyperWorker's `core/*.md` files declare falsifiable hypotheses and no instrument
 | H-S1 — event-sourced state beats mutable files | harness substrate vs. plain-files control | state-disagreement incidents per run |
 | Ceremony cost (README "heavy upfront, light ongoing") | full protocol vs. lightweight_completion vs. no harness | tokens per completed task; completion rate by model size |
 
-The last row is the first sweep worth running: *can a local model operate the harness at all, and at what token overhead?* Whatever the answer, it is a finding.
+The last row is the first sweep worth running: *can a local model operate the harness at all, and at what token overhead?* Whatever the answer, it is a finding. As of v0.2 it is runnable: `examples/ceremony-cost-plan.yaml` sweeps full-protocol vs. lightweight vs. no-harness over the tool-call loop, scoring completion with a `structural` check (`task_complete >= 1`) and reading tokens-per-completed-task off the leaderboard. `examples/ceremony-cost-mock.yaml` dry-runs the whole machinery with no model.
 
 ## Validity rules (read before trusting a leaderboard)
 
@@ -124,6 +154,6 @@ The last row is the first sweep worth running: *can a local model operate the ha
 
 ## Roadmap (earns its place or doesn't)
 
-- v0.2 — tool-call loop (beyond file blocks) so a trial can operate a full HyperWorker bootstrap; structural metrics promotable into checks.
+- v0.2 — **shipped.** Tool-call loop (beyond file blocks) so a trial can operate a full HyperWorker bootstrap via a built-in `hyperworker` toolset; structural metrics promotable into checks (`structural` check type); the ceremony-cost sweep (`examples/ceremony-cost-plan.yaml`) made runnable. See §Tool-Call Loop.
 - v0.3 — paired-comparison judge mode (A/B, not 1–5 scales — pairwise is more reliable for LLM judges); significance hinting on the leaderboard when n supports it.
 - Each addition follows the house rule carried over from the sibling project, which survives because it is correct, not because it is inherited: state the hypothesis, state the falsifier, retire what fails.

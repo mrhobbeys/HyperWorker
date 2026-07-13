@@ -1,0 +1,66 @@
+# Ceremony-cost sweep — the first real HyperFinch sweep (FINCH.md §Hypothesis Map,
+# last row). The question: *can a small local model operate the HyperWorker harness
+# at all, and at what token overhead?*
+#
+# Three ceremony levels, one varied at a time:
+#   baseline           -> ceremony-lightweight.md  (the minimum the substrate accepts)
+#   prompt=ceremony-full.md  -> the full bootstrap protocol (inventory diff, OR-001,
+#                              recite, scan, verify) — maximum ceremony
+#   prompt=ceremony-none.md  -> no harness; produce the deliverable directly (control)
+#
+# Measures per cell: completion rate (the `completed` structural check) and median
+# tokens (the leaderboard column). Read tokens-per-completed-task off results.jsonl.
+#
+# REQUIRES A LIVE ENDPOINT. Point base_url/model at your local server, then:
+#   python finch.py run examples/ceremony-cost-plan.yaml
+# To dry-run the machinery with no model first: use examples/ceremony-cost-mock.yaml.
+#
+# This is the canonical/template plan. The two runs behind CEREMONY-COST-COMPARISON.md
+# use the per-model variants ceremony-cost-gptoss20b.yaml and ceremony-cost-qwen4b.yaml
+# (distinct `name:` -> separate results/ dirs). Compare with examples/compare-ceremony.py.
+
+finch: 1
+name: ceremony-cost
+mode: one-at-a-time
+trials_per_cell: 5                  # 5 detects only large effects; the leaderboard says so
+
+endpoint:
+  base_url: "http://localhost:1234/v1"     # LM Studio (any OpenAI-compatible server)
+  model: "openai/gpt-oss-20b"              # local model under test; probe: ~33s/turn, reliable tool_calls
+  api_key: null                            # or "$ENV_VAR_NAME"
+  # Also onboard and tool-call-capable: qwen/qwen3-4b-thinking-2507 (truly small, 4B,
+  # but ~106s/turn on CPU — 365/412 completion tokens are reasoning. Swap in for the
+  # smaller-model run; expect ~3-4x the wall-clock.)
+
+params:
+  temperature: 0.2                  # low: we want the model to follow the protocol, not improvise
+  max_tokens: 2048
+  seed: 42                          # passed through; many local backends ignore it
+
+budget:
+  max_turns: 14                     # full protocol is ~11 tool calls; leave headroom
+  max_seconds_per_trial: 300        # per-call timeout (gpt-oss ~33s warm; ample headroom)
+
+tools: hyperworker                  # v0.2 tool-call loop + built-in harness toolset
+
+task:
+  prompt_file: ceremony-lightweight.md
+  inputs:
+    topic: "Event-sourced state beats mutable files for multi-writer agent work"
+
+axes:
+  - id: prompt
+    target: prompt_file
+    levels: ["ceremony-full.md", "ceremony-none.md"]
+
+scoring:
+  structural: auto
+  checks:
+    # Completion is the headline: did a task.complete event land at all?
+    - {id: completed,     type: structural, metric: task_complete,           min: 1, weight: 3.0}
+    # Did the model actually operate the harness (vs. just talk about it)?
+    - {id: activated,     type: structural, metric: "kind:project.activate", min: 1, weight: 1.0}
+    # Full protocol only: the bootstrap inventory ceremony closed.
+    - {id: scope_locked,  type: structural, metric: "kind:bootstrap.scope_locked", min: 1, weight: 1.0}
+    # No Layer-1 self-reported failures in the trace.
+    - {id: clean_layer1,  type: structural, metric: layer1_fail,             max: 0, weight: 1.0}
