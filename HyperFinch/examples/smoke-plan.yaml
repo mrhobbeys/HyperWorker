@@ -1,0 +1,37 @@
+# Smoke test: exercises cells, trials, file-block materialization, checks, and
+# the leaderboard against the built-in mock endpoint. No LLM required.
+# Run from the HyperFinch directory:  python finch.py run examples/smoke-plan.yaml
+
+finch: 1
+name: smoke
+mode: one-at-a-time
+trials_per_cell: 2
+
+endpoint:
+  base_url: "mock"
+  model: "mock"
+
+params:
+  temperature: 0.5
+
+budget:
+  max_turns: 1
+  max_seconds_per_trial: 30
+
+task:
+  prompt_file: smoke-task.md
+  inputs:
+    tone: "direct"
+
+axes:
+  - id: tone
+    target: input
+    key: tone
+    levels: ["direct", "playful"]
+
+scoring:
+  checks:
+    - {id: has_subject, type: regex,       pattern: "^Subject:",       weight: 2.0}
+    - {id: artifact,    type: file_exists, path: "out/email.md",       weight: 1.0}
+    - {id: no_hype,     type: not_contains, pattern: "guaranteed",     weight: 1.0}
+  structural: auto

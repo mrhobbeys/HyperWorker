@@ -1,0 +1,53 @@
+# HyperFinch flight plan — copy, fill in, run: python finch.py run <this-file>
+# Full field reference: FINCH.md §Flight plan schema
+
+finch: 1
+name: my-first-sweep              # results land in results/<name>/
+mode: one-at-a-time               # one-at-a-time | factorial (factorial explodes; opt in knowingly)
+trials_per_cell: 5                # 5-10 detects large effects only; the leaderboard says so
+
+endpoint:
+  base_url: "http://localhost:11434/v1"   # Ollama default; any OpenAI-compatible server; "mock" to dry-run
+  model: "llama3.1:8b"
+  api_key: null                   # or "$ENV_VAR_NAME"
+
+params:
+  temperature: 0.7
+  max_tokens: 1024
+  seed: 42                        # passed through; many local backends ignore it
+
+budget:
+  max_turns: 1                    # >1 enables the bounded file-block agentic loop
+  max_seconds_per_trial: 120
+
+workspace:
+  copy: []                        # e.g. ["../HyperWorker"] to give each trial a fresh harness checkout
+
+task:
+  prompt_file: task-prompt.md     # {{key}} placeholders substituted from inputs
+  inputs:
+    tone: "direct"
+
+axes:
+  # Vary a task input:
+  - id: tone
+    target: input
+    key: tone
+    levels: ["direct", "playful"]
+  # Vary a sampling parameter:
+  # - id: temperature
+  #   target: param
+  #   key: temperature
+  #   levels: [0.2, 0.9]
+  # Swap the whole prompt:
+  # - id: prompt
+  #   target: prompt_file
+  #   levels: ["task-prompt.md", "task-prompt-v2.md"]
+
+scoring:
+  checks:
+    - {id: has_subject, type: regex,          pattern: "^Subject:",  weight: 2.0}
+    - {id: short,       type: word_count_max, value: 300,            weight: 1.0}
+    - {id: no_hype,     type: not_contains,   pattern: "guaranteed", weight: 1.0}
+  structural: auto                # auto | off — HyperWorker events.jsonl metrics when present
+  judge: null                     # reserved for v0.3 (paired-comparison judging)
