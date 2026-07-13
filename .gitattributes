@@ -1,0 +1,10 @@
+# Normalize all text files to LF in the repository.
+# The harness is operated across Windows / macOS / Linux machines;
+# hash-cited artifacts must not change bytes because of a checkout.
+* text=auto eol=lf
+
+# Binary-safe exclusions
+*.png binary
+*.jpg binary
+*.gif binary
+*.pdf binary
