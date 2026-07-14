@@ -1,0 +1,177 @@
+# schemas/projects/program/capability-gates.yaml
+# Capability gates and Layer 1 check declarations for program projects.
+#
+# The program instance's agents get READ access to sibling instance projections and
+# WRITE access ONLY to the program instance. No shell/browser needed by default — the
+# program coordinates by reading files and writing typed artifacts, never by driving
+# the workstreams' own tools.
+
+cross_instance_access:
+  read:
+    scope: sibling-instance-projections-only
+    allowed_paths:
+      - "<instance_path>/projects/*/SESSION-HANDOFF.md"
+      - "<instance_path>/projects/*/CYCLES.md"
+      - "<instance_path>/projects/active_project.md"
+      - "<instance_path>/projects/*/PROJECT.md"
+    forbidden:
+      - "<instance_path>/.hyperworker/events.jsonl (as a writer — see rule below)"
+    rule: |
+      A sibling instance's events.jsonl may be opened for READ ONLY, and only to
+      recompute a projection's hash for a citation or to confirm a projection's
+      provenance — never to append. Appending to a sibling's events.jsonl from this
+      instance is a Tier 1 violation regardless of intent (core/SUBSTRATE.md
+      §Single-Writer Rule; core/LOCK.md §Programs point 4). If the program genuinely
+      needs to change something in a sibling instance, that change is made by that
+      instance's own single writer, in its own session — the program records the
+      request as a Decision and waits.
+  write:
+    scope: program-instance-only
+    allowed_paths:
+      - "<program instance root>/**"
+    rule: |
+      Program agents write only inside this instance: events.jsonl, projections
+      under projects/<program-id>/, and the workstream registry. They never write
+      into projects/<id>/tasks/ of a sibling instance, never scaffold a sibling
+      instance's files directly (the sibling's own bootstrap does that, per
+      core/LOCK.md §Programs point 2 — "the actual bootstrap happens in the NEW
+      instance, not this one").
+
+# Per-task capability declarations (tools the harness composes for delegated
+# subagents). No shell_exec, no browser, no external_api by default — a program
+# reads text files and writes typed artifacts.
+task_capabilities:
+  workstream-inventory:
+    required_tools: [file_read, file_write, hash_compute]
+    description: "Probe sweep for sibling instances (bootstrap-probe.md); register existing ones directly as workstream artifacts."
+
+  registry-standup:
+    required_tools: [file_read, file_write, hash_compute]
+    description: "Confirm OR-001 sufficiency; render the registry projection; verify every T-000-discovered instance has a workstream artifact."
+
+  spawn-workstream:
+    required_tools: [file_read, file_write, hash_compute]
+    description: "Draft a spawn proposal, pause for operator approval, record the spawn Decision, register the workstream once the sibling instance is confirmed to exist. Never bootstraps the sibling instance itself."
+
+  promote-item:
+    required_tools: [file_read, file_write, hash_compute]
+    description: "Read a sibling workstream's projections read-only to identify a hot item against OR-001.promote_criteria; run the same spawn-and-pause protocol as spawn-workstream, tagged trigger: promote."
+
+  rollup-cycle:
+    required_tools: [file_read, file_write, hash_compute]
+    description: "Read-only sweep of every registered workstream's SESSION-HANDOFF.md / CYCLES.md; write one roll-up Finding per program cycle."
+    delegation_recommended: true
+    rationale: "Per-workstream reads are hermetic; fan out one read-only sub-pass per workstream, converge on a single roll-up Finding per core/SUBSTRATE.md §Single-Writer Rule (parallel actors write drafts, one writer appends)."
+
+  retire-workstream:
+    required_tools: [file_read, file_write, hash_compute]
+    description: "Record a retire Decision and supersede the workstream's status to retired."
+
+  program-review:
+    required_tools: [file_read, file_write, hash_compute]
+    description: "Cycle close: confirm the cycle's recurring tasks are complete, compute next_due, present the roll-up to the operator for review."
+
+not_required:
+  - shell_exec
+  - browser
+  - web_search
+  - web_fetch
+  - external_api
+
+# Scope-completeness check (core/SUBSTRATE.md §Scope Completeness).
+scope_completeness:
+  allowed_terminal_states:
+    - complete
+    - deferred
+    - excluded-after-discovery
+    - escalated
+
+# External-state read-back (core/SUBSTRATE.md §External State Read-Back). The
+# program itself does not actuate any external surface — it reads projections and
+# writes typed artifacts. required_for is empty; a sibling workstream's own schema
+# owns its own external_state_readback declarations.
+external_state_readback:
+  required_for: []
+  fallback_equality_method: manual-attestation
+
+# Bootstrap probe (core/SUBSTRATE.md §Bootstrap Inventory Sweep).
+bootstrap_probe:
+  method: sibling-instance-directory-sweep
+  probe_doc: bootstrap-probe.md
+  declared_source: OR-001.initial_workstream_inventory
+  found_source: directory walk for .hyperworker/events.jsonl under operator-declared search roots
+  reconciliation_flow: per-item-disposition
+
+# Spawn-pause Layer 1 check (generalizes course-master-plan-test's
+# child_project_pause_skipped to the program shape — see README.md).
+spawn_pause:
+  enforce: true
+  layer1_check_name: spawn_pause_skipped
+
+  rule: |
+    For every workstream artifact (WS-NNN) whose origin field is spawned, the
+    events.jsonl chain MUST contain, strictly before the workstream.add event that
+    first registers it:
+      1. workstream.spawn_proposed for a matching proposal_id, AND
+      2. workstream.spawn_decided for the same proposal_id, with
+         decision: approved and operator_confirmed: true.
+    Registering a spawned workstream without both prior events, in order, is a
+    Layer 1 FAIL. Workstreams with origin: existing-registered (T-000's probe sweep)
+    are exempt — they describe instances that already existed before this program
+    project began, so there is no spawn to pause on.
+
+    A DECLINED proposal (workstream.spawn_decided with decision: declined) MUST NOT
+    be followed by a workstream.add for that proposal_id. If one appears anyway,
+    FAIL.
+
+  resources_skip_allowed: false
+  # Unlike course-master-plan-test's slug-premise-pause, a program spawn has no
+  # "skip the pause" path — core/LOCK.md §Programs names promote-and-swap as a
+  # decision the operator makes, not a default the agent can assume. The pause is
+  # never optional here.
+
+  hypothesis: H-L3
+  hypothesis_falsifier: |
+    A spawned workstream's workstream.add event lands without a paired
+    spawn_proposed/spawn_decided(approved) pair preceding it in the chain, and
+    Layer 1 PASSes. Reported via friction.log type: REGRESSION.
+
+# Registry consistency Layer 1 check.
+registry_consistency:
+  enforce: true
+  layer1_check_name: registry_status_vs_supersede_chain
+
+  rule: |
+    For every child_project_id, exactly one workstream artifact (the one with no
+    superseded_by set) is current. Its status must be reachable from its direct
+    predecessor's status (the WS-NNN named in its reverses field, if any) by one of
+    the legal transitions declared in artifact-extensions.yaml's workstream.status
+    field: active<->parked, active->promoted, active->retired, active->done,
+    parked->retired, promoted->retired. More than one non-superseded workstream
+    sharing a child_project_id, or a transition outside this set, is a FAIL.
+
+# Roll-up citation freshness Layer 1 check (cross-instance citations, see
+# rules-template.md §Cross-Instance Citation Format).
+rollup_citation:
+  enforce: true
+  layer1_check_name: rollup_citation_stale_or_broken
+
+  rule: |
+    At the moment a roll-up Finding's last_rollup_citation is written, the cited
+    path must resolve and its recorded sha256 must match the file's actual bytes
+    (pre-append check, same as any citation — core/SUBSTRATE.md §hw add step 3).
+    This is checkable at write time because the program agent just read the file.
+
+    At each SUBSEQUENT roll-up cycle, the prior cycle's citation for the same
+    workstream is re-checked, non-blocking:
+      - path no longer resolves at all -> WARNING rollup_citation_broken (the
+        sibling instance's projection moved or the instance path changed; surface
+        to operator, do not FAIL the cycle).
+      - path resolves but sha256 differs from the recorded one -> expected and
+        informational, not a failure (the sibling instance simply moved on since
+        the last roll-up — that is what "staleness checkable" means, not "must
+        never go stale").
+      - path resolves and hashes match -> the workstream has not produced a new
+        SESSION-HANDOFF.md / CYCLES.md write since the last roll-up; note it as a
+        candidate for the overdue_workstreams list if the workstream is itself
+        lifecycle: ongoing.

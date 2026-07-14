@@ -1,0 +1,68 @@
+# schemas/projects/program/precedence-tiers.yaml
+# Tiered rules for program orchestrator projects. Tier ordinal wins on conflict.
+# Renaming a tier does not change ordinal precedence.
+
+tiers:
+  - tier: 1
+    name: ONE-WRITER-LANE-DISCIPLINE
+    purpose: |
+      The substrate rules that keep this a schema instead of a mechanism
+      (core/LOCK.md §Programs; core/SUBSTRATE.md §Single-Writer Rule). Never
+      overridden by operator convenience, urgency, or "it would be faster to just
+      write it directly."
+    examples:
+      - "One events.jsonl has at most one writer, always. This instance never appends to a sibling workstream's events.jsonl, not even to record a status change the sibling would obviously agree with."
+      - "A parent (this program) and a child (a spawned or promoted workstream) are never simultaneously active in one instance. Promotion is promote-and-swap — a new instance — never nesting a child project inside this one."
+      - "The orchestrator plans, reviews, opens/closes loops — it never does the work. A program agent never executes a workstream's own tasks, never drafts a workstream's deliverable, never actuates a workstream's external surface. If a routing decision implies work, the work is opened as a loop in the workstream's own instance, not performed here."
+      - "Operator decisions are FINAL: record verbatim, never re-open or contradict. Raise a concern once, then comply."
+
+  - tier: 2
+    name: REGISTRY-SCOPE
+    purpose: |
+      This project owns the registry, routing/priority decisions, and roll-up
+      findings — nothing else. Promote-and-swap, not nesting; the actual bootstrap
+      of any new instance happens in that instance, not here.
+    examples:
+      - "A spawn or promote proposal never itself creates the sibling instance. It proposes, pauses, and records a Decision; the operator (or a separate session, in the new instance) runs hw bootstrap there."
+      - "A roll-up cycle reads SESSION-HANDOFF.md / CYCLES.md read-only. It never opens a sibling instance's events.jsonl as a writer, per Tier 1."
+      - "A hot item promoted out of a sweep workstream gets a dedicated workstream artifact and a promote Decision here; the source workstream's own item is marked promoted by that workstream's own writer, in its own session, citing this program's promote Decision back — not by this instance reaching into the source."
+
+  - tier: 3
+    name: DECISION-DISCIPLINE
+    purpose: |
+      Spawn, promote, retire, and routing calls are typed Decision artifacts, not
+      loose conversation. Workstream status changes are supersede events, never
+      in-place registry edits. Cross-instance citations carry both a relative path
+      and a content hash so staleness is checkable, and promote citations go both
+      ways (program cites the source item; the source workstream, in its own
+      session, cites the promote Decision back).
+    examples:
+      - "A workstream's status field never changes by editing the registry file — it changes by a new workstream.add event with reverses: <old WS-NNN>, so the status history is a supersede chain (core/SUBSTRATE.md §Superseded Artifact Back-Link)."
+      - "Every spawn or promote Decision cites the workstream(s) it concerns by [WS-NNN#hash]; a promote-decision additionally carries source_item_citation (relative path + short hash) pointing at the specific item promoted."
+      - "Operator mid-flow directives (a new promote criterion stated in chat, a routing preference) are captured as typed Decisions with synthesis_role, not left in conversation."
+
+  - tier: 4
+    name: STYLE
+    purpose: |
+      Presentation and citation consistency for the registry, roll-up findings, and
+      decisions.
+    examples:
+      - "Same-instance citations use [KIND-NNN#hash] per core/SUBSTRATE.md §Citation Format. Cross-instance citations use the format in rules-template.md §Cross-Instance Citation Format: <relative-instance-path>/<projection-file>@sha256:<12-hex>."
+      - "Workstream names in the registry match the sibling instance's own PROJECT.md title, not an ad-hoc rename."
+
+scan_markers:
+  - tier: 1
+    marker: "@@SCAN_1_1"
+    question: "Did any event in this turn append to, or attempt to append to, a sibling instance's events.jsonl?"
+  - tier: 1
+    marker: "@@SCAN_1_2"
+    question: "Did this turn execute or draft workstream-level deliverable work (rather than plan, review, or open/close a loop about it)?"
+  - tier: 2
+    marker: "@@SCAN_2_1"
+    question: "If this turn registered a spawned workstream, did the sibling instance's existence get confirmed by the operator BEFORE registration, rather than assumed?"
+  - tier: 3
+    marker: "@@SCAN_3_1"
+    question: "Did this turn change a workstream's status by anything other than a new workstream.add with reverses: set?"
+  - tier: 3
+    marker: "@@SCAN_3_2"
+    question: "Does every spawn/promote/retire/routing decision in this output cite the workstream(s) it concerns by [WS-NNN#hash]?"

@@ -1,0 +1,95 @@
+# schemas/projects/program/verification.yaml
+# Risk -> verification mapping. Program-specific Layer 2 checks emphasize registry
+# consistency, spawn-pause compliance, and roll-up citation freshness.
+
+risk_levels:
+  standard:
+    layers: [1, 2]
+    layer2_checks:
+      - schema_validation
+      - registry_projection_consistency
+    rationale: |
+      Workstream inventory (T-000), registry standup (T-001). Layer 1 substrate
+      checks plus registry-vs-filesystem consistency.
+
+  elevated:
+    layers: [1, 2, 3]
+    council_size: 2
+    layer2_checks:
+      - schema_validation
+      - registry_projection_consistency
+      - spawn_pause_compliance
+      - rollup_citation_freshness
+    failure_scenarios_required: 2
+    rationale: |
+      Spawn proposal drafting (T-002, before approval), roll-up cycles (T-004).
+      Council fires on completion. Two failure scenarios required: one for "what if
+      the operator approves a spawn based on an inaccurate premise," one for "what
+      if a roll-up cites a projection that has already gone stale by the time the
+      operator reads it."
+
+  critical:
+    layers: [1, 2, 3]
+    council_size: 3
+    layer2_checks:
+      - schema_validation
+      - registry_projection_consistency
+      - spawn_pause_compliance
+      - rollup_citation_freshness
+      - lane_boundary_check
+    failure_scenarios_required: 3
+    operator_review_required: true
+    rationale: |
+      Promote decisions, retire decisions, and program activation/review — outputs
+      that reassign a workstream's status or commit a new instance. Full council
+      fires; operator review required before the decision is recorded.
+
+# Layer 2 check definitions.
+layer2_check_definitions:
+  schema_validation:
+    description: |
+      All written artifacts validate against their declared schemas (default kinds
+      + program's artifact-extensions.yaml). Substrate-enforced; no agent judgment.
+
+  registry_projection_consistency:
+    description: |
+      Every child_project_id has exactly one current (non-superseded) workstream
+      artifact, and its status is reachable from its predecessor by a legal
+      transition (artifact-extensions.yaml workstream.status). Mirrors the Layer 1
+      registry_status_vs_supersede_chain check at the completion-report level so a
+      task cannot complete leaving the registry inconsistent.
+
+  spawn_pause_compliance:
+    description: |
+      For any workstream registered or decision recorded in this task, the
+      spawn-pause pair (workstream.spawn_proposed then workstream.spawn_decided
+      with operator_confirmed: true) exists and precedes registration. Mirrors
+      Layer 1's spawn_pause_skipped check.
+
+  rollup_citation_freshness:
+    description: |
+      Every last_rollup_citation written or referenced by this task resolves at
+      write time (path exists, hash matches). See capability-gates.yaml
+      rollup_citation for the non-blocking staleness handling on later cycles.
+
+  lane_boundary_check:
+    description: |
+      The task's output contains no workstream-level deliverable content — no
+      drafted lesson/bid/page/whatever a workstream would itself produce. The
+      program plans, reviews, and opens/closes loops; it does not do the work
+      (precedence-tiers.yaml Tier 1).
+
+# Default per-task risk classification (operator may override).
+task_default_risks:
+  workstream-inventory: standard
+  registry-standup: standard
+  spawn-workstream: elevated
+  promote-item: critical
+  rollup-cycle: elevated
+  retire-workstream: critical
+  program-review: critical
+
+# Council triggers beyond the defaults in council.yaml's `triggers:` block are not
+# declared here — council.yaml is authoritative for trigger wiring. This file only
+# maps risk_level -> layers/council_size/checks per core/VERIFICATION.md §Risk
+# Levels.

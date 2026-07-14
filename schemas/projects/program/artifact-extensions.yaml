@@ -1,0 +1,205 @@
+# schemas/projects/program/artifact-extensions.yaml
+# Domain-specific artifact kinds and field extensions for program projects.
+
+# New artifact kinds introduced by this schema.
+
+new_kinds:
+  - kind: workstream
+    description: |
+      A registry entry for one subproject workstream — one full HyperWorker instance
+      with its own events.jsonl, its own lock, its own single writer
+      (core/SUBSTRATE.md §Single-Writer Rule). One workstream artifact per
+      child_project_id. Status changes are NEVER in-place edits: a status change is
+      a new workstream.add event with reverses: <old WS-NNN>, so the status history
+      is a supersede chain like any other typed artifact
+      (core/SUBSTRATE.md §Superseded Artifact Back-Link). The current status is
+      whichever WS-NNN for a given child_project_id has no superseded_by set.
+    schema:
+      - name: id
+        type: string
+        pattern: "WS-\\d{3,}"
+        required: true
+      - name: child_project_id
+        type: string
+        required: true
+        description: "The project ID inside the sibling instance (what its own PROJECT.md / active_project.md calls it)."
+      - name: name
+        type: string
+        required: true
+        description: "Human-readable workstream name for registry display."
+      - name: origin
+        type: enum
+        values: [existing-registered, spawned]
+        required: true
+        description: "existing-registered: instance already existed when discovered by T-000's probe. spawned: created through the T-002/T-003 spawn-and-pause protocol. Layer 1's spawn_pause_skipped check (capability-gates.yaml) only applies to spawned workstreams."
+      - name: instance_path
+        type: string
+        required: true
+        description: "Path to the sibling instance's workspace root, RELATIVE to this program instance's workspace root. Never an absolute path — the program pack is portable across operator machines."
+      - name: bootstrapped_from_schema
+        type: string
+        required: true
+        description: "The schema name the sibling instance's active/most-recent project was (or, for a proposed spawn not yet confirmed, will be) bootstrapped from."
+      - name: lifecycle
+        type: enum
+        values: [terminal, ongoing]
+        required: true
+        description: "The sibling instance's own project lifecycle, mirrored here so a roll-up can tell 'has no next_due' apart from 'is overdue'."
+      - name: status
+        type: enum
+        values: [active, parked, promoted, retired, done]
+        required: true
+        description: |
+          active: currently the workstream's own locked project (or a live ongoing
+          project with no open block). parked: the sibling instance's active project
+          is parked (core/LOCK.md §Park Protocol) or the workstream itself is on hold.
+          promoted: a hot item inside this workstream was promoted to its OWN
+          dedicated workstream; this workstream keeps running (promotion does not
+          retire the source). retired: the workstream itself is done being tracked by
+          this program (its item graduated fully, or the workstream never produced
+          and the operator closed it). done: the sibling instance's project reached
+          project.archive with nothing further expected.
+          Legal transitions: active<->parked, active->promoted, active->retired,
+          active->done, parked->retired, promoted->retired. Any other transition is
+          a Layer 1 registry_status_vs_supersede_chain FAIL (verification.yaml).
+      - name: premise
+        type: string|null
+        required: false
+        description: "Operator-stated one-paragraph premise from the spawn proposal. Required (non-null) when origin: spawned; null is acceptable for origin: existing-registered (the premise predates this program's registry)."
+      - name: spawn_decision
+        type: string|null
+        required: false
+        description: "[DEC-NNN#hash] of the spawn or promote Decision that authorized this workstream. Null for origin: existing-registered."
+      - name: promoted_from
+        type: string|null
+        required: false
+        description: "[WS-NNN#hash] of the source workstream this one was promoted out of, if this workstream exists because of a promote decision. Null otherwise."
+      - name: last_rollup_citation
+        type: object|null
+        required: false
+        schema:
+          path: string
+          sha256: string
+          cycle_id: string
+          checked_at: iso8601
+        description: |
+          Cross-instance citation to the projection file this workstream's most
+          recent roll-up actually read (SESSION-HANDOFF.md or CYCLES.md), per
+          §Cross-Instance Citation Format below. Null until the first roll-up cycle
+          covers this workstream.
+      - name: tags
+        type: list[string]
+        required: false
+
+# Extensions to default artifact kinds.
+
+decision:
+  additional_fields:
+    - name: synthesis_role
+      type: enum|null
+      values:
+        - spawn-decision       # authorizes a new workstream (plain spawn)
+        - promote-decision      # authorizes a promoted workstream out of a sweep item
+        - retire-decision        # authorizes retiring a workstream
+        - routing-decision       # cross-workstream routing / priority call
+        - scope-decision         # general program-scope decision (mid-flow)
+        - weighting-rule         # operator weighting rule (mid-flow)
+        - inclusion-exclusion    # what's in/out of the program (mid-flow)
+      required: false
+      description: "What role this decision plays in program coordination. Null if a general decision."
+    - name: cites_workstream
+      type: list[string]|null
+      required: false
+      description: "[WS-NNN#hash] entries this decision concerns. Required (non-empty) for spawn-decision, promote-decision, retire-decision, routing-decision."
+    - name: source_item_citation
+      type: object|null
+      required: false
+      schema:
+        path: string
+        sha256: string
+      description: |
+        promote-decision only: relative path + short SHA-256 of the sibling
+        workstream's projection (or artifact file) containing the promoted item, at
+        the moment of promotion. Paired with the reciprocal citation the source
+        workstream's own writer records back to this Decision — see
+        rules-template.md Tier 3 "citation both ways."
+
+finding:
+  additional_fields:
+    - name: rollup_role
+      type: enum|null
+      values: [rollup]
+      required: false
+      description: "Set to rollup on every roll-up-cycle Finding; null for any other program-level finding."
+    - name: cycle_id
+      type: string|null
+      required: false
+      description: "C-NNN of the program's own cycle this roll-up Finding belongs to (core/SUBSTRATE.md §Lifecycle events). Required when rollup_role: rollup."
+    - name: workstreams_covered
+      type: list[string]|null
+      required: false
+      description: "[WS-NNN#hash] entries this roll-up actually read this cycle. Required (non-empty) when rollup_role: rollup."
+    - name: overdue_workstreams
+      type: list[string]|null
+      required: false
+      description: "[WS-NNN#hash] entries whose sibling instance is itself lifecycle: ongoing and OVERDUE (core/LOCK.md §Ongoing Projects) per its own CYCLES.md at read time. [] means checked, none overdue."
+    - name: promote_recommendations
+      type: list[string]|null
+      required: false
+      description: "[WS-NNN#hash] entries this roll-up recommends the operator consider for promotion, with the reason inline in the Finding body."
+    - name: retire_recommendations
+      type: list[string]|null
+      required: false
+      description: "[WS-NNN#hash] entries this roll-up recommends the operator consider for retirement, with the reason inline in the Finding body."
+
+anti-pattern:
+  additional_fields:
+    - name: wasted_coordination_pattern
+      type: string|null
+      required: false
+      description: "The recurring program-level dead end this anti-pattern captures (e.g., a sweep workstream that never promotes anything after N cycles is a routing-rule problem, not a workstream problem)."
+
+operating-reality:
+  # Base operating-reality fields (budget, timeline, team, authority,
+  # operator_profile) are not asked by the program bootstrap_questions. Program
+  # goal, workstream inventory, roll-up cadence, promote criteria, and delegation
+  # policy carry the constraint set. Override the base template's required: true so
+  # they are optional for program projects.
+  field_overrides:
+    - name: budget
+      required: false
+    - name: timeline
+      required: false
+    - name: team
+      required: false
+    - name: authority
+      required: false
+    - name: operator_profile
+      required: false
+    - name: delegation_policy
+      required: true
+      description: |
+        Required (not optional) for program projects — asked explicitly at
+        bootstrap as interruption_budget. spawn-decision and promote-decision are
+        always included in delegation_policy.pause_on for this schema regardless of
+        the operator's declared pause_on list; a program that never pauses for a
+        spawn or a promote is not following the spawn protocol (rules-template.md
+        Tier 1).
+  additional_fields:
+    - name: program_goal
+      type: string
+      required: true
+      description: "One paragraph: the operator goal this program serves and why it is program-shaped."
+    - name: initial_workstream_inventory
+      type: list[object]
+      required: true
+      description: "As declared at bootstrap: existing instances to register directly, and new ones to spawn through the T-002 protocol. See schema.yaml bootstrap_questions."
+    - name: rollup_cadence
+      type: string
+      required: false
+      default: weekly
+      description: "Recorded verbatim; normalized to cadence_days once at bootstrap for the program's own lifecycle: ongoing cycles."
+    - name: promote_criteria
+      type: string
+      required: true
+      description: "What makes an item inside a workstream hot enough to promote. Read by T-003 every invocation."

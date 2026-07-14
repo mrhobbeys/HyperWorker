@@ -1,0 +1,149 @@
+# schemas/projects/program/schema.yaml
+# Orchestrator schema for program-shaped work (core/LOCK.md §Programs). The program
+# project is itself a normal locked HyperWorker project in its own instance; its
+# subject matter is a registry of sibling workstream instances plus the spawn /
+# promote / retire decisions and roll-up findings that route work between them.
+#
+# H-L3 test vehicle. See README.md and core/LOCK.md hypothesis table.
+#
+# Used by:
+#   hw bootstrap --schema program --name <program-id>
+
+schema_id: program
+schema_version: 1.0
+harness_version: "5.3.0"
+description: |
+  Orchestrate N concurrent workstream harness instances under one operator goal
+  without any orchestration primitive entering the substrate. Every workstream is a
+  typed `workstream` artifact (registry entry, status enum, supersede-chained status
+  history). Every spawn, promote, or retire is a typed Decision. Every roll-up cycle
+  reads sibling-instance projections read-only and writes one roll-up Finding. The
+  program instance is never a second writer on any workstream's events.jsonl
+  (core/SUBSTRATE.md §Single-Writer Rule).
+
+  Typically lifecycle: ongoing — the program has no natural "done" while any
+  workstream is active; roll-up proceeds in cycles on a declared cadence
+  (core/LOCK.md §Ongoing Projects). A program whose workstreams have all reached
+  retired/done and whose operator declares the program goal itself finished can still
+  hw wrap normally.
+
+bootstrap_questions:
+  - id: project_name
+    prompt: "Program project name? (e.g., the operator goal this program serves)"
+    type: string
+    required: true
+
+  - id: program_goal
+    prompt: "One paragraph: what operator goal does this program serve, and what makes it program-shaped (many concurrent workstreams) rather than one project?"
+    type: string
+    required: true
+
+  - id: lifecycle
+    prompt: "Lifecycle for this program project — ongoing (roll-up cycles on a cadence) or terminal (the program itself has a defined end)?"
+    type: enum
+    values: [ongoing, terminal]
+    required: true
+    default: ongoing
+
+  - id: initial_workstream_inventory
+    prompt: "Initial workstream inventory: for each workstream, is it an EXISTING harness instance to register (give relative instance path + schema), or a NEW one to spawn (give slug + one-paragraph premise + schema choice, to be proposed through the spawn protocol rather than registered directly)?"
+    type: list[object]
+    required: true
+    note: "Existing instances are registered directly by T-000 (bootstrap-probe.md); anything marked 'new' is NOT registered at bootstrap — it goes through the T-002 spawn-and-pause protocol like any later spawn, so the same operator-approval gate applies whether the program starts mid-flight or from zero."
+
+  - id: rollup_cadence
+    prompt: "How often does the program roll up workstream status? (e.g., 'weekly'; recorded verbatim, normalized to cadence_days once at bootstrap per core/LOCK.md §Ongoing Projects)"
+    type: string
+    required: false
+    default: "weekly"
+
+  - id: promote_criteria
+    prompt: "What makes an item inside a workstream 'hot' enough to promote to its own dedicated workstream? Be concrete — this is read by the promote task every time."
+    type: string
+    required: true
+
+  - id: interruption_budget
+    prompt: "Operator interruption budget for this program: mode (step-by-step | run-to-completion | hybrid), which events should pause for the operator, and who may resume after a pause? Programs generate more pause points than most schemas (every spawn and every promote stops for approval), so this is asked explicitly rather than left to defaults."
+    type: object
+    required: true
+    note: "Written verbatim to OR-001.delegation_policy — the base field from templates/artifact-templates/operating-reality-template.md, asked explicitly here rather than left optional. spawn-decision and promote-decision events are always in delegation_policy.pause_on for this schema regardless of what the operator answers; see artifact-extensions.yaml."
+
+includes:
+  - precedence-tiers.yaml
+  - artifact-extensions.yaml
+  - capability-gates.yaml
+  - verification.yaml
+  - council.yaml
+  - project-template.md
+  - rules-template.md
+  - task-templates/
+  - artifact-templates/
+  - README.md
+
+# Project-local event kinds. Both are the pause-gate pair for the spawn protocol
+# (T-002) and its promote-flavored use (T-003) — a hot item promoted out of a sweep
+# workstream is spawned exactly like any other new workstream, just with
+# `trigger: promote` and `promoted_from` set. Retiring a workstream needs no new event
+# kind: it is an ordinary `workstream.add` with `reverses:` set to the current WS-NNN
+# and `status: retired` (core/SUBSTRATE.md §Superseded Artifact Back-Link).
+local_event_kinds:
+  - kind: workstream.spawn_proposed
+    payload_schema:
+      proposal_id: string
+      trigger: enum [spawn, promote]
+      slug: string
+      premise: string
+      schema_choice: string
+      promoted_from: string|null
+      proposed_by: string
+    description: |
+      Emitted when the agent finishes drafting a spawn (or promote) proposal —
+      slug + one-paragraph premise + schema choice. After this event the agent
+      STOPS and surfaces the proposal to the operator for approval. The actual
+      bootstrap of the new instance happens outside this project, in the new
+      instance itself, after approval — this event never scaffolds anything.
+
+  - kind: workstream.spawn_decided
+    payload_schema:
+      proposal_id: string
+      decision: enum [approved, declined]
+      decision_artifact: string|null
+      operator_confirmed: bool
+    description: |
+      Emitted when the operator decides. Pairs with the prior
+      workstream.spawn_proposed to satisfy the Layer 1 spawn_pause_skipped check
+      (capability-gates.yaml). decision_artifact is the [DEC-NNN#hash] of the
+      spawn/promote Decision recorded on approval; null on decline.
+
+# Default tasks scaffolded into projects/<id>/tasks/ at bootstrap. Filenames copied
+# verbatim; frontmatter task IDs (T-000..T-006) preserved (core/SUBSTRATE.md
+# §hw bootstrap step 2).
+default_tasks:
+  description: |
+    7 tasks. Phase A (Setup): workstream inventory (T-000), registry standup (T-001).
+    Phase B (Steady state, repeatable procedures run as branches of their task):
+    spawn workstream (T-002), promote item (T-003), retire workstream (T-005).
+    Phase C (Cycle, recurring — see recurring_tasks below): roll-up (T-004), program
+    review / cycle close (T-006).
+  templates:
+    - "00-workstream-inventory.md"
+    - "01-registry-standup.md"
+    - "02-spawn-workstream.md"
+    - "03-promote-item.md"
+    - "04-rollup-cycle.md"
+    - "05-retire-workstream.md"
+    - "06-program-review.md"
+
+# v5.3 convention (core/LOCK.md §Ongoing Projects, core/SUBSTRATE.md §`hw cycle`).
+# `hw cycle close` resets exactly these tasks to `pending` for the next cycle; every
+# other default task stays at whatever state it reached (T-002/T-003/T-005 are
+# repeatable procedures re-invoked as branches, not reset by cycle close).
+recurring_tasks:
+  - "04-rollup-cycle.md"
+  - "06-program-review.md"
+
+# Friction-log scope at project level — a program instance's friction is almost
+# always about the coordination layer itself (spawn ceremony friction, registry
+# drift, promote criteria that keep needing revision), worth keeping local rather
+# than mixed into the workspace-root log of whatever else runs in this workspace.
+friction_log_scope: project

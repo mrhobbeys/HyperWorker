@@ -1,0 +1,136 @@
+# schemas/projects/program/council.yaml
+# Verifier subagents run context-asymmetric: they see the registry, the citations,
+# and the consumes list, never the implementer's reasoning prose.
+
+convergence_rule: all-agree-or-escalate
+
+members:
+  - role: program-goal-aligner
+    family_default: claude
+    prompt_template_on_activate: |
+      You are reviewing OR-001 before any workstream registry work begins.
+      No workstreams are registered yet; do not look for any.
+
+      Read: program_goal, lifecycle, initial_workstream_inventory,
+      rollup_cadence, promote_criteria, delegation_policy.
+
+      Check:
+      - Is program_goal a concrete one-paragraph statement of the operator goal
+        and why it is program-shaped (many concurrent workstreams), not a vague
+        label?
+      - Does initial_workstream_inventory distinguish existing-to-register from
+        new-to-spawn for every entry, with enough detail (instance path + schema
+        for existing; slug + premise + schema choice for new) to act on?
+      - Is promote_criteria concrete enough that a later task can apply it without
+        re-asking the operator what "hot" means?
+      - Does delegation_policy.pause_on include (or is it silent, which this
+        schema treats as inclusive of) spawn-decision and promote-decision pause
+        points? Flag if it explicitly excludes them.
+      Output one line: PASS or FAIL: <missing fields>.
+    prompt_template_on_output: |
+      You are reviewing whether the current registry and recent decisions serve
+      OR-001's program_goal.
+
+      Read OR-001 (program_goal, promote_criteria). Sample the artifact under
+      review (a workstream registration, a spawn/promote/retire Decision, a
+      roll-up Finding).
+
+      Check:
+      - Does the artifact advance the declared program goal? Cite specific
+        workstreams that do or do not.
+      - For a promote Decision: does the promoted item actually meet
+        OR-001.promote_criteria, cited concretely (not "seems hot")?
+      - For a roll-up Finding: does it cover every currently-active workstream,
+        or are some silently absent?
+      Output one line: PASS or FAIL: <reasons>.
+
+  - role: spawn-pause-watcher
+    family_default: claude
+    description: |
+      Verifies the spawn-pause invariant. Fires at any task.complete touching a
+      spawn or promote, and at session.handoff.
+    prompt_template: |
+      You are reviewing whether the spawn-pause invariant held during this
+      session.
+
+      Read the events.jsonl tail and the workstream registry. For every
+      workstream artifact with origin: spawned:
+
+      - Confirm a workstream.spawn_proposed event exists for its proposal_id.
+      - Confirm a paired workstream.spawn_decided event exists for the same
+        proposal_id, with decision: approved and operator_confirmed: true.
+      - Confirm the workstream.add event that registered it comes AFTER both,
+        not before.
+      - Confirm no workstream.add exists for a proposal_id whose
+        spawn_decided was decision: declined.
+
+      If any spawn or promote skipped the pause, output FAIL with the
+      child_project_id. Otherwise PASS.
+
+  - role: registry-integrity-watcher
+    family_default: claude
+    description: |
+      Verifies the registry-vs-supersede-chain consistency (Layer 1's
+      registry_status_vs_supersede_chain, reviewed here at the judgmental level
+      for anything Layer 1's mechanical check cannot see, e.g. whether a status
+      change's REASON is substantive). Fires on task.complete for
+      promote-item / retire-workstream, and at project.archive.
+    prompt_template: |
+      You are reviewing registry integrity.
+
+      Read every workstream artifact. For each child_project_id, confirm exactly
+      one current (non-superseded) entry exists.
+
+      For each status change (a workstream.add with reverses: set) in scope for
+      this review, confirm:
+      - The transition is legal (active<->parked, active->promoted,
+        active->retired, active->done, parked->retired, promoted->retired).
+      - The change is backed by a cited Decision (spawn/promote/retire) — not
+        a bare status flip with no rationale.
+
+      Output one line: PASS or FAIL: <child_project_ids with issues>.
+
+  - role: lane-boundary-watcher
+    family_default: claude
+    description: |
+      Verifies the orchestrator never does workstream-level work
+      (precedence-tiers.yaml Tier 1). Fires on any critical-risk task completion
+      and at project.archive.
+    prompt_template: |
+      You are reviewing whether this program instance stayed in its lane: plans,
+      reviews, opens/closes loops — never does a workstream's own work.
+
+      Sample the artifact(s) under review. Check for content that reads as a
+      workstream deliverable rather than program coordination: drafted
+      end-deliverable prose, executed workstream-level task steps, or any write
+      outside this program instance's own projects/ tree.
+
+      Output one line: PASS or FAIL: <what crossed the lane boundary, if
+      anything>.
+
+triggers:
+  - event: project.activate
+    members: [program-goal-aligner]
+    description: "Verification Checkpoint at bootstrap. Confirms OR-001 is sufficient before T-000 begins."
+
+  - event: task.complete
+    when: "task.risk_level == 'critical'"
+    members: [program-goal-aligner, registry-integrity-watcher, spawn-pause-watcher, lane-boundary-watcher]
+    description: "Full council on promote decisions, retire decisions, and program review / cycle close."
+
+  - event: task.complete
+    when: "task.risk_level == 'elevated'"
+    members: [program-goal-aligner, spawn-pause-watcher]
+    description: "Spawn proposals and roll-up cycles."
+
+  - event: session.handoff
+    members: [spawn-pause-watcher]
+    description: "Session-handoff check. Verifies the spawn-pause invariant held throughout the closing session."
+
+  - event: cycle.close
+    members: [program-goal-aligner, registry-integrity-watcher]
+    description: "Program cycle close (hw cycle close via T-006). Confirms the roll-up served the goal and the registry is internally consistent before next_due is recorded."
+
+  - event: project.archive
+    members: [program-goal-aligner, spawn-pause-watcher, registry-integrity-watcher, lane-boundary-watcher]
+    description: "Pre-archive verification, for the terminal case where the operator declares the program goal itself finished (core/LOCK.md §Ongoing Projects — hw wrap is valid only when the recurring need itself has ended)."
