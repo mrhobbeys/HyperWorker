@@ -9,7 +9,7 @@ delivery_mode: constrained
 depends_on: [T-001]
 consumes: ["[OR-001#<short-hash>]"]
 acceptance_criteria:
-  - "The 175 crawled-not-indexed (+ other exclusions) categorized by likely cause (thin/duplicate/orphan/quality)."
+  - "Every crawled-not-indexed page (+ other exclusions) categorized by likely cause (thin/duplicate/orphan/quality)."
   - "Each category linked to the phase that addresses it (content / structure / on-page)."
 ---
 

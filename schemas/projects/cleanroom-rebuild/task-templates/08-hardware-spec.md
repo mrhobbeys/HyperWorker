@@ -11,7 +11,7 @@ consumes:
   - "[OR-001#<short-hash>]"
   - "[OBS-NNN#<short-hash>]"  # hardware-io OBS
 acceptance_criteria:
-  - "Each in-scope peripheral operation is specified as a SPEC (spec_type: hardware-spec): the byte sequence / OPOS call contract the rebuilt app must emit, in our own words, with worked example payloads."
+  - "Each in-scope peripheral operation is specified as a SPEC (spec_type: hardware-spec): the byte sequence / device-protocol call contract (e.g., OPOS) the rebuilt app must emit, in our own words, with worked example payloads."
   - "Each hardware-spec cites the hardware-io OBS it derives from in derived_from."
   - "Protocol byte values / device literals retained verbatim (required for the device to function) are listed in verbatim_carryover with justification — these are canonical facts, not over-quoting."
   - "Where a behavior-rule governs device output (e.g., receipt formatting depends on a pricing rule), the hardware-spec cross-references the BR."
@@ -29,7 +29,7 @@ Re-express the original's peripheral protocols as a cleanroom hardware spec the 
 
 1. Recite OR-001 and the hardware-io OBS. SCAN: confirm @@SCAN_2_1 / @@SCAN_2_2. Not a build-room task.
 2. For each device operation, author a SPEC (`spec_type: hardware-spec`): the call contract / byte sequence the rebuilt app must emit, with a worked example payload from the captured OBS.
-3. List required protocol literals (control bytes, OPOS method names) in `verbatim_carryover` with justification. Confirm they also appear in the 00-REFERENCE-rules canonical-facts table so they are not normalized.
+3. List required protocol literals (control bytes, OPOS method names, or other device-protocol identifiers) in `verbatim_carryover` with justification. Confirm they also appear in the 00-REFERENCE-rules canonical-facts table so they are not normalized.
 4. Cross-reference any BR that governs device output (e.g., receipt line formatting tied to a pricing rule).
 5. Cite source OBS in `derived_from`.
 6. `hw add spec < draft-spec-NNN.md`. Confirm `source: cleanroom`, `zone: spec`, `consumable_by_build: true`.

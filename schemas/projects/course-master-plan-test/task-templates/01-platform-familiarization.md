@@ -28,7 +28,7 @@ Walk the platform's admin nav once, document it, and produce `<project root>/<pl
 
 1. Read OR-001. Note `platform`, `course_url`, `admin_user`, `platform_actuation.browser_codename`, `platform_actuation.guide_path`.
 
-2. **Operator browser pick.** If multiple paired browsers are available (e.g., MainChrome + GarageChrome), surface the list and ask operator to select. Record the selection as a Finding artifact (`F-NNN: browser-selected: <codename>`) so future tasks reference the same browser.
+2. **Operator browser pick.** If multiple paired browser-automation agents are available (e.g., a work profile + a personal profile, or separate Claude-in-Chrome-equivalent instances), surface the list and ask operator to select. Record the selection as a Finding artifact (`F-NNN: browser-selected: <codename>`) so future tasks reference the same browser.
 
 3. **Navigate to the platform admin URL** as the admin user (operator pre-authenticated). Confirm the platform recognizes admin-level access (e.g., a Settings link visible that members don't see).
 

@@ -10,7 +10,7 @@ depends_on: [T-000]
 consumes: ["[OR-001#<short-hash>]"]
 acceptance_criteria:
   - "The correct /sitemap_index.xml resubmission + reindex requests are SPECIFIED (depends on Recovery having fixed the docroot sitemap/robots)."
-  - "The 130 not-found 404s are each classified restore-vs-301-vs-leave."
+  - "Every not-found 404 from the baseline is classified restore-vs-301-vs-leave."
   - "SERVER-HANDOFF produced for any server-side work (sitemap/robots/redirects)."
 ---
 

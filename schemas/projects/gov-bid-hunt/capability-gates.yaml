@@ -13,7 +13,7 @@ task_capabilities:
 
   opportunity-sweep:
     required_tools: [file_read, file_write, web_search, web_fetch, browser]
-    description: "Sweep live sources for open opportunities. Browser needed for JS/login-gated portals (BidNet, ESBD, Bonfire, Ionwave, BeaconBid, tribal boards)."
+    description: "Sweep live sources for open opportunities. Browser needed for JS/login-gated portals (e.g., BidNet, Bonfire, Ionwave, BeaconBid, a state's own e-procurement site such as Texas's ESBD, tribal boards)."
     delegation_recommended: true
     rationale: "Per-source sweeps are hermetic; strong subagent fan-out fit. Give subagents web_search + web_fetch; escalate gated portals to a browser session."
 

@@ -149,4 +149,4 @@ operating-reality:
     - name: eligibility_gates
       type: object
       required: true
-      description: "Gates on our ability to win (SAM, cert, membership, teaming), with honest not-done status."
+      description: "Gates on our ability to win (e.g., government contractor registration/SAM, certifications, membership, teaming — or your context's equivalent), with honest not-done status."

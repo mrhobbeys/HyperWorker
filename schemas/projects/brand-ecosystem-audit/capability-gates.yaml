@@ -8,8 +8,9 @@ task_capabilities:
     description: "Renders the property in a real browser, page-by-page, and writes a property-audit. ONE property per unit."
     delegation_recommended: true
     rationale: |
-      Hermetic (one property -> one report). BUT social/login surfaces (FB, LinkedIn, IG,
-      X, YouTube) require a sustained AGENT-DRIVEN browser with the human assisting only at
+      Hermetic (one property -> one report). BUT social/login surfaces (e.g. FB, LinkedIn,
+      IG, X, YouTube, TikTok, or any other platform needing a logged-in session) require a
+      sustained AGENT-DRIVEN browser with the human assisting only at
       login / an irreducible click — subagents can't hold that session. Per dispatch_mode:
       single-agent for <=4 low-risk surfaces; separate-chats (operator runs the templated
       prompt per surface) otherwise and ALWAYS for social/login surfaces.

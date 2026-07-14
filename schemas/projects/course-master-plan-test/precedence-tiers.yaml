@@ -28,7 +28,7 @@ tiers:
       fires.
     examples:
       - "L1 spawning an L2 project does not start L2's first task — that's the L2 session's job after operator drops resources."
-      - "L1 navigating Skool/platform admin pages beyond Phase A.2 read-only walk is a scope violation."
+      - "L1 navigating the platform's admin pages beyond Phase A.2 read-only walk is a scope violation."
       - "Skipping the slug-premise-pause stop point because the operator's intent seems clear is a Tier 2 violation."
       - "Promo work routes to L2 promo-* projects (or external surface if promotion_scope: external); L1 does not draft promo copy."
 

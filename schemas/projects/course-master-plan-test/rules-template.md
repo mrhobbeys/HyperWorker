@@ -74,11 +74,11 @@ Voice consistency across cross-project artifacts. Match `OR-001.lens_anchor[0]` 
 
 ### LENS — guides, doesn't dominate
 
-Skool variant (primary):
+Primary variant (platform lesson framing):
 > I tried the thing, learned this, now I'm teaching you what I learned so you can avoid mistakes and apply the lesson.
 
 Cross-channel variant (secondary, kept for cross-promotional coherence):
-> The multi-business stopping point. I'm running several things at once. Here's what I poked at this week, here's what one business taught me that another couldn't, here's where I stopped and why.
+> Here's what I worked on this week, here's what one project taught me that another couldn't, here's where I stopped and why.
 
 The lens shapes voice and framing in spawned content. Premise of each module is discovered through the work, not pre-determined.
 

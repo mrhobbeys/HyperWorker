@@ -21,7 +21,7 @@ tags: []
 
 ## How to access
 
-<Which connector (M365/Outlook or Google/Gmail)? Connected, or does access still need to be granted? Note any quirks (shared mailbox, alias, archive-only).>
+<Which connector (e.g., M365/Outlook, Google/Gmail, or another provider's connector)? Connected, or does access still need to be granted? Note any quirks (shared mailbox, alias, archive-only).>
 
 ## Why in scope
 

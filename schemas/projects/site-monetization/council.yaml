@@ -9,14 +9,15 @@ members:
     family_default: claude
     prompt_template: |
       Confirm this is Monetization for the assigned site only. Output: PASS or FAIL: <reason>.
-  - role: ezoic-adsense-integration-reviewer
+  - role: ad-network-integration-reviewer
     family_default: claude
     prompt_template: |
-      Verify AdSense is mediated THROUGH Ezoic (not double-served) and ads.txt is consistent.
+      If a mediation/optimization platform is in scope (e.g., Ezoic), verify the primary ad network
+      (e.g., AdSense) is mediated THROUGH it (not double-served) and ads.txt is consistent.
       Output: PASS or FAIL: <reason>.
 triggers:
   - event: project.activate
     members: [sensitive-action-guard, scope-guard]
   - event: task.complete
     when: "task.risk_level in {elevated, critical}"
-    members: [sensitive-action-guard, scope-guard, ezoic-adsense-integration-reviewer]
+    members: [sensitive-action-guard, scope-guard, ad-network-integration-reviewer]

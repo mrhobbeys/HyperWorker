@@ -57,7 +57,7 @@ task_capabilities:
 
   assembly:
     required_tools: [file_read, file_write, docx_handling]
-    description: "T-010. Reads assembly-map artifact + per-chapter files; reassembles into Edited Completed Book.docx."
+    description: "T-010. Reads assembly-map artifact + per-chapter files; reassembles into the polished manuscript at OR-001.deliverable_path."
 
   voice-guidelines-doc:
     required_tools: [file_read, file_write]

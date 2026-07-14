@@ -171,8 +171,8 @@ members:
       archive_folders, and candidates_folder (filenames + sizes only).
 
       Check:
-      - Does book_metadata identify a real, specific book (title + ASIN or
-        equivalent identifier)?
+      - Does book_metadata identify a real, specific book (title + platform ID
+        such as ISBN/ASIN, or equivalent identifier)?
       - Does source_manuscript_path point at a single canonical file (not
         a folder, not multiple candidates)?
       - Is voice_anchor_strategy consistent with the corpus (e.g., extract-

@@ -6,7 +6,7 @@ This is a **working schema** — it is being empirically tested in the run that 
 
 ## What this is for
 
-You have a previously-published manuscript (a Kindle-published book that was put together quickly and shipped without professional editing) and you need to prepare it for re-release: polished copy, voice-preserving edit, AI-indicator pattern removal, spelling and grammar correction, surfacing and resolving unfinished bits the author left mid-draft, and final assembly into both an updated digital manuscript and a print-ready layout.
+You have a previously-published manuscript (a self-published book — e.g., via Kindle Direct Publishing or another self-publishing platform — that was put together quickly and shipped without professional editing) and you need to prepare it for re-release: polished copy, voice-preserving edit, AI-indicator pattern removal, spelling and grammar correction, surfacing and resolving unfinished bits the author left mid-draft, and final assembly into both an updated digital manuscript and a print-ready layout.
 
 The edit is not a rewrite. The work preserves the author's voice, the real examples and case studies, the chapter structure, and the book's substantive arguments. The transformation is at the level of the prose surface: tightening, correcting, smoothing, removing patterns that have come to read as machine-generated, and resolving incomplete sentences or placeholder markers the author intended to come back to.
 
@@ -47,7 +47,7 @@ The edit is not a rewrite. The work preserves the author's voice, the real examp
 
 ## Phase shape
 
-**Phase A — Setup.** Bootstrap inventory sweep. Chapter split from source manuscript into per-chapter working files (assembly map captured for Phase D reassembly). Voice anchor extraction. AI-indicator research subagent (web access; only task in the project that has it). Candidates evaluation (notes / extra-pitfalls files). Unfinished-bits scan. Per-chapter edit-philosophy declaration.
+**Phase A — Setup.** Bootstrap inventory sweep. Chapter split from source manuscript into per-chapter working files (assembly map captured for Phase D reassembly). Voice anchor extraction. AI-indicator research subagent (web access; only task in the project that has it). Candidates evaluation (notes / unincorporated-material files). Unfinished-bits scan. Per-chapter edit-philosophy declaration.
 
 **Phase B — Per-chapter edit passes.** One subagent per chapter, hermetic, working live-edit on its chapter's working file. Pre/post hashes captured. 30% line-delta cap by default. Council fires per pass. Operator promotes between chapters; that is the cadence.
 
@@ -61,7 +61,7 @@ The edit is not a rewrite. The work preserves the author's voice, the real examp
 
 A ghostwriter. The voice is the author's; the schema preserves it.
 
-A typesetter for arbitrary print formats. Phase E produces a docx laid out for a standard POD print pipeline (KDP Print, IngramSpark) — exotic typography, multi-language layout, or specialty binding work falls outside the schema's default Phase E.
+A typesetter for arbitrary print formats. Phase E produces a docx laid out for a standard POD print pipeline (e.g., KDP Print, IngramSpark, or another print-on-demand service) — exotic typography, multi-language layout, or specialty binding work falls outside the schema's default Phase E.
 
 A multi-author tool. One author voice per project.
 

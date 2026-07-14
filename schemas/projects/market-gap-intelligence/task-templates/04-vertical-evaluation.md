@@ -36,7 +36,7 @@ pool. Runs only when scope_mode == vertical-choice.
    - Defensibility / specialization premium (do buyers search for a specialist? do
      specialists charge more? is there a compliance/language barrier generalists
      fail?) [OBSERVED]
-   - Channel reality (where buyers decide; LSA eligibility) [OBSERVED]
+   - Channel reality (where buyers decide; local-ads-program eligibility e.g. LSA, if applicable) [OBSERVED]
    - Switching cost & sales cycle [OBSERVED/ASSUMED]
 3. Run disqualifier checks: intent mismatch (money terms owned by software/
    product → buyer wants a tool, fatal for content entry), no specialization

@@ -4,7 +4,7 @@
 
 - **Title:** {{ book_title }}
 - **Short title:** {{ book_short_title }}
-- **ASIN:** {{ book_asin }}
+- **Platform ID (e.g., ISBN, ASIN):** {{ book_platform_id }}
 - **Listing URL:** {{ book_listing_url }}
 - **Target re-release:** {{ target_release }}
 

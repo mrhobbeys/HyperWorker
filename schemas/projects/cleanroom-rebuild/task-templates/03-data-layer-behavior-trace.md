@@ -11,7 +11,7 @@ consumes:
   - "[OR-001#<short-hash>]"
   - "[OBS-NNN#<short-hash>]"  # the screen OBS / action whose data effect this branch traces
 acceptance_criteria:
-  - "For each in-scope user action, a SQL Server trace + DB before/after diff is captured as OBS (observation_type: sql-trace and/or db-diff) with capture_method: sql-trace | db-diff and source_ref = the action name."
+  - "For each in-scope user action, a SQL trace (e.g., SQL Server Profiler/Extended Events, or the equivalent for the original's RDBMS) + DB before/after diff is captured as OBS (observation_type: sql-trace and/or db-diff) with capture_method: sql-trace | db-diff and source_ref = the action name."
   - "Each trace OBS records the exact statements issued and the row-level before/after delta — a BLACK-BOX measurement of what the action does to data (no code reading)."
   - "Every OBS carries source=original, zone=observed, consumable_by_build=false; this task writes only to observed/."
   - "Actions whose data effect is ambiguous (e.g., depends on hidden state) are flagged in the completion report for repeated measurement."
@@ -22,7 +22,7 @@ acceptance_criteria:
 
 ## Objective
 
-For each user action, MEASURE what the original does to its data: run a SQL Server trace and a DB before/after diff, and record both as OBS. This is the raw material from which behavior rules (T-006) are later derived — black-box, never by reading the original's code. Observation-room task (`data-layer-behavior-trace` kind): faces the original via `app_driver` / `sql_trace` / `sql_query`; reads and writes only `observed/`.
+For each user action, MEASURE what the original does to its data: run a SQL trace (e.g., SQL Server Profiler/Extended Events, or the equivalent for the original's RDBMS) and a DB before/after diff, and record both as OBS. This is the raw material from which behavior rules (T-006) are later derived — black-box, never by reading the original's code. Observation-room task (`data-layer-behavior-trace` kind): faces the original via `app_driver` / `sql_trace` / `sql_query`; reads and writes only `observed/`.
 
 ## Branching Note
 

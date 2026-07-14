@@ -17,7 +17,7 @@ open-ended (ongoing SEO plan).
 - Server/dev work is HANDED OFF (not executed here).
 ### Explicitly Excluded
 - Live site/server changes (operator / dev / Recovery execute).
-- Review & Repair and Monetization (separate sub-chats); docroot sitemap/robots fix (Recovery).
+- Review & Repair and Monetization (separate sub-projects); docroot sitemap/robots fix (Recovery).
 
 ## Operating Reality
 `[OR-001#<short-hash>]` declares: site_domain, gsc_account, recovery_dependency, priority_order.

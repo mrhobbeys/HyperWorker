@@ -39,7 +39,7 @@ This schema gives you all of that as a three-layer L1/L2/L3 orchestration patter
 
 **Tier policy as DEC with append-only movement history.** DEC-002 is the tier policy. `policy_mode: evolving` (default) lets modules move between free/paid tiers; each move is a DEC-002 supersede with documented reason. `movement_history` accumulates so patterns surface over time.
 
-**Platform actuation with manual-attestation read-back.** L2 actuation tasks navigate the platform via Claude in Chrome (operator-named browser codename), emit `external_state.read_back` with `equality_method: manual-attestation`, and trigger a `friction.log` REGRESSION/OPERATOR-CONFUSION entry if divergence is detected.
+**Platform actuation with manual-attestation read-back.** L2 actuation tasks navigate the platform via a browser-driven agent (Claude in Chrome or equivalent; referenced by an operator-named browser codename), emit `external_state.read_back` with `equality_method: manual-attestation`, and trigger a `friction.log` REGRESSION/OPERATOR-CONFUSION entry if divergence is detected.
 
 **Lens anchor as `list[string]`.** OR-001.lens_anchor inherits the marketing-campaign `brand_voice_anchor` widening pattern. First-listed dominates; additional entries hold for cross-channel coherence. Lens guides voice/framing; module premises are discovered from operator's actual learning, not pre-determined by the lens.
 

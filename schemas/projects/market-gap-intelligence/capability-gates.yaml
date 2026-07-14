@@ -40,7 +40,7 @@ task_capabilities:
 
   channel-reality-audit:
     required_tools: [file_read, file_write, browser]
-    description: "Confirms where the buyer actually decides (SERP ownership, LSA eligibility, software-vs-service intent, referral/directory reality) before content is recommended."
+    description: "Confirms where the buyer actually decides (SERP ownership, local-ads-program eligibility e.g. LSA if applicable, software-vs-service intent, referral/directory reality) before content is recommended."
 
   recommendation-synthesis:
     required_tools: [file_read, file_write]

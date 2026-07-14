@@ -25,6 +25,7 @@ task_capabilities:
 connectors_needed:
   - "Outlook / Microsoft 365 (for business mailboxes)"
   - "Gmail / Google (for personal Gmail mailboxes)"
+  - "Other mail provider connector, matching whatever each declared mailbox actually uses"
 
 not_required:
   - shell_exec

@@ -23,7 +23,7 @@ acceptance_criteria:
 
 ## Objective
 
-For each file in `OR-001.candidates_folder` (e.g., `Book FULL Notes.docx`, `extra material.docx`), determine whether the content is already in the manuscript, should be folded in, should be discarded, or should be deferred for later evaluation. The operator makes the final per-item call; this task surfaces the candidates with enough context to decide.
+For each file in `OR-001.candidates_folder` (e.g., `notes.docx`, `unused-material.docx`), determine whether the content is already in the manuscript, should be folded in, should be discarded, or should be deferred for later evaluation. The operator makes the final per-item call; this task surfaces the candidates with enough context to decide.
 
 ## Step-by-Step Instructions
 
@@ -69,5 +69,5 @@ For each file in `OR-001.candidates_folder` (e.g., `Book FULL Notes.docx`, `extr
 - **Per-fold-in findings:** F-NNN through F-MMM
 - **candidate-disposition Decision:** DEC-NNN
 - **Files moved to evaluated/:** <list>
-- **Discoveries:** <e.g., "extra pitfalls.docx contains three items already in chapter 6 and one item that's a clear fold-in for chapter 9">
+- **Discoveries:** <e.g., "unused-material.docx contains three items already in chapter 6 and one item that's a clear fold-in for chapter 9">
 - **Recommended follow-up:** "Phase B chapter passes for any chapter with fold-in items will consume DEC-NNN; T-005 unfinished-bits-scan can run next (or in parallel with this task)."

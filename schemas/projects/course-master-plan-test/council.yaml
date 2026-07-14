@@ -25,7 +25,7 @@ members:
 
       Check:
       - Is course_name a concrete handle (a real proposed title), or vague
-        ("MSP Stuff")? It is supersedable, so a draft handle is fine; complete
+        ("Course Stuff")? It is supersedable, so a draft handle is fine; complete
         absence is not.
       - Is lens_anchor[0] a real frame the operator has stated, or a generic
         instructor voice? "I tried the thing, learned this, teaching you" is a

@@ -23,8 +23,8 @@ tiers:
     name: TECHNICAL
     purpose: "Integration correctness."
     examples:
-      - "On Ezoic sites, AdSense runs THROUGH Ezoic mediation — never double-serve standalone AdSense + Ezoic on the same pages."
-      - "ads.txt managed by Ezoic; verify entries rather than hand-editing conflicting copies."
+      - "When a mediation/optimization platform is in scope (e.g., Ezoic), the primary ad network (e.g., AdSense) runs THROUGH it — never double-serve the primary network standalone alongside the mediation platform on the same pages."
+      - "ads.txt is typically managed by the mediation platform when one is in use (e.g., Ezoic); verify entries rather than hand-editing conflicting copies."
       - "Respect the operator's ad-density goal."
   4:
     name: DOCUMENTATION

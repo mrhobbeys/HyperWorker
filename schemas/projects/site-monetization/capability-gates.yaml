@@ -1,6 +1,6 @@
 task_kinds:
   audit:
-    description: "Reading AdSense/Ezoic state (read-only)."
+    description: "Reading primary-network / mediation-platform state (e.g., AdSense, Ezoic — read-only)."
     required_tools: [http_fetch, file_read, file_write]
     delivery_modes: [constrained]
   plan:

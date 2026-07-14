@@ -17,7 +17,7 @@ tiers:
     purpose: "Stay in this site's Review & Repair workstream only."
     examples:
       - "Only the assigned site; never another site or program."
-      - "Review & Repair only — not Monetization, SEO, or DMCA (separate sub-chats)."
+      - "Review & Repair only — not Monetization, SEO, or DMCA (separate sub-projects)."
       - "Scope changes require operator approval and a new DEC-XXX."
     scan_markers:
       - "@@SCAN_2_1: Confirm this work is Review & Repair for the assigned site."

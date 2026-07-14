@@ -22,7 +22,8 @@ Produce a self-contained read of ONE surface: what a real visitor/searcher sees,
 highest-impact changes toward OR.primary_goal.
 
 ## Dispatch note
-Per OR.dispatch_mode. Social/login surfaces (FB, LinkedIn, IG, X, YouTube) run as a SEPARATE
+Per OR.dispatch_mode. Social/login surfaces (e.g. FB, LinkedIn, IG, X, YouTube, TikTok, or
+any other platform needing a logged-in session) run as a SEPARATE
 agent-driven chat — the agent drives the browser; the human assists only at login / an
 irreducible click. A subagent without a sustained interactive browser must refuse + emit
 capability_gap.md.

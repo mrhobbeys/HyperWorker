@@ -28,7 +28,9 @@ acceptance_criteria:
   - "All five council members fire (voice-watcher, angle-anchor-watcher, thinness-watcher, verbatim-keeper-fidelity, variant-comparison-watcher). All-agree-or-escalate convergence. All-PASS unblocks operator review."
 ---
 
-# Task T-004: Ab-Variant Format Generation (Substack, X, YouTube)
+# Task T-004: Ab-Variant Format Generation (default example: Substack, X, YouTube)
+
+The three named variants below are this schema's worked default example (`target_formats` bootstrap default). If the operator declared a different `target_formats` list, mirror the same per-format pattern — announce, produce to `OR-001.formats[id].structure`, confirm VK fidelity, save — once per declared format instead.
 
 ## Why this is one task with three variants
 

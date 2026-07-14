@@ -4,7 +4,7 @@ kind: task
 schema: cleanroom-rebuild
 phase: D
 risk_level: critical
-executor: local_model            # WALLED: runs on OR-001.build_executor (LM Studio), NOT the orchestrator
+executor: local_model            # WALLED: runs on OR-001.build_executor (e.g., LM Studio or another isolated local endpoint), NOT the orchestrator
 required_tools: [file_read, file_write]
 forbidden_tools: [app_driver, gui_driver, sql_trace, sql_query, screenshot, browser, web_fetch, vision_describe, decompiler]
 forbidden_reads: [observed]      # hard wall: build context never contains original-derived imagery/code

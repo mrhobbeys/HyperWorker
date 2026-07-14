@@ -19,8 +19,8 @@ Higher tiers override lower. Tier 1 cannot be overridden.
 @@SCAN_2_1: Confirm this is Monetization for the assigned site.
 
 ### Tier 3: TECHNICAL
-- On Ezoic sites, AdSense runs THROUGH Ezoic mediation — never double-serve.
-- ads.txt managed by Ezoic; verify, don't hand-edit conflicting copies.
+- When a mediation/optimization platform is in scope (e.g., Ezoic), the primary ad network (e.g., AdSense) runs THROUGH it — never double-serve.
+- ads.txt is typically managed by the mediation platform when one is in use (e.g., Ezoic); verify, don't hand-edit conflicting copies.
 - Respect the operator's ad-density goal.
 
 ### Tier 4: DOCUMENTATION

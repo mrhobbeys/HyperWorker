@@ -18,7 +18,7 @@ bootstrap_questions:
     type: string
     required: true
   - id: accounts
-    prompt: "Which mailboxes to mine, with exact addresses + provider (Outlook/Gmail) + connector status?"
+    prompt: "Which mailboxes to mine, with exact addresses + provider (e.g., Outlook/M365, Gmail, or other) + connector status?"
     type: list[string]
     required: true
   - id: date_range

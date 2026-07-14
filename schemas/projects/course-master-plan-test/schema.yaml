@@ -28,9 +28,8 @@ bootstrap_questions:
     required: true
 
   - field: platform
-    prompt: "Platform name (skool, circle, mighty-networks, discord, other)?"
-    type: enum
-    values: [skool, circle, mighty-networks, discord, other]
+    prompt: "Platform name? (e.g., skool, circle, mighty-networks, discord — or any other community/classroom platform.)"
+    type: string
     required: true
 
   - field: admin_user

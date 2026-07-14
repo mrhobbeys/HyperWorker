@@ -1,2 +1,2 @@
 # site-monetization schema
-Per-site Monetization workstream. Report-first: the worker audits AdSense + Ezoic + video state and proposes an operator-execution checklist; the operator performs all credentialed/irreversible steps. On Ezoic sites, AdSense runs through Ezoic mediation. Isolated workspace, own .hyperworker.
+Per-site Monetization workstream. Report-first: the worker audits the primary ad network (e.g., AdSense) + mediation/optimization platform (e.g., Ezoic, if one is in scope) + video state and proposes an operator-execution checklist; the operator performs all credentialed/irreversible steps. When a mediation platform is in scope, the primary network runs through it. Isolated workspace, own .hyperworker.
