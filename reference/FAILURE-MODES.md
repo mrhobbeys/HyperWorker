@@ -32,7 +32,19 @@ The v5.1 spec adds seven hypotheses (H-F1 through H-F8, with H-F7 omitted from t
 
 The Lock mechanism is per-harness-instance. Truly parallel workstreams (an urgent hotfix while a feature project is active) require either parking the current project or running a second harness instance with a separate `events.jsonl`. Multi-project parallelism is not supported within one instance.
 
-**Mitigation.** Two harness instances with shared cross-project subscriptions for compounding artifacts. Documented as a workaround, not a feature.
+**Mitigation (v5.3).** One instance per workstream, coordinated by a program project — see `core/LOCK.md` §Programs and the `program` schema. Prior to v5.3 this page called multi-instance operation "a workaround, not a feature"; three field deployments then built the coordination layer ad hoc, so v5.3 names and schematizes it. Cross-instance coordination remains files-and-citations only.
+
+### Concurrent writers on one event log (v5.3)
+
+Two dated field incidents: parallel actors (council members in one, concurrently dispatched sessions in the other) appended to a single `events.jsonl` and produced EV-id collisions, chains forking from one tail event, and broken hashes. This is not a rare edge — it is the default outcome of dispatching parallel work into one instance.
+
+**Mitigation.** `core/SUBSTRATE.md` §Single-Writer Rule (H-S3): parallel actors write draft files; one convergence writer appends serially. `hw verify` surfaces violations as `chain_breaks`. There is deliberately no filesystem lock primitive; if a deployment following the draft/convergence protocol still corrupts logs, H-S3 is falsified and a lock primitive gets reconsidered.
+
+### Perpetual work has no terminal state (pre-v5.3)
+
+Projects with no natural "done" (a weekly sweep, a standing registry, an ongoing maintenance plan) could not truthfully archive; field runs improvised `deferred (ongoing)` statuses and off-harness cadence conventions, twice, independently.
+
+**Mitigation (v5.3).** `lifecycle: ongoing` with `cycle.open`/`cycle.close` events and a computed `next_due` — see `core/LOCK.md` §Ongoing Projects (H-L2). Overdue cycles surface structurally in `hw status`.
 
 ### Solo-operator assumption
 
