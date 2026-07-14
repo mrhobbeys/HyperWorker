@@ -288,9 +288,24 @@ def check_scope_completeness(workspace: Path, events: list) -> list:
                 break
 
         if scope_complete_idx is None:
+            # No scope.complete precedes the last handoff. That's not
+            # automatically a FAIL: a retroactive fix-run may append a
+            # scope.complete *after* the handoff to close out the same
+            # boundary it should have covered originally. As long as no
+            # further session.handoff has fired since (this is still the
+            # last one), a trailing scope.complete satisfies the obligation.
+            # Multiple trailing events can occur (repeated fix-runs); take the
+            # most recent one.
+            for i in range(len(project_events) - 1, last_handoff_idx, -1):
+                if project_events[i].get("kind") == "scope.complete":
+                    scope_complete_idx = i
+                    break
+
+        if scope_complete_idx is None:
             failures.append(
                 f"{project_id}: scope_completeness_missing "
-                f"(no scope.complete precedes {project_events[last_handoff_idx]['id']})"
+                f"(no scope.complete precedes or retroactively follows "
+                f"{project_events[last_handoff_idx]['id']})"
             )
             continue
 
