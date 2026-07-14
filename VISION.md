@@ -50,7 +50,7 @@ The following requests recur. They are out of scope on purpose.
 
 **An auto-tuning harness.** A feedback loop that mutates the harness based on past runs is the opposite of substrate-over-rules. Mutation undermines the structural contract.
 
-**A meta-orchestration layer.** If an operator needs many parallel projects, run many harness instances. We do not build a harness-of-harnesses.
+**A meta-orchestration layer.** If an operator needs many parallel projects, run many harness instances. We do not build a harness-of-harnesses. *(v5.3 clarification, from field evidence: operators who need many instances also need the coordination between them, and three deployments built that layer ad hoc when we refused to name it. The answer stays inside the position — a program is itself a locked project, run from its own instance, bootstrapped from the `program` schema; see `core/LOCK.md` §Programs. No orchestration primitive enters the substrate. If coordination ever needs code — leases, serialized writes, schedulers — that code is a sibling Hyper project, not harness core.)*
 
 **Built-in vendor integrations as load-bearing features.** The harness is files. Per-model profiles document differences declaratively; they do not call vendor APIs.
 
