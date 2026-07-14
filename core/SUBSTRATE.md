@@ -172,7 +172,7 @@ The harness defines a closed set. Schema extensions must add kinds via the proje
 | `finding.add` | `{artifact_id, fields...}` |
 | `anti-pattern.add` | `{artifact_id, fields...}` |
 | `operating-reality.add` | `{artifact_id, fields...}` |
-| `<kind>.supersede` | `{old_id, new_id, reason}` (emitted automatically when `<kind>.add` includes `reverses:`) |
+| `<kind>.supersede` | `{old_id, new_id, reason, supersede_kind, surviving_principles}` (emitted automatically when `<kind>.add` includes `reverses:`; one supersede event per reversed artifact when `reverses:` is a list). `supersede_kind` ∈ `{full, mechanism-only, scope-narrowing}`, default `full`. `surviving_principles` is a list of verbatim principles from the old artifact that remain load-bearing (`[]` for `full`) — so a fresh agent reading the chain can distinguish "this decision is dead, ignore it" from "its mechanism changed but its principle still binds." (v5.3; both fields optional on pre-v5.3 chains.) |
 | `<kind>.promote` | `{artifact_id, from: provisional, to: validated}` |
 
 ### Task events
@@ -249,6 +249,15 @@ The harness defines a closed set. Schema extensions must add kinds via the proje
 |---|---|
 | `toolchain.anchor` | `{tools: [{name, path, sha256}], source, spec_version, fired_at}` — see §Toolchain Anchor. Pins the hash of every script the agent will use for hash-computing operations. `source` ∈ `{shipped, generated}`. Re-anchoring on deliberate tool change is a new event; silent drift is a Layer 1 FAIL. |
 
+### Lifecycle events (v5.3)
+
+Valid only on a project whose `PROJECT.md` declares `lifecycle: ongoing` (see `core/LOCK.md` §Ongoing Projects). On a terminal-lifecycle project, emitting either kind is a Layer 1 FAIL.
+
+| Kind | Payload |
+|---|---|
+| `cycle.open` | `{project_id, cycle_id, opened_at, cadence}` — `cycle_id` is `C-NNN`, monotonic per project. `cadence` is recorded verbatim from `OR-001` (e.g., `"weekly"`, `"P7D"`, a cron expression) plus a normalized `cadence_days: <int>` the harness computes once at bootstrap so due-date math never re-parses prose. |
+| `cycle.close` | `{project_id, cycle_id, closed_at, summary, next_due}` — `next_due` (`YYYY-MM-DD`) is computed at close as `closed_at + cadence_days` and recorded **on the event**, so "when is the next sweep due" is substrate state, not prose in a handoff. A close without a matching open, or a second open without an intervening close, is a Layer 1 FAIL. |
+
 ---
 
 ## Projections
@@ -279,6 +288,7 @@ A projection is a regenerable file derived from events. Projections are **never 
 | Council report (per fire) | `council.invoke`, `council.report`, `council.converged` / `council.escalated` (grouped by `fire_id`) | `projects/<id>/council/<fire_id>-<trigger>.md` |
 | Council index | All council events for the project | `projects/<id>/council/INDEX.md` |
 | Session handoff | `session.handoff` (most recent only) | `projects/<id>/SESSION-HANDOFF.md` |
+| Cycle index (ongoing projects) | `cycle.open`, `cycle.close` | `projects/<id>/CYCLES.md` — one row per cycle: id, opened, closed, summary, next_due. The `active_project.md` projection additionally carries `Next due:` for an ongoing active project. |
 
 ### Projection rendering
 
@@ -505,7 +515,7 @@ Report the next pending task with all dependencies met.
 
 Report the current project state.
 
-**Steps.** Read `active_project.md`, `TASK-STATE.yaml`, recent events. Summarize: active project, pending tasks count, blocked tasks, in-progress tasks, recent council outcomes, pending operator review.
+**Steps.** Read `active_project.md`, `TASK-STATE.yaml`, recent events. Summarize: active project, pending tasks count, blocked tasks, in-progress tasks, recent council outcomes, pending operator review. On an ongoing project, additionally read the last `cycle.close`: if `next_due` < today and no `cycle.open` follows it, lead the status report with **OVERDUE: next cycle was due <date>** — this is the structural replacement for "the operator remembers the weekly sweep."
 
 ### `hw log <text>`
 
@@ -515,9 +525,24 @@ Append to backlog without activating a project.
 1. Append `backlog.add` event with `{entry_id, text, ts}`. The agent assigns priority and tags from the text or asks the operator.
 2. Re-render `backlog.md`.
 
+### `hw cycle close` / `hw cycle open` (v5.3, ongoing projects only)
+
+Close the current cycle of an ongoing project, or open the next one. See `core/LOCK.md` §Ongoing Projects for when a project qualifies.
+
+**Steps (`hw cycle close`).**
+1. Confirm the project's `PROJECT.md` declares `lifecycle: ongoing` and a `cycle.open` exists without a matching close. Otherwise STOP (Layer 1 FAIL).
+2. Confirm the cycle's task set is `complete` at Layer 2 (same bar as `hw wrap` step 1, scoped to the cycle's tasks).
+3. Compute `next_due = closed_at + cadence_days`. Append `cycle.close` with `{cycle_id, closed_at, summary, next_due}`.
+4. Re-render `CYCLES.md` and `active_project.md` (the pointer stays on the project; only `Next due:` changes). The project does **not** archive.
+5. Reset the cycle's recurring tasks to `pending` for the next cycle per the schema's `recurring_tasks:` list.
+
+**Steps (`hw cycle open`).**
+1. Confirm the prior cycle is closed. Append `cycle.open` with the recorded cadence.
+2. Re-render `CYCLES.md`. Announce tasks for the new cycle via `hw next-step`.
+
 ### `hw wrap`
 
-Run the project completion protocol.
+Run the project completion protocol. On an `lifecycle: ongoing` project, `hw wrap` is valid only when the recurring need itself has ended (the operator says so explicitly); otherwise use `hw cycle close`. Wrap of an ongoing project with an open cycle is a Layer 1 FAIL.
 
 **Steps.**
 1. Confirm all tasks `complete` and acceptance criteria pass at Layer 2.
@@ -563,9 +588,23 @@ A file is in exactly one category. If unsure, refer to the table in §File Layou
 
 ---
 
+## Single-Writer Rule (v5.3)
+
+**One `events.jsonl` has at most one writer at any moment.** This was always the substrate's silent assumption; two independent field incidents made it law. In both, parallel actors (council members in one; concurrently dispatched session chats in the other) appended to the same log and produced EV-id collisions, multiple chains forking from one tail event, and broken hash chains. The operators' postmortems converged on the same fix, which is now the documented protocol:
+
+- **Parallel actors never append directly.** A parallel actor (council member, delegated subagent, sibling session) writes its output to a **draft file** in its own directory. One serial **convergence writer** — the parent agent, or whoever holds the instance — reads the drafts and appends the resulting events in order.
+- **Parallelism across instances, not within one.** If two workstreams genuinely need to write concurrently, they belong in separate harness instances with separate `events.jsonl` files (see `core/LOCK.md` §Programs). The Lock is per-instance; so is the writer.
+- **Layer 1 detection.** Duplicate event IDs, or more than one event whose `prev` hash references the same parent, is a `chain_breaks` FAIL in `hw verify` — corruption from a violated writer rule is visible on the next verify, not at the next confusing read.
+
+| Hypothesis | Claim | Falsifier |
+|---|---|---|
+| H-S3 | Draft-files-plus-one-convergence-writer eliminates the concurrent-append corruption class without a filesystem lock primitive. | A deployment following the protocol still produces EV-id collisions or forked chains, or the draft/convergence ceremony proves heavy enough that operators bypass it and corrupt logs anyway. |
+
+---
+
 ## Superseded Artifact Back-Link
 
-When artifact `B` supersedes artifact `A` (i.e., a `<kind>.add` event creates `B` with `reverses: A`), the harness emits a `<kind>.supersede` event automatically (see §Event Kinds). The supersede event MUST trigger a re-render of artifact `A`'s projection so that `A`'s frontmatter carries `superseded_by: [B-NNN#hhhhhhhhhhhh]` referencing the superseding artifact's current short-hash.
+When artifact `B` supersedes artifact `A` (i.e., a `<kind>.add` event creates `B` with `reverses: A`), the harness emits a `<kind>.supersede` event automatically (see §Event Kinds). `reverses:` accepts a single ID or a list (v5.3); a list emits one supersede event per reversed artifact — a field run that needed one decision to reverse three priors had to improvise exactly this, so it is now the documented form. The supersede event MUST trigger a re-render of artifact `A`'s projection so that `A`'s frontmatter carries `superseded_by: [B-NNN#hhhhhhhhhhhh]` referencing the superseding artifact's current short-hash.
 
 **Rendering rule.** The projection for `A` is regenerated using the standard protocol in `core/TYPED-ARTIFACTS.md` §Projection Rendering Protocol, with the additional step:
 
