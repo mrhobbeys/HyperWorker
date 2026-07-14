@@ -38,7 +38,7 @@ The Lock mechanism is per-harness-instance. Truly parallel workstreams (an urgen
 
 Two dated field incidents: parallel actors (council members in one, concurrently dispatched sessions in the other) appended to a single `events.jsonl` and produced EV-id collisions, chains forking from one tail event, and broken hashes. This is not a rare edge — it is the default outcome of dispatching parallel work into one instance.
 
-**Mitigation.** `core/SUBSTRATE.md` §Single-Writer Rule (H-S3): parallel actors write draft files; one convergence writer appends serially. `hw verify` surfaces violations as `chain_breaks`. There is deliberately no filesystem lock primitive; if a deployment following the draft/convergence protocol still corrupts logs, H-S3 is falsified and a lock primitive gets reconsidered.
+**Mitigation.** `core/SUBSTRATE.md` §Single-Writer Rule (H-S5): parallel actors write draft files; one convergence writer appends serially. `hw verify` surfaces violations as `chain_breaks`. There is deliberately no filesystem lock primitive; if a deployment following the draft/convergence protocol still corrupts logs, H-S5 is falsified and a lock primitive gets reconsidered.
 
 ### Perpetual work has no terminal state (pre-v5.3)
 

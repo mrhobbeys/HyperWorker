@@ -55,7 +55,7 @@ Then tell your AI agent:
 
 That's it. The agent reads HARNESS.md, asks you clarifying questions, scaffolds your project from the schema, runs a verification checkpoint, and begins execution.
 
-Nineteen schemas ship as defaults:
+Twenty schemas ship as defaults:
 
 | Schema | When to use |
 |---|---|
@@ -78,8 +78,11 @@ Nineteen schemas ship as defaults:
 | `content-piece-test` | One piece of creator content fanned out to three format-native variants, voice preserved verbatim |
 | `book-edit-test` | Voice-preserving re-release edit of a shipped manuscript, per-chapter hermetic passes |
 | `course-master-plan-test` | Multi-module course build on a community platform; L1/L2/L3 spawn pattern (working schema) |
+| `program` | Orchestrate N concurrent workstreams (each its own harness instance): registry, spawn/promote/retire, roll-up cycles |
 
 If none fit, the agent scaffolds from default templates and offers to capture your derived schema after the project completes.
+
+Two of the twenty deserve a special note. An **ongoing** project (`lifecycle: ongoing`, v5.3) works in cycles with a computed next-due date instead of a terminal "done" — for weekly sweeps, standing registries, maintenance plans. A **program** (v5.3) is how multiple projects run at once without breaking the one-active-project lock: every workstream gets its own harness instance, and the orchestrator coordinating them is itself just a locked HyperWorker project. See `core/LOCK.md` §Ongoing Projects and §Programs.
 
 ## Work the way you work
 

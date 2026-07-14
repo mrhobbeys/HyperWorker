@@ -1,5 +1,19 @@
 # Changelog — HyperWorker
 
+## Unreleased (2026-07-14, branch `v5.3/programs`) — Programs, ongoing lifecycle, single-writer rule, checked claims
+
+The v5.3 core, derived from both field reports (`reference/field-reports/`). Four primitives and one bugfix; every primitive carries a hypothesis and falsifier. Pending local testing before release.
+
+- **Single-Writer Rule (`core/SUBSTRATE.md`, H-S5)** — one `events.jsonl` has at most one writer; parallel actors write draft files and one convergence writer appends serially. From two dated field incidents of concurrent-append corruption (EV-id collisions, forked chains). Layer 1 surfaces violations as `chain_breaks`.
+- **Ongoing lifecycle (`core/LOCK.md` §Ongoing Projects, H-L2)** — `lifecycle: ongoing` projects work in cycles (`cycle.open`/`cycle.close` events, `CYCLES.md` projection, `hw cycle` protocol) with `next_due` computed onto the close event; `hw status` leads with OVERDUE when it passes. Replaces the field-improvised `deferred (ongoing)` terminal state and cadence-in-prose. `hw wrap` on an ongoing project is valid only when the recurring need itself ends.
+- **Programs (`core/LOCK.md` §Programs, H-L3; new `program` schema)** — program-shaped work (N concurrent workstreams under one goal) is a schema, not a mechanism: each workstream runs in its own instance; the orchestrator is itself a locked project whose artifacts are a workstream registry (supersede-chained statuses), spawn-pause/promote/retire decisions, and read-only roll-up cycles citing sibling projections by path+hash. H-L1's field status recorded: not falsified. VISION.md's meta-orchestration position clarified, not reversed. Twenty schemas now ship.
+- **Checked claims (`core/SUBSTRATE.md` §Checked Claims, H-S4; `core/VERIFICATION.md`; `tools/hw-verify.py --claims`)** — events asserting world-state may carry a machine-checkable predicate (`file_exists`, `file_absent`, `file_sha256`, `cmd_exit`, `url_status`) recorded with its observed result; schemas opt in per event kind via `verification.yaml` `checked_claims.required_for`. `hw verify --claims` replays predicates against the world — truth, separate from chain integrity. `cmd_exit` replay requires both `--allow-cmd` and the schema's shell capability. From the field incident where three systems recorded files as "posted" that did not exist while `hw verify` passed. 25-case test suite added.
+- **Supersede payload upgrade (`core/SUBSTRATE.md`)** — `<kind>.supersede` gains `supersede_kind` (`full | mechanism-only | scope-narrowing`) and `surviving_principles`; `reverses:` accepts a list (one supersede event per reversed artifact). From field friction: a fresh agent could not distinguish "dead decision" from "principle still binds."
+- **Fix: `check_scope_completeness` false positive (FL-024, `tools/hw-verify.py`)** — retroactive `scope.complete` events appended after the last `session.handoff` now satisfy the check (forward-scan fallback). 7-case test suite added.
+- **`reference/FAILURE-MODES.md`** — concurrent-writer and perpetual-work entries added; the single-instance-lock "workaround, not a feature" note superseded by §Programs.
+
+Deferred to v5.3 fast-follows (tracked in the field reports): test-gated exclusion (`suspect` vs `excluded` with `test_ref`), secrets refused at `hw add`, frontier staleness clock, `evidence.capture` event kind, ledger-digest projection, `profile: single-executor`, conditional-task primitive, `hw amend` tooling.
+
 ## Unreleased (2026-07-13) — Machine-2 field gather: three creator/education schemas; second field report
 
 Schemas-and-evidence change from the second-machine gather; no mechanism or substrate edits.
