@@ -57,6 +57,7 @@ A task moves up the pyramid only when triggered. Standard-risk routine work runs
 | 10 | Bootstrap probe | Every project with a `project.activate` event has either (`bootstrap.inventory_diff` followed by `bootstrap.scope_locked`, with `operator_reconciliation` populated) OR a `bootstrap.probe_skipped` event. Failure code: `bootstrap_probe_missing`. See `core/SUBSTRATE.md` §Bootstrap Inventory Sweep. |
 | 11 | execution_mode validity | If `OR-001.delegation_policy.execution_mode` is set, its value is in `{interactive, agent, observer}`. `observer` is reserved (not yet implemented in v5.2.0); the harness emits a WARNING with code `execution_mode_observer_reserved` and treats the dispatch as `interactive` for behavior purposes. Any value outside the enum is a FAIL with code `execution_mode_invalid`. See `core/ATOMICITY.md` §Execution Mode. |
 | 12 | Toolchain integrity (v5.2.1) | Before the session's first hash-computing operation, each tool pinned by the most recent `toolchain.anchor` event re-hashes to its recorded `sha256`. Mismatch is a FAIL with code `toolchain_drift`; a missing `toolchain.anchor` in a workspace with any hash-bearing events is a WARNING with code `toolchain_unanchored`. See `core/SUBSTRATE.md` §Toolchain Anchor. |
+| 13 | Checked claims (v5.3) | Every `claim:` block present anywhere in the chain (required or not) is structurally well-formed: exactly one known predicate kind, `checked_at`, and `passed` present. FAIL `checked_claims_malformed` otherwise. Additionally, for event kinds a schema's `verification.yaml` `checked_claims.required_for` names, the matching event (or, for `scope.complete`, each `scope_items[]` entry) carries such a block with `passed: true`. FAIL `checked_claims_missing` (block absent or malformed) or `checked_claims_predicate_failed` (block present, well-formed, `passed: false`). This check is about what was *recorded*, not the world as it stands now — see §Claim Replay below for re-evaluation against current state. See `core/SUBSTRATE.md` §Checked Claims. |
 
 **On failure.** Checks that are read-only computations (schema validation, citation existence/freshness — checks 1–3) run *before* append: the offending payload is rejected with a structured error and nothing lands in the log (v5.2.1; see `core/SUBSTRATE.md` §`hw add` step 3). For defects discovered after an event has already been appended, a `verify.layer1.fail` event is appended *immediately after* the offending event and the harness either:
 
@@ -66,6 +67,39 @@ A task moves up the pyramid only when triggered. Standard-risk routine work runs
 The agent does not "decide" whether to honor a Layer 1 failure. The substrate enforces; the agent retries or escalates.
 
 **Friction prompt signal.** If the same Layer 1 check fails ≥3 times within a single task on the same `target_id`, the harness emits a `friction.log.prompt` event with `trigger: layer1_repeat`. Read each prompt and decide whether to follow with a `friction.log` event. See `core/SUBSTRATE.md` §Friction Log Event Kind for the full heuristic table.
+
+---
+
+## Claim Replay — `hw verify --claims` (v5.3)
+
+Layer 1's Checked claims row (above) is a structural check: it looks only at what was recorded, at authoring time, inside the event itself. It cannot detect a claim that was true when written and has since rotted — a file moved, a service redeployed, a command's behavior drifted. `hw verify --claims` is **not** a fourth pyramid layer; it is an orthogonal replay pass that answers a different question than every layer above answers: not "is the event log internally consistent" but "is what the log currently asserts about the world still true." See `core/SUBSTRATE.md` §Checked Claims for the `claim:` payload schema and the five predicate kinds.
+
+**When to run it.** Not automatic, and not gated to any risk level or trigger — `--claims` is an operator- or schedule-invoked audit, analogous to running `git fsck` on a schedule rather than as a per-commit hook. Standard use: before an operator review, before archiving a project, or as a periodic sweep on long-running / ongoing (v5.3 lifecycle) projects where the world the claims describe has had time to drift.
+
+**Algorithm.**
+
+1. Walk `events.jsonl` in order. Collect every well-formed `claim:` block from `task.complete`, `finding.add`, and `external_state.read_back` payloads, plus each `scope_items[]` entry of `scope.complete` payloads. Malformed blocks are already reported by Layer 1 check 13; replay does not re-evaluate them (nothing evaluable) and records them as `error: malformed, not replayed`.
+2. For each collected claim, re-evaluate `predicate` against the current workspace:
+   - `file_exists` / `file_absent` — check the path (relative to workspace root) now.
+   - `file_sha256` — recompute the file's SHA-256 now; compare full hex.
+   - `url_status` — issue the request now; compare status code. A network failure records `error`, not `fail` — an unreachable URL is missing information, not evidence the claim was false.
+   - `cmd_exit` — executed only if **both** gates are open: the operator passed `--allow-cmd`, **and** the claim's project's active schema declares `shell_exec` available (`capability-gates.yaml`; see the shell-capability gate in `core/SUBSTRATE.md` §Checked Claims). Otherwise the claim is recorded `skipped: shell predicates disabled` (default — `--allow-cmd` absent) or `skipped: shell_exec not permitted by workspace capability declarations` (schema gate closed). No active schema, or no `capability-gates.yaml` found, degrades to the closed gate — shell predicates are off by default, not on by default, in the absence of information.
+3. Compare the fresh result against the recorded `passed`. `pass` = predicate holds now. `fail` = predicate does not hold now (replay reports the world as it is *now*, regardless of what was recorded at write time). `error` = the predicate could not be evaluated (network failure, unreadable file for reasons other than absence, malformed block). `skipped` = gated off (`cmd_exit` only).
+4. Emit a structured report, separate from the integrity report:
+
+```
+hw verify --claims <workspace>:
+  claims_checked:  <N>
+  pass:            <N>
+  fail:            <N> [<list of event-id.label: detail>]
+  error:           <N> [<list, with reason>]
+  skipped:         <N> [<list, with reason>]
+  result:          PASS | FAIL | N/A (no claims recorded)
+```
+
+`FAIL` requires at least one `fail`. `error` and `skipped` are reported but do not by themselves fail the replay — an unreachable URL or a gated `cmd_exit` is missing information, not a disproven claim. `N/A` when the chain has zero well-formed claims to replay — this is expected and fine (`claim:` is never required by default; see `core/SUBSTRATE.md` §Checked Claims "Never required by default"). The golden fixture (`tools/fixtures/golden-workspace`), for example, has none and reports `N/A`.
+
+**Relationship to the integrity result.** `hw verify --claims` runs alongside, never instead of, the standard integrity replay described in `core/SUBSTRATE.md` §`hw verify`. The two `result` fields are independent: a `--claims` FAIL does not imply chain tampering, and an integrity FAIL (a chain break, a tampered hash) makes claim replay unreliable — a claim's `predicate` came from a payload whose own hash may not be trustworthy — so an agent reading a `--claims` report should check the integrity result first.
 
 ---
 
@@ -253,6 +287,7 @@ If a *blocking ambiguity* is encountered mid-execution, the response is `task.st
 | Not | Because |
 |---|---|
 | Automated end-to-end testing of the deliverable. | Verification is structural about the harness's contract; deliverable testing is a project concern declared in acceptance criteria. |
+| Full re-execution or re-testing of the deliverable, even with `hw verify --claims`. | Claim replay re-checks only the specific predicates an agent chose to record — a targeted spot-check of asserted world-state, not exhaustive deliverable testing. See `core/SUBSTRATE.md` §Checked Claims. |
 | A safety net that lets shoddy work through. | A Layer 1 failure is non-negotiable; the work cannot move forward. |
 | A blanket review queue. | Layer 3 fires on triggers, not on every task. |
 | Human-in-the-loop by default. | Standard risk runs Layer 1 + 2 without operator. Elevated and critical tasks bring the operator in. |
@@ -263,7 +298,7 @@ If a *blocking ambiguity* is encountered mid-execution, the response is `task.st
 
 | Mechanism | Interaction |
 |---|---|
-| Substrate | Verification reads events and projections; it does not write to the Mutable Surface. |
+| Substrate | Verification reads events and projections; it does not write to the Mutable Surface. Layer 1 check 13 and `hw verify --claims` read the `claim:` blocks defined in `core/SUBSTRATE.md` §Checked Claims. |
 | Lock | Council fires at `project.activate` (Verification Checkpoint). |
 | Atomicity | Risk level is a task field; it determines which layers run. |
 | Typed Artifacts | Layer 1 citation freshness uses the artifact hash sidecar. |

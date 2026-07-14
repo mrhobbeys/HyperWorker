@@ -169,7 +169,7 @@ The harness defines a closed set. Schema extensions must add kinds via the proje
 | Kind | Payload |
 |---|---|
 | `decision.add` | `{artifact_id, fields...}` |
-| `finding.add` | `{artifact_id, fields...}` |
+| `finding.add` | `{artifact_id, fields..., claim?}` — `claim` is an optional §Checked Claims (v5.3) block; required per-schema via `verification.yaml` `checked_claims.required_for`. |
 | `anti-pattern.add` | `{artifact_id, fields...}` |
 | `operating-reality.add` | `{artifact_id, fields...}` |
 | `<kind>.supersede` | `{old_id, new_id, reason, supersede_kind, surviving_principles}` (emitted automatically when `<kind>.add` includes `reverses:`; one supersede event per reversed artifact when `reverses:` is a list). `supersede_kind` ∈ `{full, mechanism-only, scope-narrowing}`, default `full`. `surviving_principles` is a list of verbatim principles from the old artifact that remain load-bearing (`[]` for `full`) — so a fresh agent reading the chain can distinguish "this decision is dead, ignore it" from "its mechanism changed but its principle still binds." (v5.3; both fields optional on pre-v5.3 chains.) |
@@ -183,7 +183,7 @@ The harness defines a closed set. Schema extensions must add kinds via the proje
 | `task.status` | `{task_id, from, to}` |
 | `task.recite` | `{task_id, consumed_id, paraphrase, overlap_score}` |
 | `task.scan` | `{task_id, marker_id, answer}` |
-| `task.complete` | `{task_id, completion_report_path}` |
+| `task.complete` | `{task_id, completion_report_path, claim?}` — `claim` is optional; see §Checked Claims (v5.3). |
 
 ### Branch / fold events
 
@@ -221,13 +221,13 @@ The harness defines a closed set. Schema extensions must add kinds via the proje
 | Kind | Payload |
 |---|---|
 | `session.handoff` | `{project_id, closing_actor, last_completed_task, next_pending_task, active_artifact_state, open_operator_questions[], recommended_first_action, context_compaction_summary}` — see §Session Handoff Event Kind. One event per closing-session boundary; not chained. |
-| `scope.complete` | `{scope_items: [{id, name, terminal_state, reason}]}` — see §Scope Completeness. Emitted before `session.handoff`; Layer 1 cross-checks against PROJECT.md §Scope. |
+| `scope.complete` | `{scope_items: [{id, name, terminal_state, reason, claim?}]}` — see §Scope Completeness. Emitted before `session.handoff`; Layer 1 cross-checks against PROJECT.md §Scope. `scope_items[].claim` is optional; see §Checked Claims (v5.3). |
 
 ### External-state events
 
 | Kind | Payload |
 |---|---|
-| `external_state.read_back` | `{task_id, artifact_url, pre_state_ref, post_state_ref, equality_method, divergence_detected, divergence_notes}` — see §External State Read-Back. Per-schema opt-in via `capability-gates.yaml` `external_state_readback.required_for`. |
+| `external_state.read_back` | `{task_id, artifact_url, pre_state_ref, post_state_ref, equality_method, divergence_detected, divergence_notes, claim?}` — see §External State Read-Back. Per-schema opt-in via `capability-gates.yaml` `external_state_readback.required_for`. `claim` is optional; see §Checked Claims (v5.3). |
 
 ### Bootstrap events
 
@@ -598,7 +598,7 @@ A file is in exactly one category. If unsure, refer to the table in §File Layou
 
 | Hypothesis | Claim | Falsifier |
 |---|---|---|
-| H-S3 | Draft-files-plus-one-convergence-writer eliminates the concurrent-append corruption class without a filesystem lock primitive. | A deployment following the protocol still produces EV-id collisions or forked chains, or the draft/convergence ceremony proves heavy enough that operators bypass it and corrupt logs anyway. |
+| H-S5 | Draft-files-plus-one-convergence-writer eliminates the concurrent-append corruption class without a filesystem lock primitive. | A deployment following the protocol still produces EV-id collisions or forked chains, or the draft/convergence ceremony proves heavy enough that operators bypass it and corrupt logs anyway. |
 
 ---
 
@@ -940,6 +940,60 @@ The substrate fix: generate (or adopt) the toolchain **once**, pin it, and verif
 
 ---
 
+## Checked Claims (v5.3)
+
+The chain proves events were not tampered with; it never proved the events were true. The motivating field incident: an infrastructure-recovery engagement's own postmortem states it as the thesis of the whole patch — *"The hash chain did its job. It proved nothing was tampered with. It could not prove anything was true."* Three independently-authored records on that engagement — an agent's completion report, a human-kept ledger, and a harness projection — all asserted the same two files were `posted`. None of the three were true. `hw verify` passed for the full duration because integrity and truth are different properties, and nothing in the substrate checked the second one.
+
+The fix is deliberately narrow: an optional `claim:` block on payloads that assert world-state, carrying a machine-checkable predicate plus the result observed when the event was authored. `hw verify` gains a second, independent mode — replay (`--claims`) — that re-runs the same predicates against the world as it stands now and reports claim-level truth, kept structurally separate from chain-integrity results. A workspace can PASS integrity and FAIL claim replay in the same breath; that is the primitive working as designed, not a contradiction.
+
+**Where `claim:` is valid.** The payload of `task.complete`, `finding.add` (and, by schema opt-in, the other typed-artifact `.add` kinds), `external_state.read_back`, and — at per-item granularity, since the event is already itemized — each entry of `scope.complete`'s `scope_items[]`. A `claim:` block appearing on any other event kind is not read by Layer 1 or by `--claims` replay.
+
+**Payload schema (`claim:` block).**
+
+| Field | Type | Meaning |
+|---|---|---|
+| `predicate` | object | Exactly one key, one of the five kinds below. Zero keys or more than one is a structural failure. |
+| `checked_at` | string | ISO 8601 UTC — when the authoring agent evaluated the predicate, not when it is replayed. |
+| `passed` | bool | The result recorded at `checked_at`. Fixed at write time; a later disagreement is a replay finding, never a correction to this field — the substrate is append-only even here. |
+
+**Predicate kinds.**
+
+| Kind | Shape | Evaluates to true when |
+|---|---|---|
+| `file_exists` | `<path>` (string) | A file exists at `<path>`. |
+| `file_absent` | `<path>` (string) | No file exists at `<path>`. |
+| `file_sha256` | `{path, hash}` | The file at `path` has SHA-256 (full hex) equal to `hash`. |
+| `cmd_exit` | `{cmd, expect_substring, expect_code}` | Running `cmd` exits with `expect_code` (default `0`) and, if `expect_substring` is set, combined stdout+stderr contains it. |
+| `url_status` | `{url, expect_code}` | An HTTP(S) request to `url` returns status `expect_code`. |
+
+All `<path>` values are relative to the workspace root (§File Layout), never absolute — a claim recorded on one operator's machine must still replay on a fresh checkout on a different one.
+
+**`cmd_exit` and the shell-capability gate.** `cmd_exit` is the one predicate that executes arbitrary code, so it does not get its own permission model — it inherits the substrate's existing one. A workspace's active schema declares whether shell execution is available at all via `capability-gates.yaml` (`task_capabilities.*.required_tools` containing `shell_exec`, and its absence from `not_required`; see e.g. `schemas/projects/report-synthesis/capability-gates.yaml`, which excludes it entirely). `cmd_exit` predicates are only executed — at authoring time or at replay — in a workspace whose schema declares `shell_exec` available. `hw verify --claims` additionally requires the operator to pass `--allow-cmd`: two independent gates (schema capability + explicit operator flag) must both be open, since a replay pass is exactly the kind of unattended, later-in-time execution that shell predicates make riskiest. Absent either gate, `cmd_exit` claims report `skipped`, not `fail` — an unevaluated predicate is not a broken one.
+
+**Never required by default.** A `claim:` block is optional cargo on every payload above unless a schema opts a kind in. Opt-in is per-schema, in `verification.yaml`:
+
+```yaml
+# schemas/projects/<name>/verification.yaml
+checked_claims:
+  required_for:
+    - finding.add
+    - task.complete:critical      # risk_level-scoped, task.complete only
+    - external_state.read_back
+    - scope.complete               # every scope_items[] entry must carry a passing claim
+```
+
+A bare event kind requires every event of that kind to carry a `claim:` block with a well-formed predicate and `passed: true`. Appending `:<risk_level>` (valid only on `task.complete`) scopes the requirement to tasks authored at that risk level, read from the task's `task.create` frontmatter — mirroring how `external_state_readback.required_for` patterns already scope by risk (§External State Read-Back). No `verification.yaml`, or no `checked_claims` key in it, means the requirement is off; ceremony stays proportional to what the schema author actually asked for.
+
+**Layer 1 enforcement.** See `core/VERIFICATION.md` §Layer 1. Two independent checks: (1) any `claim:` block present anywhere in the chain, required or not, must be structurally well-formed (single known predicate kind, `checked_at`, `passed` present) — malformed claims fail `checked_claims_malformed` regardless of schema config; (2) for event kinds a schema marks `required_for`, a matching event without a well-formed, `passed: true` claim fails `checked_claims_missing` (block absent or malformed) or `checked_claims_predicate_failed` (block present, well-formed, `passed: false`). Both are structural failures — a `task.complete` claiming a file was posted, checked, and found absent should never reach `complete` state quietly.
+
+**Replay mode — `hw verify --claims`.** A second, opt-in mode: instead of (or alongside) integrity replay, walk every recorded `claim:` block in the chain and re-evaluate its `predicate` against the world *now*. This is a fundamentally different question than integrity replay answers — "is the event log internally consistent" versus "is what the log asserts still (or ever) true" — so the two run and report independently; a `--claims` FAIL never flips the integrity `result` field and vice versa. Report format and CLI flags are specified in `core/VERIFICATION.md` §Claim Replay.
+
+| Hypothesis | Claim | Falsifier |
+|---|---|---|
+| H-S4 | Recording a machine-checkable predicate alongside every world-state claim, and replaying it later, catches the class of failure where chain integrity holds but the asserted world-state was never true (or stopped being true). | Predicates rot faster than they're useful — paths move, commands drift, so replay failures are overwhelmingly false alarms operators learn to ignore — or agents satisfy the letter of the check by asserting trivial/tautological predicates (e.g. `file_exists` on a file they just touched, not the actual deliverable) while the substantive claim stays unchecked. |
+
+---
+
 ## Relationship to Mechanisms
 
 | Mechanism | Substrate use |
@@ -952,3 +1006,4 @@ The substrate fix: generate (or adopt) the toolchain **once**, pin it, and verif
 | Friction logging | `friction.log`, `friction.log.prompt` events; `friction-log.md` projection. Spans mechanisms — any mechanism may surface a friction. |
 | Session continuity | `session.handoff` events; `SESSION-HANDOFF.md` projection. Read by Atomicity at task start when `requires_handoff_acknowledge: true`. |
 | Operator identity | `operator_soul_anchor` event; read by Verification's `soul_consistency_watcher` council member at every council fire that includes the role. |
+| Checked claims (v5.3) | `claim:` block on `task.complete`, `finding.add`, `external_state.read_back`, `scope.complete` `scope_items[]`; Layer 1 structural + schema-required checks; `hw verify --claims` replay mode. See `core/VERIFICATION.md` §Claim Replay. |

@@ -19,15 +19,26 @@ core/SUBSTRATE.md are authoritative — divergence from those rules is a bug.
 
 v5.2.1: KNOWN_EVENT_KINDS synced with the substrate (adds operator_soul_anchor,
 toolchain.anchor) and REQUIRED_PAYLOAD_FIELDS entries added for both.
+
+v5.3: adds checked-claims support (core/SUBSTRATE.md §Checked Claims,
+core/VERIFICATION.md §Layer 1 check 13 and §Claim Replay). Default mode gains
+two structural checks: `claim:` blocks (wherever present) must be well-formed,
+and event kinds a schema's verification.yaml marks `checked_claims.required_for`
+must carry a passing one. `--claims` is a new, separate replay mode that
+re-evaluates recorded predicates against the current world and reports
+claim-level pass/fail/error/skipped, independent of chain integrity.
 """
 
 import argparse
 import hashlib
 import json
 import re
+import subprocess
 import sys
+import urllib.error
+import urllib.request
 from collections import defaultdict
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 CITATION_RE = re.compile(r"\[([A-Z]+)-(\d{3,})#([0-9a-f]{12})\]")
 ARTIFACT_DIRS = ("decisions", "findings", "anti-patterns", "operating-reality",
@@ -38,6 +49,17 @@ ZERO_HASH_PREFIXED = "sha256:" + ZERO_HASH
 DEFAULT_ALLOWED_TERMINAL_STATES = (
     "complete", "deferred", "excluded-after-discovery", "escalated",
 )
+
+# v5.3 checked-claims. See core/SUBSTRATE.md §Checked Claims.
+CLAIM_PREDICATE_KINDS = {
+    "file_exists", "file_absent", "file_sha256", "cmd_exit", "url_status",
+}
+# Event kinds (plus scope.complete's scope_items[] granularity, handled
+# separately) whose payload may carry a top-level `claim:` block.
+CLAIM_BEARING_KINDS = {
+    "task.complete", "finding.add", "external_state.read_back",
+    "decision.add", "anti-pattern.add", "operating-reality.add",
+}
 
 # v5.1 event kinds. The validator confirms each event's `kind` is in the closed
 # set the harness recognizes. Unknown kinds are reported as untracked but do not
@@ -516,6 +538,417 @@ def check_bootstrap_probe(events: list) -> list:
     return failures
 
 
+def parse_verification_yaml_checked_claims(path: Path) -> list:
+    """Minimal YAML reader for verification.yaml's `checked_claims.required_for`
+    list. Mirrors the block-list convention already used by
+    `external_state_readback.required_for` in shipped capability-gates.yaml
+    files (quoted or bare items, one per `- ` line, indented under the key).
+    Also accepts an inline `required_for: [a, b]` form. Dependency-free by
+    design, matching parse_capability_gates_yaml above.
+    """
+    if not path.exists():
+        return []
+    text = path.read_text(encoding="utf-8")
+    m = re.search(r"^checked_claims:\s*$", text, re.MULTILINE)
+    if not m:
+        return []
+    block_start = m.end()
+    rest = text[block_start:]
+    block_lines = []
+    for line in rest.splitlines():
+        if line.strip() == "":
+            block_lines.append(line)
+            continue
+        if not line.startswith(" ") and not line.startswith("\t"):
+            break
+        block_lines.append(line)
+    block = "\n".join(block_lines)
+
+    inline = re.search(r"required_for:\s*\[([^\]]*)\]", block)
+    if inline:
+        return [s.strip().strip('"').strip("'")
+                for s in inline.group(1).split(",") if s.strip()]
+
+    rf = re.search(r"required_for:\s*$", block, re.MULTILINE)
+    if not rf:
+        return []
+    patterns = []
+    for line in block[rf.end():].splitlines():
+        stripped = line.strip()
+        if stripped == "":
+            continue
+        item_m = re.match(r"-\s*(.+)$", stripped)
+        if not item_m:
+            break
+        item = re.sub(r"\s+#.*$", "", item_m.group(1)).strip()
+        patterns.append(item.strip('"').strip("'"))
+    return patterns
+
+
+def capability_gates_allows_shell(path: Path) -> bool:
+    """True if the schema's capability-gates.yaml declares `shell_exec` as an
+    available tool: it appears in some task's `required_tools` list and is not
+    listed under `not_required`. No file, or no declaration either way,
+    defaults to False (closed) — see core/SUBSTRATE.md §Checked Claims,
+    the shell-capability gate for cmd_exit predicates.
+    """
+    if not path.exists():
+        return False
+    text = path.read_text(encoding="utf-8")
+
+    not_required = set()
+    inline = re.search(r"^not_required:\s*\[([^\]]*)\]", text, re.MULTILINE)
+    if inline:
+        not_required = {s.strip().strip('"').strip("'")
+                         for s in inline.group(1).split(",") if s.strip()}
+    else:
+        block_m = re.search(r"^not_required:\s*$", text, re.MULTILINE)
+        if block_m:
+            for line in text[block_m.end():].splitlines():
+                if line.strip() == "":
+                    continue
+                if not line.startswith(" ") and not line.startswith("\t"):
+                    break
+                item_m = re.match(r"\s*-\s*([^\s#]+)", line)
+                if item_m:
+                    not_required.add(item_m.group(1).strip('"').strip("'"))
+
+    if "shell_exec" in not_required:
+        return False
+
+    for required_tools in re.findall(r"required_tools:\s*\[([^\]]*)\]", text):
+        items = {s.strip().strip('"').strip("'")
+                  for s in required_tools.split(",") if s.strip()}
+        if "shell_exec" in items:
+            return True
+    return False
+
+
+def validate_claim_predicate(predicate) -> str | None:
+    """Return an error string if `predicate` is malformed, else None."""
+    if not isinstance(predicate, dict) or len(predicate) != 1:
+        return "predicate must be an object with exactly one key"
+    ((pkind, pval),) = predicate.items()
+    if pkind not in CLAIM_PREDICATE_KINDS:
+        return f"unknown predicate kind {pkind!r}"
+
+    if pkind in ("file_exists", "file_absent"):
+        if not isinstance(pval, str) or not pval:
+            return f"{pkind} value must be a non-empty path string"
+        if PureWindowsPath(pval).is_absolute() or PurePosixPath(pval).is_absolute():
+            return f"{pkind} path must be workspace-relative, not absolute: {pval!r}"
+    elif pkind == "file_sha256":
+        if not isinstance(pval, dict) or "path" not in pval or "hash" not in pval:
+            return "file_sha256 requires {path, hash}"
+        if not re.fullmatch(r"[0-9a-fA-F]{64}", str(pval.get("hash", ""))):
+            return "file_sha256 hash must be full 64-character hex"
+    elif pkind == "cmd_exit":
+        if not isinstance(pval, dict) or "cmd" not in pval or not pval.get("cmd"):
+            return "cmd_exit requires at least {cmd}"
+    elif pkind == "url_status":
+        if not isinstance(pval, dict) or "url" not in pval or "expect_code" not in pval:
+            return "url_status requires {url, expect_code}"
+    return None
+
+
+def validate_claim_block(claim) -> str | None:
+    """Return an error string if `claim` is a malformed claim: block, else None."""
+    if not isinstance(claim, dict):
+        return "claim must be an object"
+    if "predicate" not in claim:
+        return "missing predicate"
+    reason = validate_claim_predicate(claim["predicate"])
+    if reason:
+        return reason
+    if "checked_at" not in claim or not isinstance(claim["checked_at"], str):
+        return "missing/invalid checked_at"
+    if "passed" not in claim or not isinstance(claim["passed"], bool):
+        return "missing/invalid passed"
+    return None
+
+
+def collect_claim_entries(events: list) -> list:
+    """Return (event, label, claim) for every location a claim: block may
+    appear, per core/SUBSTRATE.md §Checked Claims: top-level `claim` on
+    world-state-asserting `.add`/`.complete`/`.read_back` payloads, and
+    per-item `claim` on scope.complete's scope_items[].
+    """
+    entries = []
+    for ev in events:
+        kind = ev.get("kind")
+        payload = ev.get("payload") or {}
+        if kind in CLAIM_BEARING_KINDS:
+            claim = payload.get("claim")
+            if claim is not None:
+                entries.append((ev, kind, claim))
+        elif kind == "scope.complete":
+            for item in payload.get("scope_items", []) or []:
+                if not isinstance(item, dict):
+                    continue
+                claim = item.get("claim")
+                if claim is not None:
+                    label = f"scope_items[{item.get('id') or item.get('name') or '?'}]"
+                    entries.append((ev, label, claim))
+    return entries
+
+
+def check_claims_structural(events: list) -> list:
+    """Layer 1 check 13, part 1: every claim: block present, anywhere, is
+    well-formed — regardless of whether the schema requires it.
+    """
+    malformed = []
+    for ev, label, claim in collect_claim_entries(events):
+        reason = validate_claim_block(claim)
+        if reason:
+            malformed.append(f"{ev['id']} {label}: {reason}")
+    return malformed
+
+
+def _claim_pattern_matches(event_kind: str, risk_level, pattern: str) -> bool:
+    """Match one checked_claims.required_for pattern against an event.
+    Pattern is `<event_kind>` or `<event_kind>:<risk_level>` — the risk-level
+    suffix is only meaningful for task.complete (see core/SUBSTRATE.md
+    §Checked Claims).
+    """
+    if ":" in pattern:
+        p_kind, p_risk = pattern.split(":", 1)
+    else:
+        p_kind, p_risk = pattern, None
+    if event_kind != p_kind:
+        return False
+    if p_risk is None:
+        return True
+    return (risk_level or "").lower() == p_risk.strip().lower()
+
+
+def check_claims_required(workspace: Path, events: list) -> list:
+    """Layer 1 check 13, part 2: schema-required claims are present and passing.
+
+    Reads each project's schema's verification.yaml `checked_claims.required_for`.
+    No schema, no verification.yaml, or no checked_claims key: the requirement
+    is off for that project (graceful degrade — never required by default).
+    """
+    failures = []
+    by_project = defaultdict(list)
+    for ev in events:
+        by_project[ev.get("project")].append(ev)
+
+    for project_id, project_events in by_project.items():
+        if not project_id or project_id == "_harness":
+            continue
+
+        schema = find_schema_for_project(workspace, project_id)
+        if not schema:
+            continue
+
+        verification_path = (workspace / "schemas" / "projects" / schema
+                              / "verification.yaml")
+        if not verification_path.exists():
+            verification_path = (workspace.parent / "schemas" / "projects"
+                                  / schema / "verification.yaml")
+        required_for = parse_verification_yaml_checked_claims(verification_path)
+        if not required_for:
+            continue
+
+        task_meta = {}
+        for ev in project_events:
+            if ev.get("kind") == "task.create":
+                payload = ev.get("payload", {}) or {}
+                tid = payload.get("task_id")
+                fm = payload.get("frontmatter") or {}
+                if tid:
+                    task_meta[tid] = fm
+
+        for ev in project_events:
+            kind = ev.get("kind")
+            payload = ev.get("payload") or {}
+
+            if kind == "scope.complete":
+                if not any(_claim_pattern_matches(kind, None, p) for p in required_for):
+                    continue
+                for item in payload.get("scope_items", []) or []:
+                    if not isinstance(item, dict):
+                        continue
+                    label = item.get("id") or item.get("name") or "?"
+                    claim = item.get("claim")
+                    if claim is None:
+                        failures.append(
+                            f"{project_id}: checked_claims_missing "
+                            f"({ev['id']} scope_items[{label}])"
+                        )
+                        continue
+                    reason = validate_claim_block(claim)
+                    if reason:
+                        failures.append(
+                            f"{project_id}: checked_claims_missing "
+                            f"({ev['id']} scope_items[{label}]: malformed — {reason})"
+                        )
+                        continue
+                    if not claim.get("passed"):
+                        failures.append(
+                            f"{project_id}: checked_claims_predicate_failed "
+                            f"({ev['id']} scope_items[{label}])"
+                        )
+                continue
+
+            risk_level = None
+            if kind == "task.complete":
+                tid = payload.get("task_id")
+                risk_level = (task_meta.get(tid, {}) or {}).get("risk_level")
+
+            if not any(_claim_pattern_matches(kind, risk_level, p) for p in required_for):
+                continue
+
+            claim = payload.get("claim")
+            if claim is None:
+                failures.append(f"{project_id}: checked_claims_missing ({ev['id']} {kind})")
+                continue
+            reason = validate_claim_block(claim)
+            if reason:
+                failures.append(
+                    f"{project_id}: checked_claims_missing "
+                    f"({ev['id']} {kind}: malformed — {reason})"
+                )
+                continue
+            if not claim.get("passed"):
+                failures.append(
+                    f"{project_id}: checked_claims_predicate_failed ({ev['id']} {kind})"
+                )
+
+    return failures
+
+
+def evaluate_claim_predicate(workspace: Path, predicate: dict, allow_cmd: bool,
+                              shell_allowed_cache: dict, project_id) -> tuple:
+    """Replay one predicate against the current world. Returns (status, detail)
+    with status in {pass, fail, error, skipped}. See core/VERIFICATION.md
+    §Claim Replay for the algorithm this implements.
+    """
+    ((pkind, pval),) = predicate.items()
+    try:
+        if pkind == "file_exists":
+            exists = (workspace / pval).exists()
+            return ("pass", f"{pval} exists") if exists else ("fail", f"{pval} does not exist")
+
+        if pkind == "file_absent":
+            exists = (workspace / pval).exists()
+            return ("fail", f"{pval} exists") if exists else ("pass", f"{pval} absent")
+
+        if pkind == "file_sha256":
+            target = workspace / pval["path"]
+            if not target.exists():
+                return ("fail", f"{pval['path']} does not exist")
+            actual = sha256_hex(target.read_bytes())
+            expected = str(pval["hash"]).lower()
+            if actual.lower() == expected:
+                return ("pass", f"{pval['path']} sha256 matches")
+            return ("fail", f"{pval['path']} sha256 {actual} != expected {expected}")
+
+        if pkind == "url_status":
+            req = urllib.request.Request(pval["url"], method="HEAD")
+            try:
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    code = resp.status
+            except urllib.error.HTTPError as e:
+                code = e.code
+            if code == pval["expect_code"]:
+                return ("pass", f"{pval['url']} -> {code}")
+            return ("fail", f"{pval['url']} -> {code}, expected {pval['expect_code']}")
+
+        if pkind == "cmd_exit":
+            if not allow_cmd:
+                return ("skipped", "shell predicates disabled")
+            if project_id not in shell_allowed_cache:
+                allowed = False
+                schema = find_schema_for_project(workspace, project_id) if project_id else None
+                if schema:
+                    cap_path = (workspace / "schemas" / "projects" / schema
+                                / "capability-gates.yaml")
+                    if not cap_path.exists():
+                        cap_path = (workspace.parent / "schemas" / "projects"
+                                    / schema / "capability-gates.yaml")
+                    allowed = capability_gates_allows_shell(cap_path)
+                shell_allowed_cache[project_id] = allowed
+            if not shell_allowed_cache[project_id]:
+                return ("skipped",
+                        "shell_exec not permitted by workspace capability declarations")
+            try:
+                proc = subprocess.run(
+                    pval["cmd"], shell=True, capture_output=True, text=True,
+                    timeout=30, cwd=str(workspace),
+                )
+            except Exception as e:  # noqa: BLE001 — replay must not crash on a bad cmd
+                return ("error", f"execution error: {e}")
+            expect_code = pval.get("expect_code", 0)
+            output = (proc.stdout or "") + (proc.stderr or "")
+            if proc.returncode != expect_code:
+                return ("fail", f"exit {proc.returncode}, expected {expect_code}")
+            substr = pval.get("expect_substring")
+            if substr and substr not in output:
+                return ("fail", f"output missing expected substring {substr!r}")
+            return ("pass", f"exit {proc.returncode}")
+    except Exception as e:  # noqa: BLE001 — a single bad claim must not abort replay
+        return ("error", str(e))
+
+    return ("error", f"unhandled predicate kind {pkind!r}")
+
+
+def replay_claims(workspace: Path, events: list, allow_cmd: bool) -> dict:
+    """`hw verify --claims`: re-evaluate every recorded claim predicate against
+    the current world. Independent of, and reported separately from, chain
+    integrity. See core/VERIFICATION.md §Claim Replay.
+    """
+    entries = collect_claim_entries(events)
+    details = []
+    shell_cache = {}
+
+    for ev, label, claim in entries:
+        malformed = validate_claim_block(claim)
+        if malformed:
+            details.append({"event_id": ev["id"], "label": label, "status": "error",
+                             "detail": "malformed, not replayed"})
+            continue
+        status, detail = evaluate_claim_predicate(
+            workspace, claim["predicate"], allow_cmd, shell_cache, ev.get("project"),
+        )
+        details.append({"event_id": ev["id"], "label": label, "status": status,
+                         "detail": detail})
+
+    summary = {"claims_checked": len(details), "pass": 0,
+               "fail": [], "error": [], "skipped": [], "details": details}
+    for d in details:
+        line = f"{d['event_id']}.{d['label']}: {d['detail']}"
+        if d["status"] == "pass":
+            summary["pass"] += 1
+        elif d["status"] == "fail":
+            summary["fail"].append(line)
+        elif d["status"] == "error":
+            summary["error"].append(line)
+        elif d["status"] == "skipped":
+            summary["skipped"].append(line)
+
+    if not details:
+        summary["result"] = "N/A"
+    elif summary["fail"]:
+        summary["result"] = "FAIL"
+    else:
+        summary["result"] = "PASS"
+    return summary
+
+
+def render_claims(summary: dict) -> str:
+    lines = [
+        "hw verify --claims",
+        f"  claims_checked: {summary['claims_checked']}",
+        f"  pass:           {summary['pass']}",
+        f"  fail:           {len(summary['fail'])} {summary['fail']}",
+        f"  error:          {len(summary['error'])} {summary['error']}",
+        f"  skipped:        {len(summary['skipped'])} {summary['skipped']}",
+        f"  result:         {summary['result']}",
+    ]
+    return "\n".join(lines)
+
+
 def find_projection_path(workspace: Path, artifact_id: str, hashes_index: dict) -> Path | None:
     """Locate a projection file for an artifact ID. Prefer hashes.json, else search."""
     for projection_path in hashes_index:
@@ -529,6 +962,17 @@ def find_projection_path(workspace: Path, artifact_id: str, hashes_index: dict) 
             if candidate.exists():
                 return candidate
     return None
+
+
+def load_events(events_path: Path) -> list:
+    events = []
+    with events_path.open(encoding="utf-8") as f:
+        for raw in f:
+            line = raw.strip()
+            if not line:
+                continue
+            events.append(json.loads(line))
+    return events
 
 
 def verify(workspace: Path, since: str | None) -> dict:
@@ -550,6 +994,8 @@ def verify(workspace: Path, since: str | None) -> dict:
         "external_state_readback_failures": [],
         "external_state_readback_warnings": [],
         "bootstrap_probe_failures": [],
+        "checked_claims_malformed": [],
+        "checked_claims_required_failures": [],
         "result": "PASS",
     }
 
@@ -558,13 +1004,7 @@ def verify(workspace: Path, since: str | None) -> dict:
         result["error"] = f"events.jsonl not found at {events_path}"
         return result
 
-    events = []
-    with events_path.open(encoding="utf-8") as f:
-        for raw in f:
-            line = raw.strip()
-            if not line:
-                continue
-            events.append(json.loads(line))
+    events = load_events(events_path)
     result["events_scanned"] = len(events)
 
     skip_until = since
@@ -667,6 +1107,8 @@ def verify(workspace: Path, since: str | None) -> dict:
     result["external_state_readback_failures"] = esrb_failures
     result["external_state_readback_warnings"] = esrb_warnings
     result["bootstrap_probe_failures"] = check_bootstrap_probe(events)
+    result["checked_claims_malformed"] = check_claims_structural(events)
+    result["checked_claims_required_failures"] = check_claims_required(workspace, events)
 
     blocking = (
         result["tamper"]
@@ -678,6 +1120,8 @@ def verify(workspace: Path, since: str | None) -> dict:
         or result["scope_completeness_failures"]
         or result["external_state_readback_failures"]
         or result["bootstrap_probe_failures"]
+        or result["checked_claims_malformed"]
+        or result["checked_claims_required_failures"]
     )
     result["result"] = "FAIL" if blocking else "PASS"
     return result
@@ -700,6 +1144,8 @@ def render(result: dict) -> str:
         f"  ext_state_readback:    {len(result['external_state_readback_failures'])} {result['external_state_readback_failures']}",
         f"  ext_state_warnings:    {len(result['external_state_readback_warnings'])} {result['external_state_readback_warnings']}",
         f"  bootstrap_probe:       {len(result['bootstrap_probe_failures'])} {result['bootstrap_probe_failures']}",
+        f"  checked_claims:        {len(result['checked_claims_malformed'])} {result['checked_claims_malformed']}",
+        f"  checked_claims_req:    {len(result['checked_claims_required_failures'])} {result['checked_claims_required_failures']}",
         f"  result:                {result['result']}",
     ]
     if "error" in result:
@@ -713,6 +1159,15 @@ def main() -> int:
                         help="Workspace root containing .hyperworker/")
     parser.add_argument("--since", default=None,
                         help="Skip the chain re-walk for events before this EV-NNNN ID")
+    parser.add_argument("--claims", action="store_true",
+                        help="Also replay recorded claim: predicates against the current "
+                             "world (v5.3, core/VERIFICATION.md §Claim Replay). Reported "
+                             "separately from, and never affecting, chain integrity.")
+    parser.add_argument("--allow-cmd", action="store_true",
+                        help="Permit cmd_exit claim predicates to execute during --claims "
+                             "replay. Still gated by the workspace's shell_exec capability "
+                             "declaration (core/SUBSTRATE.md §Checked Claims). Default: "
+                             "cmd_exit predicates are skipped.")
     args = parser.parse_args()
 
     workspace = args.workspace.resolve()
@@ -722,7 +1177,21 @@ def main() -> int:
 
     result = verify(workspace, args.since)
     print(render(result))
-    return 0 if result["result"] == "PASS" else 1
+    exit_code = 0 if result["result"] == "PASS" else 1
+
+    if args.claims:
+        events_path = workspace / ".hyperworker" / "events.jsonl"
+        if events_path.exists():
+            claims_summary = replay_claims(workspace, load_events(events_path), args.allow_cmd)
+        else:
+            claims_summary = {"claims_checked": 0, "pass": 0, "fail": [], "error": [],
+                               "skipped": [], "result": "N/A", "details": []}
+        print()
+        print(render_claims(claims_summary))
+        if claims_summary["result"] == "FAIL":
+            exit_code = 1
+
+    return exit_code
 
 
 if __name__ == "__main__":
