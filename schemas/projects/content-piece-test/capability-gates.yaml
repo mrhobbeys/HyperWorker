@@ -1,0 +1,54 @@
+# schemas/projects/content-piece-test/capability-gates.yaml
+# Tool requirements per task. Creator-content piece work is file-bound: no
+# browser, no external execution, no API calls. Plus interview_question_budget
+# (Layer 1 check declared here, fires per-turn during T-002).
+
+task_capabilities:
+  source-inventory:
+    required_tools: [file_read, file_write]
+    description: "Reads inputs/, writes source artifact projections. SHA-256 dedup."
+
+  corpus-scan:
+    required_tools: [file_read, file_write]
+    description: "Reads source headers + first lines (NOT bodies). Surfaces or anchors central angle vs default_lens. Writes confirm/refine/defer outcome."
+
+  interview:
+    required_tools: [file_read, file_write]
+    description: "Interactive turn-by-turn interview. Runs in PARENT context, not subagent — question-budget Layer 1 needs turn-by-turn visibility. Writes finding artifacts per operator response."
+    delegation_recommended: false
+    rationale: "T-002 is the sole interactive task. Subagent dispatch loses turn-by-turn visibility for the question-budget check."
+
+  draft-capture:
+    required_tools: [file_read, file_write]
+    description: "Receives operator rough draft, flags verbatim_keeper candidates, awaits operator approval of keeper list."
+
+  format-generation:
+    required_tools: [file_read, file_write]
+    description: "ab-variant single task producing three publication-format-native variants. Subagent runs hermetic — sees consumes by hash, materializes from projections, emits each variant independently to prevent cross-format polish-leak."
+    delegation_recommended: true
+    rationale: "Hermetic subagent dispatch is the right shape for ab-variant generation."
+
+not_required:
+  - browser
+  - web_fetch
+  - shell_exec
+  - external_api
+
+# v5.1.1 scope-completeness Layer 1 check.
+scope_completeness:
+  required: true
+  allowed_terminal_states: [complete, deferred, excluded-after-discovery, escalated]
+
+# NEW: interview_question_budget — Layer 1 check fires during T-002 per-turn.
+# A turn (one assistant message in T-002 working log) with >max_per_turn agent
+# questions FAILs Layer 1; the agent re-drafts the turn before continuing.
+interview_question_budget:
+  required_for: [T-002]
+  max_per_turn: 2
+  count_method: |
+    Count "?" terminating sentences in the turn's agent-facing output, excluding
+    those inside [paraphrase: ...] markers and inside quoted operator material.
+  enforcement: |
+    Layer 1 emits verify.layer1.fail with check_name=interview_question_budget on
+    overrun. Friction.log auto-prompt fires on the third overrun in one task
+    (Layer 1 fail-3-on-same-check pattern).

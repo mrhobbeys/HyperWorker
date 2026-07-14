@@ -1,0 +1,107 @@
+# schemas/projects/course-master-plan-test/capability-gates.yaml
+# Capability gates and Layer 1 check declarations for course-master-plan L1.
+
+# Scope-completeness check (v5.1.1). All terminal states accepted; future deploy-shaped
+# variants may tighten.
+scope_completeness:
+  allowed_terminal_states:
+    - complete
+    - deferred
+    - excluded-after-discovery
+    - escalated
+
+# External-state read-back (v5.1.1). L1 itself does NOT actuate the platform beyond
+# Phase A.2 read-only familiarization. The required_for list is empty for L1; L2 schemas
+# (when they're authored at L2 spawn time) inherit this section and populate the patterns
+# specific to platform actuation tasks (create-module, set-tier-gate, upload-asset).
+external_state_readback:
+  required_for: []   # L1 does not actuate; L2 schemas populate this for actuation tasks
+
+  fallback_equality_method: manual-attestation
+
+  divergence_handling:
+    on_detect: warn
+    follow_up_required:
+      - friction.log              # category: REGRESSION or OPERATOR-CONFUSION
+
+# Slug-premise-pause Layer 1 check (NOVEL — proposed for substrate promotion v5.1.2 if H-CB1 holds).
+slug_premise_pause:
+  enforce: true
+  layer1_check_name: child_project_pause_skipped
+
+  rule: |
+    For every child project (registered as a `spawned-project` artifact with
+    `status: scaffolded-awaiting-resources` or later), the events.jsonl chain
+    MUST contain:
+      1. `child_project.scaffolded` event for the child_project_id, AND
+      2. EITHER `child_project.resources_ready` OR `child_project.resources_skipped`
+         event for the same child_project_id, with operator_confirmed: true.
+
+    The check fires at any task.start event whose `task_id` belongs to the child
+    project AND task is T-001 (or whatever the child schema declares as its first
+    work-doing task — set per child schema). If only `child_project.scaffolded`
+    exists without a paired resources_ready or resources_skipped, FAIL.
+
+  resources_skip_allowed: true
+
+  hypothesis: H-CB1
+  hypothesis_falsifier: |
+    A child project's T-001 task.start event fires without a paired
+    `child_project.resources_ready` (or `resources_skipped`) event in the chain
+    AND Layer 1 PASSes. Reported via friction.log type: REGRESSION.
+
+# Bootstrap probe (v5.1.1). For L1: filesystem listing of inputs/.
+bootstrap_probe:
+  method: filesystem-listing
+  probe_doc: bootstrap-probe.md
+
+  declared_source: OR-001.input_folder      # convention: <project root>/inputs/
+  found_source: directory walk of <project root>/inputs/
+
+  reconciliation_flow: per-item-disposition
+
+# Per-task capability declarations (tools the harness composes for delegated subagents).
+task_capabilities:
+  source-inventory:
+    required_tools: [file_read, file_write, hash_compute]
+    risk_level: standard
+
+  platform-familiarization:
+    required_tools: [browser_navigate, browser_read, file_write]
+    risk_level: standard
+    notes: |
+      Read-only browser walk of platform admin nav. No actuation; no clicks
+      that change platform state. Operator browser-pick happens at task start.
+
+  curriculum-corpus-scan:
+    required_tools: [file_read, file_write]
+    risk_level: elevated
+    notes: |
+      Section-level reads of inputs/ files (filenames + first 20 lines + section
+      headers); NOT full content reads. Surfaces 2-3 candidate curriculum
+      structures.
+
+  spawn-protocol:
+    required_tools: [file_read, file_write, directory_create, hash_compute]
+    risk_level: standard
+    notes: |
+      Mechanical scaffolding work. Cheaper-model-suitable per
+      OR-001.model_selection_policy.per_task_overrides.
+
+  master-plan-update:
+    required_tools: [file_read, file_write]
+    risk_level: standard
+    notes: |
+      Master-plan document edits as L2 spawns happen, modules complete, etc.
+      Live document; not a one-shot deliverable.
+
+  reorder-decision:
+    required_tools: [file_read, file_write, hash_compute]
+    risk_level: critical
+    notes: |
+      Curriculum sequence supersede. Triggers v5.0 ratchet on in-flight L2
+      projects; redirect_implications generated for affected published copy.
+
+  tier-move-decision:
+    required_tools: [file_read, file_write, hash_compute]
+    risk_level: elevated

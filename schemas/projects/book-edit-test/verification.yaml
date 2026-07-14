@@ -1,0 +1,136 @@
+# schemas/projects/book-edit-test/verification.yaml
+# Risk → verification mapping for book-edit projects.
+# Layer 2 checks emphasize voice preservation, banned-pattern enforcement,
+# examples preservation, and per-pass line-delta caps.
+
+risk_levels:
+  standard:
+    layers: [1, 2]
+    layer2_checks:
+      - schema_validation
+      - banned_pattern_enforcement
+      - spelling_correction_floor
+    rationale: |
+      Inventory tasks, voice-anchor extraction, candidate-evaluation,
+      unfinished-bits scan, edit-philosophy declaration. Layer 1 substrate
+      checks plus banned-pattern enforcement (the seed list — em dash etc.)
+      and the spelling-correction floor (any pass that ships with
+      uncorrected spelling errors fails Layer 2).
+
+  elevated:
+    layers: [1, 2, 3]
+    council_size: 2
+    layer2_checks:
+      - schema_validation
+      - banned_pattern_enforcement
+      - spelling_correction_floor
+      - voice_drift_check
+      - line_delta_cap
+      - examples_preservation_check
+    failure_scenarios_required: 2
+    rationale: |
+      Per-chapter edit passes. Council fires on each pass. Two failure
+      scenarios required: one for "what if the voice anchor is incomplete"
+      (voice drift slips through), one for "what if a real example was
+      paraphrased without being detected by the preservation watcher."
+
+  critical:
+    layers: [1, 2, 3]
+    council_size: 4
+    layer2_checks:
+      - schema_validation
+      - banned_pattern_enforcement
+      - spelling_correction_floor
+      - voice_drift_check
+      - line_delta_cap
+      - examples_preservation_check
+      - cross_chapter_continuity_check
+      - internal_reference_resolution_check
+    failure_scenarios_required: 3
+    operator_review_required: true
+    rationale: |
+      Continuity scan/resolution, assembly, voice guidelines, final read,
+      print-ready formatting. Full council fires. Operator review required
+      before project archival. Three failure scenarios: voice integrity,
+      examples integrity, cross-chapter integrity (broken internal references,
+      drifted character names, contradicted facts).
+
+# Layer 2 check definitions.
+layer2_check_definitions:
+  schema_validation:
+    description: |
+      All written artifacts validate against their declared schemas (default
+      kinds + book-edit extensions). Substrate-enforced.
+
+  banned_pattern_enforcement:
+    description: |
+      For every banned-pattern artifact in the project, the substrate scans
+      the task's output for any instance. Any surviving instance fails the
+      check. The em-dash check runs even before T-003 produces the AI-
+      indicator list (the seed pattern from bootstrap is enough).
+
+  spelling_correction_floor:
+    description: |
+      Every pass corrects every spelling error it identifies. Substrate runs
+      a spell-checker (project-config-driven dictionary) over the post-pass
+      output; any surviving misspelling that the pre-pass output also had
+      fails the check. (New misspellings introduced by the pass also fail —
+      but those are typically caught by banned-pattern checks if they're
+      pattern-induced rather than typos.)
+
+  voice_drift_check:
+    description: |
+      The pass's edit_proposal artifact carries a voice_drift_score
+      (subagent self-assessment 0-1). Layer 2 requires the score to be ≤0.5
+      for light-copyedit passes, ≤0.75 for substantive-edit passes, no cap
+      for structural-rewrite. The voice-preservation-watcher council member
+      cross-checks the self-assessment against the voice-anchor artifact.
+
+  line_delta_cap:
+    description: |
+      The pass's edit_proposal records line_delta_pct. Layer 2 requires this
+      to be ≤ OR-001.max_line_delta_pct (default 30) for the chapter's
+      declared philosophy, modulo per-chapter overrides captured as DECs
+      with synthesis_role: chapter-edit-philosophy and chapter_scope set.
+
+  examples_preservation_check:
+    description: |
+      For every edit_candidate in the proposal, if the original_text contains
+      an example, case study, or direct quote (heuristic: detected via quote
+      marks, "for example", named-entity markers, etc.), the proposed_text
+      must preserve the example verbatim. Paraphrased examples fail. The
+      preservation-rule-watcher council member is the canonical verifier;
+      this check is the Layer 2 supporting heuristic.
+
+  cross_chapter_continuity_check:
+    description: |
+      Pairwise scan across post-edit chapter files for character-name
+      consistency, term consistency, internal-reference resolution
+      ("Chapter 7" actually exists and contains what's referenced),
+      example consistency (the same example used in two chapters appears
+      identically). Heuristic; operator review is the canonical check at
+      critical level.
+
+  internal_reference_resolution_check:
+    description: |
+      Every "see Chapter N", "as we'll see later", "as discussed earlier"
+      reference resolves to actual content. Forward references must point
+      at existing future chapters; backward references must point at
+      existing earlier chapters. Heuristic.
+
+# Default per-task risk classification (operator may override).
+task_default_risks:
+  corpus-inventory: standard
+  chapter-split: standard
+  voice-anchor-extraction: standard
+  ai-indicator-research: standard
+  candidates-evaluation: standard
+  unfinished-bits-scan: standard
+  edit-philosophy-per-chapter: standard
+  chapter-edit-pass: elevated
+  continuity-scan: elevated
+  continuity-resolution: elevated
+  assembly: critical
+  voice-guidelines-doc: standard
+  final-read: critical
+  print-ready-formatting: critical

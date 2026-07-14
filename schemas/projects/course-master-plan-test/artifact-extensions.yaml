@@ -1,0 +1,219 @@
+# schemas/projects/course-master-plan-test/artifact-extensions.yaml
+# Domain-specific artifact extensions and event-kind extensions for the
+# course-master-plan L1 schema.
+
+# Operating-reality field overrides and additions for L1.
+operating-reality:
+  field_overrides:
+    - name: budget
+      required: false
+    - name: timeline
+      required: false
+    - name: team
+      required: false
+    - name: authority
+      required: false
+    - name: operator_profile
+      required: false
+
+  additional_fields:
+    - name: project_type
+      type: enum
+      values: [course-master-plan]
+      required: true
+
+    - name: course_name
+      type: string
+      required: true
+
+    - name: course_url
+      type: url
+      required: true
+
+    - name: platform
+      type: enum
+      values: [skool, circle, mighty-networks, discord, other]
+      required: true
+
+    - name: admin_user
+      type: string
+      required: true
+
+    - name: test_member
+      type: string|null
+      required: false
+
+    - name: lens_anchor
+      type: list[string]
+      required: true
+      description: |
+        Voice/framing anchor for cross-project artifacts. First-listed dominates;
+        additional entries hold for cross-channel coherence. Inherits the v5.1
+        brand_voice_anchor widening pattern from marketing-campaign. The lens
+        guides — module premises are discovered, not pre-determined by the lens.
+
+    - name: cross_project_scope
+      type: string
+      required: true
+      description: |
+        Tag attached to L1 artifacts on emit. L2/L3 config.yaml lists this tag
+        in cross_project_subscriptions to inherit lens + curriculum decisions.
+
+    - name: tier_policy
+      type: object
+      required: true
+      schema:
+        policy_mode: enum [evolving, locked, per-module-decision]
+        default_tier: enum [free, paid]
+        free_tier_modules: list[string]
+        movement_history: list[object]
+      description: |
+        Tier policy snapshot at OR creation. DEC-002 is the canonical tier
+        policy; OR mirrors the initial state. Tier moves are DEC-002 supersedes;
+        movement_history accumulates append-only.
+
+    - name: promotion_scope
+      type: enum
+      values: [in-harness, external]
+      required: true
+
+    - name: curriculum_discovery_mode
+      type: enum
+      values: [from-corpus, from-draft, hybrid]
+      required: false
+      default: from-corpus
+      description: |
+        Set by T-000/T-002 based on inputs/ contents. Provisional default at
+        bootstrap; T-002 (corpus scan) confirms or supersedes.
+
+    - name: slug_premise_pause
+      type: object
+      required: true
+      schema:
+        enforce: bool
+        layer1_check: string
+        resources_skip_allowed: bool
+
+    - name: platform_actuation
+      type: object
+      required: true
+      schema:
+        browser_codename: string
+        read_back_method: enum [manual-attestation, visual-diff, rest-roundtrip]
+        guide_path: string
+      description: |
+        Platform-actuation parameters. browser_codename names the operator's
+        admin-pre-authenticated browser instance. guide_path points at the
+        platform-site-guide.md Phase A.2 produces.
+
+# Decision extensions specific to course-master-plan.
+decision:
+  additional_fields:
+    - name: synthesis_role
+      type: enum|null
+      values:
+        - curriculum-sequence       # DEC-001 — module list with order, tier, learning-objective summary
+        - tier-policy               # DEC-002 — tier policy state
+        - module-premise            # per-module premise capture
+        - lens-refinement           # lens_anchor supersede via OR
+        - reorder-decision          # curriculum-sequence supersede with redirect_implications
+        - tier-move-decision        # tier-policy supersede with reason
+        - scope-decision            # general scope decision (mid-flow)
+        - weighting-rule            # operator weighting rule (mid-flow)
+        - inclusion-exclusion       # what's in/out of the master plan (mid-flow)
+        - spawn-decision            # decision captured during an L2/L3 spawn
+      required: false
+
+    - name: redirect_implications
+      type: list[object]|null
+      required: false
+      schema:
+        from_position: string
+        to_position: string
+        affected_module_id: string|null
+        affected_lesson_id: string|null
+        action: enum [edit-copy, accept-inconsistency, defer-until-revisit, spawn-course-task]
+        status: enum [planned, applied, verified, deferred, excluded]
+      description: |
+        Inherited from marketing-campaign. Captures stale cross-references in
+        published / in-flight lesson copy when DEC-001 (curriculum sequence)
+        is superseded. Layer 1 verifies coverage at session.handoff.
+
+# Finding extensions.
+finding:
+  additional_fields:
+    - name: from_corpus_source
+      type: string|null
+      required: false
+      description: "[SRC-NNN#hash] of the inputs/ source where this finding originated."
+
+    - name: applies_to_layer
+      type: enum|null
+      values: [L1, L2, L3, all]
+      required: false
+      description: "Which layer this finding constrains."
+
+# Anti-pattern extensions.
+anti-pattern:
+  additional_fields:
+    - name: from_corpus_source
+      type: string|null
+      required: false
+    - name: applies_to_layer
+      type: enum|null
+      values: [L1, L2, L3, all]
+      required: false
+
+# New artifact kinds introduced by this schema (inherits source / claim / contradiction
+# from report-synthesis as the corpus-scan substrate).
+new_kinds:
+  - kind: source
+    description: |
+      Inherits report-synthesis source kind. Each file in inputs/ registered as
+      one source artifact. Used by T-000 inventory and T-002 corpus scan.
+    inherits_from: report-synthesis.source
+
+  - kind: spawned-project
+    description: |
+      Registry entry for an L2 or L3 project spawned via the slug-premise-pause
+      protocol. Hash-citable so the master plan can list active spawns by hash.
+    schema:
+      - name: id
+        type: string
+        pattern: "SP-\\d{3,}"
+        required: true
+      - name: child_project_id
+        type: string
+        required: true
+        description: "The actual project ID under projects/ (e.g., module-03-network-fundamentals)"
+      - name: child_project_type
+        type: enum
+        values: [module, course-task, promo, content-piece]
+        required: true
+      - name: parent_layer
+        type: enum
+        values: [L1, L2]
+        required: true
+      - name: slug
+        type: string
+        required: true
+      - name: premise
+        type: string
+        required: true
+        description: "Operator-stated 1-3 sentence premise; verbatim per Tier 1."
+      - name: scaffolded_event
+        type: string
+        required: true
+        description: "EV-NNNN of the child_project.scaffolded event."
+      - name: resources_ready_event
+        type: string|null
+        required: false
+        description: "EV-NNNN of the child_project.resources_ready or resources_skipped event. Null until operator says continue."
+      - name: status
+        type: enum
+        values: [scaffolded-awaiting-resources, ready-for-handoff, in-flight, parked, complete, archived]
+        required: true
+      - name: consumes
+        type: list[string]
+        required: true
+        description: "Cross-project citations consumed at scaffold time (typically [DEC-001#hash], [DEC-002#hash], [OR-001#hash])."

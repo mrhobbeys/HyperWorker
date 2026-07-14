@@ -1,0 +1,81 @@
+# schemas/projects/course-master-plan-test/precedence-tiers.yaml
+# Tiered rules for course-master-plan L1 projects. Tier ordinal wins on conflict.
+# Renaming a tier does not change ordinal precedence.
+
+tiers:
+  - tier: 1
+    name: LENS-FIDELITY
+    purpose: |
+      The lens (OR-001.lens_anchor) shapes voice and framing. Tier 1 verbatim
+      quotation principle: when an artifact summarizes operator intent or source
+      content, quote verbatim where possible. Paraphrase only when the original
+      is too long; flag with [paraphrase: ...] markers and preserve qualifiers
+      (numbers, dates, conditional clauses). The lens guides — module premises
+      are discovered from the corpus and operator's actual learning, not
+      pre-determined by the lens itself.
+    examples:
+      - "Lens text in 00-REFERENCE-rules.md is quoted verbatim from OR-001.lens_anchor; not paraphrased."
+      - "Operator workflow rules are reproduced verbatim with SCAN markers; restating them in different words is a Tier 1 violation."
+      - "Module premises in DEC-001 reflect operator-stated learning, not lens-fitted inferences."
+
+  - tier: 2
+    name: SCOPE-INTEGRITY
+    purpose: |
+      L1 owns the master plan only. L1 does not produce lesson content (that's
+      L2/L3) and does not actuate platform entities besides Phase A.2 read-only
+      familiarization. The slug-premise-pause invariant is non-negotiable: every
+      child-project spawn STOPS and waits for operator continue before T-001
+      fires.
+    examples:
+      - "L1 spawning an L2 project does not start L2's first task — that's the L2 session's job after operator drops resources."
+      - "L1 navigating Skool/platform admin pages beyond Phase A.2 read-only walk is a scope violation."
+      - "Skipping the slug-premise-pause stop point because the operator's intent seems clear is a Tier 2 violation."
+      - "Promo work routes to L2 promo-* projects (or external surface if promotion_scope: external); L1 does not draft promo copy."
+
+  - tier: 3
+    name: DECISION-DISCIPLINE
+    purpose: |
+      Curriculum and tier-policy decisions are typed Decision artifacts (DEC-001
+      sequence, DEC-002 tier policy), not loose conversation. Reordering and
+      tier moves are supersedes with explicit reason and movement_history
+      append. Operator mid-flow directives are typed Decisions (per HARNESS.md
+      §Operator mid-flow directives).
+    examples:
+      - "Module reorder is a DEC-001 supersede with reason; not 'I think we should swap module 3 and 7' in chat."
+      - "Tier move is a DEC-002 supersede; movement_history is append-only."
+      - "Operator says 'always cite the source survey when discussing tier moves' → typed Decision with synthesis_role: weighting-rule."
+      - "Cross-project lens refinement is an OR-001 supersede; lens text is not edited in place."
+
+  - tier: 4
+    name: STYLE
+    purpose: |
+      Voice consistency across cross-project artifacts. Citation format
+      ([DEC-NNN#hash], [F-NNN#hash], [OR-NNN#hash]). Match the OR-001.lens_anchor
+      first-listed entry's voice in cross-project artifacts.
+    examples:
+      - "Master plan prose voice matches OR-001.lens_anchor[0]."
+      - "Citations use the canonical [KIND-NNN#12-hex] form per SUBSTRATE.md §Citation Format."
+
+scan_markers:
+  - tier: 1
+    marker: "@@SCAN_1_1"
+    question: "Is every operator-stated lens framing or workflow rule in this output a verbatim quote, or marked with [paraphrase: ...]?"
+  - tier: 1
+    marker: "@@SCAN_1_2"
+    question: "Did this output infer module premise from the lens rather than from operator-stated learning or corpus evidence?"
+  - tier: 2
+    marker: "@@SCAN_2_1"
+    question: "If this turn spawned a child project, did the agent STOP after child_project.scaffolded and wait for operator continue?"
+  - tier: 2
+    marker: "@@SCAN_2_2"
+    question: "Did this output produce lesson content or actuate platform entities? (L1 should answer 'no' for both unless this is the Phase A.2 read-only familiarization.)"
+  - tier: 3
+    marker: "@@SCAN_3_1"
+    question: "If a curriculum reorder or tier move was discussed, was it captured as a DEC-001 / DEC-002 supersede with reason, or left in conversation?"
+  - tier: 3
+    marker: "@@SCAN_3_2"
+    question: "If an operator mid-flow directive surfaced, was it captured as a typed Decision artifact with synthesis_role?"
+
+# Banned tokens at the schema level: none. Operators may declare project-specific
+# banned tokens in 00-REFERENCE-rules.md if course content has voice constraints
+# (regulated industry, brand-controlled communication).

@@ -1,0 +1,210 @@
+# schemas/projects/book-edit-test/schema.yaml
+# Working schema metadata. After project completion, hw schema save extracts
+# the validated patterns into schemas/projects/book-edit/.
+
+schema_id: book-edit-test
+schema_version: 0.1
+harness_version: "5.1.1"
+inherits_from: report-synthesis
+borrows_primitives_from: [marketing-campaign]   # delivery_mode: live-edit, external_state.read_back, scope-shrink-watcher
+description: |
+  Take a previously-published manuscript and prep it for re-release: voice-
+  preserving copy edit, AI-indicator pattern removal, spelling and grammar
+  correction, surfacing and resolving unfinished bits the author left mid-
+  draft, and final assembly into both an updated digital manuscript and a
+  print-ready layout. Per-chapter atomic editing with operator-cadenced
+  review. The author's voice is preserved; real examples are quoted verbatim;
+  banned patterns (e.g., em dash, AI-indicator prefixes) are enforced at
+  Layer 1.
+
+bootstrap_questions:
+  - id: project_name
+    prompt: "What is this project called?"
+    type: string
+    required: true
+
+  - id: book_title
+    prompt: "Book title (full, as published)?"
+    type: string
+    required: true
+
+  - id: book_short_title
+    prompt: "Book short title or abbreviation (used in artifact filenames, e.g., 'MYBK')?"
+    type: string
+    required: true
+
+  - id: book_asin
+    prompt: "Current Amazon ASIN (if Kindle-published)?"
+    type: string|null
+    required: false
+
+  - id: book_listing_url
+    prompt: "Current product page URL (Amazon or other)?"
+    type: string|null
+    required: false
+
+  - id: target_release
+    prompt: "Target re-release window (e.g., 'Q3 2026', 'when ready')?"
+    type: string
+    required: true
+
+  - id: source_manuscript_path
+    prompt: "Path to the source-of-truth manuscript file (the version that becomes the input to chapter splitting)?"
+    type: string
+    required: true
+
+  - id: input_folder
+    prompt: "Path where per-chapter working files are kept (created by Phase A chapter-split if missing)?"
+    type: string
+    required: true
+
+  - id: archive_folders
+    prompt: "List of paths to reference/archive folders (older rounds, edited but superseded versions). Hash-pinned at registration; not edited."
+    type: list[string]|null
+    required: false
+
+  - id: candidates_folder
+    prompt: "Path to candidate-content folder (notes, extra material, unincorporated drafts that need disposition decisions)?"
+    type: string|null
+    required: false
+
+  - id: voice_anchor_strategy
+    prompt: "How is voice anchored? (operator-supplied | extract-from-corpus | mixed)"
+    type: enum
+    values: [operator-supplied, extract-from-corpus, mixed]
+    default: mixed
+    required: true
+
+  - id: edit_philosophy_default
+    prompt: "Default edit philosophy per chapter (operator may override per chapter): light-copyedit | substantive-edit | structural-rewrite | mixed-by-chapter"
+    type: enum
+    values: [light-copyedit, substantive-edit, structural-rewrite, mixed-by-chapter]
+    default: light-copyedit
+    required: true
+
+  - id: max_line_delta_pct
+    prompt: "Per-pass line-delta cap (Layer 2 guardrail; default 30; raise per-chapter on demand)"
+    type: integer
+    default: 30
+    required: false
+
+  - id: banned_patterns_seed
+    prompt: "Initial banned-pattern list (operator-direct, before AI-indicator research). Default: ['em dash']."
+    type: list[string]
+    default: ["em dash"]
+    required: true
+
+  - id: ai_indicator_research
+    prompt: "Run the AI-indicator research subagent in Phase A? (run | skip)"
+    type: enum
+    values: [run, skip]
+    default: run
+    required: true
+
+  - id: examples_preservation
+    prompt: "Examples-preservation rule: should real-world examples, case studies, and direct quotes be preserved verbatim? (yes | no — yes is the schema default)"
+    type: enum
+    values: [yes, no]
+    default: yes
+    required: true
+
+  - id: unfinished_bits_scan
+    prompt: "Run the unfinished-bits scan in Phase A? (run | skip)"
+    type: enum
+    values: [run, skip]
+    default: run
+    required: true
+
+  - id: confidence_floor
+    prompt: "Minimum confidence for output claims and edits (provisional | validated)"
+    type: enum
+    values: [provisional, validated]
+    default: provisional
+    required: false
+
+  - id: deliverable_path
+    prompt: "Path to the final assembled polished manuscript (Phase D output)"
+    type: string
+    required: true
+
+  - id: print_ready_required
+    prompt: "Produce a print-ready laid-out version (Phase E)? (yes | no)"
+    type: enum
+    values: [yes, no]
+    default: yes
+    required: true
+
+  - id: print_ready_path
+    prompt: "Path to the print-ready manuscript (Phase E output). Required if print_ready_required is yes."
+    type: string|null
+    required: false
+
+  - id: voice_guidelines_path
+    prompt: "Path to the Voice & Editing Guidelines deliverable (Phase D byproduct)"
+    type: string
+    required: true
+
+  - id: post_archive_backlog
+    prompt: "Post-archive backlog items (e.g., 'Update Amazon listing for X after print release')?"
+    type: list[string]|null
+    required: false
+
+includes:
+  - precedence-tiers.yaml
+  - artifact-extensions.yaml
+  - capability-gates.yaml
+  - verification.yaml
+  - council.yaml
+  - bootstrap-probe.md
+  - project-template.md
+  - rules-template.md
+  - task-templates/
+  - README.md
+
+default_tasks:
+  description: |
+    book-edit-test decomposes into 14 task templates across 5 phases:
+
+    Phase A (Setup):
+      T-000 corpus-inventory                  — register source manuscript + archive corpus as chapter-source artifacts
+      T-001 chapter-split                     — split source manuscript into per-chapter files; record assembly map
+      T-002 voice-anchor-extraction           — extract voice anchor from representative chapters
+      T-003 ai-indicator-research             — web-research current AI-indicator patterns; operator approves banned-pattern list
+      T-004 candidates-evaluation             — evaluate notes/extra-content files for fold-in / discard
+      T-005 unfinished-bits-scan              — surface placeholder markers, incomplete sentences, internal references; operator dispositions
+      T-006 edit-philosophy-per-chapter       — operator declares philosophy per chapter (default flows from bootstrap)
+
+    Phase B (Per-chapter edit passes):
+      T-007 chapter-edit-pass                 — branched per chapter; live-edit; bounded-iteration max_passes=3
+
+    Phase C (Cross-chapter continuity):
+      T-008 continuity-scan                   — character / term / reference / example consistency across chapters
+      T-009 continuity-resolution             — Decisions for each continuity contradiction
+
+    Phase D (Assembly + Voice Guidelines):
+      T-010 assembly                          — reassemble per-chapter files into polished manuscript per Phase A assembly map
+      T-011 voice-guidelines-doc              — assemble Voice & Editing Guidelines from run events log
+      T-012 final-read                        — full-manuscript pass for any remaining issues
+
+    Phase E (Print-ready):
+      T-013 print-ready-formatting            — trim size, margins, page numbers, front/back matter, heading styling
+
+    The chapter-edit-pass template (T-007) is branched once per chapter at
+    Phase B kickoff. The branched IDs follow T-007.ch-NN naming so the parent
+    T-007 captures the rollup and each chapter's pass is its own atomic unit.
+
+  templates:
+    - "00-corpus-inventory.md"
+    - "01-chapter-split.md"
+    - "02-voice-anchor-extraction.md"
+    - "03-ai-indicator-research.md"
+    - "04-candidates-evaluation.md"
+    - "05-unfinished-bits-scan.md"
+    - "06-edit-philosophy-per-chapter.md"
+    - "07-chapter-edit-pass.md"
+    - "08-continuity-scan.md"
+    - "09-continuity-resolution.md"
+    - "10-assembly.md"
+    - "11-voice-guidelines-doc.md"
+    - "12-final-read.md"
+    - "13-print-ready-formatting.md"

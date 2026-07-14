@@ -1,0 +1,431 @@
+# schemas/projects/book-edit-test/artifact-extensions.yaml
+# Domain-specific artifact kinds and field extensions for book-edit projects.
+# Inherits from report-synthesis where applicable; novel kinds for the editing
+# domain are declared below.
+
+new_kinds:
+  - kind: chapter-source
+    description: |
+      Represents an input file registered for editing. One artifact per file
+      (Completed Book.docx as canonical; archived/edited round files as
+      reference-pinned). Created during T-000 corpus-inventory; immutable once
+      registered. Hash-citable. Inherits the round/supersedes shape from
+      report-synthesis's `source` kind, adapted for chapter-grain content.
+    schema:
+      - name: id
+        type: string
+        pattern: "SRC-\\d{3,}"
+        required: true
+      - name: title
+        type: string
+        required: true
+      - name: file_path
+        type: string
+        required: true
+      - name: source_role
+        type: enum
+        values: [canonical-manuscript, archive-original, archive-edited, candidate-content, post-split-chapter]
+        required: true
+        description: |
+          canonical-manuscript = the source-of-truth input; live edits never
+            land here directly (stays untouched as backup of record).
+          archive-original = older rounds (Unformatted, Formatted V1/V2);
+            kept for reference, hash-pinned, not edited.
+          archive-edited = mid-stage edited rounds; kept for reference, hash-
+            pinned, not edited.
+          candidate-content = unincorporated material being evaluated for
+            fold-in (notes files, extra-content drafts).
+          post-split-chapter = per-chapter file written by T-001 chapter-split;
+            this is the live-edit target for Phase B chapter passes.
+      - name: round
+        type: enum
+        values: [unformatted, formatted-v1, formatted-v2, edited, completed, post-split, candidate, single]
+        required: true
+      - name: chapter_id
+        type: string|null
+        required: false
+        description: "Chapter identifier (e.g., 'ch-01', 'ch-02') if this source represents one chapter. Null for whole-manuscript sources."
+      - name: supersedes
+        type: string|null
+        required: false
+        description: "[SRC-NNN#hash] of an earlier round this source corrects."
+      - name: superseded_by
+        type: string|null
+        required: false
+        description: "[SRC-NNN#hash] of a later round, if any."
+      - name: weight
+        type: enum
+        values: [primary, secondary, contextual]
+        required: true
+        default: secondary
+        description: "primary = source-of-truth for live edits (typically Completed Book.docx and post-split-chapter files); secondary = older rounds; contextual = candidate or notes."
+      - name: hash
+        type: string
+        required: true
+        description: "Content hash of the file at registration time."
+      - name: tags
+        type: list[string]
+        required: false
+
+  - kind: voice-anchor
+    description: |
+      Captures the author's voice as extracted from representative passages of
+      the source manuscript and as augmented by operator-declared rules. One
+      voice-anchor artifact per project (typically VA-001). Consumed by every
+      chapter edit pass and by every council fire that includes voice-
+      preservation-watcher.
+    schema:
+      - name: id
+        type: string
+        pattern: "VA-\\d{3,}"
+        required: true
+      - name: sample_excerpts
+        type: list[object]
+        required: true
+        description: |
+          List of representative excerpts. Each: {source_citation: [SRC-NNN#hash],
+          chapter_id, excerpt_text, why_representative}.
+      - name: tone_descriptors
+        type: list[string]
+        required: true
+        description: "Adjectives or short phrases describing the voice (e.g., 'pragmatic', 'first-person plural', 'examples-driven')."
+      - name: sentence_rhythm_notes
+        type: string|null
+        required: false
+        description: "Observations about sentence length distribution, parenthetical-vs-comma habits, paragraph cadence."
+      - name: vocabulary_register
+        type: string|null
+        required: false
+        description: "Formal / informal / technical-but-accessible / etc. plus any specific lexical preferences observed."
+      - name: voice_dont_list
+        type: list[string]
+        required: false
+        description: "Anti-patterns: phrasings or rhetorical moves the voice doesn't use."
+      - name: operator_overrides
+        type: list[string]
+        required: false
+        description: "Operator-declared rules layered on top of the corpus-extracted anchor (e.g., 'I prefer parentheses over em dashes')."
+
+  - kind: banned-pattern
+    description: |
+      A pattern (literal or regex) that must not survive any chapter edit pass.
+      Consumed by every chapter pass; verified at Layer 1. Created from operator-
+      direct rules at bootstrap (e.g., em dash) and from the AI-indicator
+      research task's operator-approved list (T-003).
+    schema:
+      - name: id
+        type: string
+        pattern: "BP-\\d{3,}"
+        required: true
+      - name: pattern
+        type: string
+        required: true
+        description: "The literal string or regex that flags a violation."
+      - name: pattern_kind
+        type: enum
+        values: [literal, regex, unicode-codepoint]
+        required: true
+      - name: pattern_class
+        type: enum
+        values: [punctuation, ai-indicator-prefix, ai-indicator-phrase, weasel-word, hedge-word, transitional-filler, other]
+        required: true
+      - name: replacement_rule
+        type: string|null
+        required: false
+        description: "How to replace when the pattern is encountered (e.g., 'em dash → parentheses for parenthetical scope, ellipsis for trailing thought, comma for in-line clause')."
+      - name: source
+        type: enum
+        values: [operator-direct, ai-indicator-research, voice-anchor-derived, council-finding]
+        required: true
+      - name: source_citation
+        type: string|null
+        required: false
+        description: "[DEC-NNN#hash] or [VA-NNN#hash] for traceability to where this pattern was approved."
+      - name: confidence
+        type: enum
+        values: [provisional, validated]
+        required: true
+        default: provisional
+
+  - kind: edit_proposal
+    description: |
+      Per-chapter delta artifact produced by a chapter edit pass. Captures the
+      proposed changes before the live-edit actuates. Required because the
+      live-edit shape (delivery_mode: live-edit, paired external_state.read_back)
+      is verifiable only if the proposal enumerates edit_candidates,
+      create_candidates, and delete_candidates per the marketing-campaign
+      live-edit primitive.
+    schema:
+      - name: id
+        type: string
+        pattern: "EP-\\d{3,}"
+        required: true
+      - name: chapter_id
+        type: string
+        required: true
+      - name: chapter_source
+        type: string
+        required: true
+        description: "[SRC-NNN#hash] citing the post-split-chapter source-of-truth file before this pass."
+      - name: pass_number
+        type: integer
+        required: true
+        description: "Which iteration of bounded-iteration this proposal represents (1, 2, or 3 — max_passes=3 per schema default)."
+      - name: edit_candidates
+        type: list[object]
+        required: true
+        description: "Proposed edits to existing prose. Each: {location, original_text, proposed_text, rationale, tier_invoked}."
+      - name: create_candidates
+        type: list[object]
+        required: true
+        description: "Proposed insertions of new content (e.g., expanding an unfinished bit). Each: {location, proposed_text, rationale, finding_citation}. Empty list if none."
+      - name: delete_candidates
+        type: list[object]
+        required: true
+        description: "Proposed deletions (e.g., cutting an unfinished bit operator decided to remove). Each: {location, original_text, rationale, finding_citation}. Empty list if none."
+      - name: voice_drift_score
+        type: number|null
+        required: false
+        description: "Subagent self-assessment 0-1 of how much the proposal drifts from voice-anchor. 0 = no drift; 1 = wholesale rewrite."
+      - name: line_delta_pct
+        type: number
+        required: true
+        description: "Percentage of lines changed (added + deleted + modified) relative to the chapter's pre-pass line count."
+      - name: consumed_preservation_rules
+        type: list[string]
+        required: true
+        description: "List of [DEC-NNN#hash] for every preservation-rule Decision the pass loaded."
+      - name: consumed_banned_patterns
+        type: list[string]
+        required: true
+        description: "List of [BP-NNN#hash] for every banned-pattern artifact the pass loaded."
+      - name: consumed_voice_anchor
+        type: string
+        required: true
+        description: "[VA-NNN#hash] of the voice-anchor artifact the pass loaded."
+      - name: applied
+        type: bool
+        required: true
+        default: false
+        description: "Set true when external_state.read_back confirms the live-edit landed."
+      - name: applied_at
+        type: iso8601-datetime|null
+        required: false
+
+  - kind: assembly-map
+    description: |
+      Captured at T-001 chapter-split. Records exactly how the source manuscript
+      was decomposed into per-chapter files so the Phase D assembly task can
+      reconstruct the manuscript byte-faithfully (modulo the chapter content
+      changes).
+    schema:
+      - name: id
+        type: string
+        pattern: "AM-\\d{3,}"
+        required: true
+      - name: source_manuscript
+        type: string
+        required: true
+        description: "[SRC-NNN#hash] of the source-of-truth manuscript split."
+      - name: chapters
+        type: list[object]
+        required: true
+        description: |
+          One entry per chapter: {chapter_id, title, original_paragraph_range,
+          original_heading_style, post_split_file: [SRC-NNN#hash], front_matter
+          (bool), back_matter (bool)}.
+      - name: front_matter
+        type: object|null
+        required: false
+        description: "Title page, copyright, dedication, TOC content (kept separate from chapter splits so reassembly preserves order)."
+      - name: back_matter
+        type: object|null
+        required: false
+        description: "About author, also-by, etc."
+      - name: docx_style_inventory
+        type: object|null
+        required: false
+        description: "Catalog of paragraph styles, character styles, fonts used in source manuscript so reassembly preserves them."
+
+# Extensions to default artifact kinds.
+
+decision:
+  additional_fields:
+    - name: synthesis_role
+      type: enum|null
+      values: [
+        # inherited from report-synthesis
+        contradiction-resolution,
+        output-structure,
+        scope-decision,
+        weighting-rule,
+        inclusion-exclusion,
+        # book-edit additions
+        preservation-rule,
+        edit-philosophy,
+        voice-anchor-source,
+        ai-indicator-policy,
+        candidate-disposition,
+        unfinished-bit-disposition,
+        chapter-edit-philosophy,
+        continuity-resolution,
+      ]
+      required: false
+      description: |
+        What role this decision plays. preservation-rule = consumed by every
+        chapter pass as Tier 1. edit-philosophy = chapter-level edit-philosophy
+        override. ai-indicator-policy = operator-approved banned-pattern list
+        from T-003. candidate-disposition = fold-in/discard for candidate-content
+        files. unfinished-bit-disposition = leave/expand/cut for findings from
+        T-005. chapter-edit-philosophy = per-chapter overrides of the bootstrap
+        default. continuity-resolution = Phase C resolutions.
+
+    - name: chapter_scope
+      type: string|null
+      required: false
+      description: "If this decision applies to a specific chapter, the chapter_id (e.g., 'ch-03'). Null for global decisions."
+
+finding:
+  additional_fields:
+    - name: from_source
+      type: string|null
+      required: false
+      description: "[SRC-NNN#hash] of the source where this finding was identified."
+    - name: chapter_id
+      type: string|null
+      required: false
+    - name: finding_kind
+      type: enum|null
+      values: [
+        # inherited
+        evidence,
+        methodology-note,
+        edge-case,
+        prior-art,
+        # book-edit additions
+        unfinished-bit,
+        placeholder-marker,
+        incomplete-sentence,
+        broken-internal-reference,
+        candidate-content-evaluation,
+        ai-indicator-candidate,
+        spelling-pattern,
+        grammar-pattern,
+      ]
+      required: false
+    - name: location
+      type: string|null
+      required: false
+      description: "Where in the source the finding appears (paragraph index, heading-relative position, or excerpt context)."
+
+anti-pattern:
+  additional_fields:
+    - name: from_source
+      type: string|null
+      required: false
+    - name: superseding_direction
+      type: string|null
+      required: false
+      description: "[CLM-NNN#hash], [SRC-NNN#hash], or [DEC-NNN#hash] indicating the corrected direction."
+    - name: applies_to
+      type: list[string]|null
+      required: false
+      description: "Chapter IDs or content kinds this anti-pattern applies to. Used by anti-pattern-watcher council member."
+
+operating-reality:
+  field_overrides:
+    - name: budget
+      required: false
+    - name: timeline
+      required: false
+    - name: team
+      required: false
+    - name: authority
+      required: false
+    - name: operator_profile
+      required: false
+  additional_fields:
+    - name: book_metadata
+      type: object
+      required: true
+      description: "{title, short_title, asin, listing_url, target_release}."
+    - name: source_manuscript_path
+      type: string
+      required: true
+    - name: input_folder
+      type: string
+      required: true
+      description: "Per-chapter working files folder. Created by T-001 if missing."
+    - name: archive_folders
+      type: list[string]|null
+      required: false
+    - name: candidates_folder
+      type: string|null
+      required: false
+    - name: voice_anchor_strategy
+      type: enum
+      values: [operator-supplied, extract-from-corpus, mixed]
+      required: true
+    - name: edit_philosophy_default
+      type: enum
+      values: [light-copyedit, substantive-edit, structural-rewrite, mixed-by-chapter]
+      required: true
+    - name: max_line_delta_pct
+      type: integer
+      required: true
+    - name: banned_patterns_seed
+      type: list[string]
+      required: true
+    - name: ai_indicator_research
+      type: enum
+      values: [run, skip]
+      required: true
+    - name: examples_preservation
+      type: enum
+      values: [yes, no]
+      required: true
+    - name: unfinished_bits_scan
+      type: enum
+      values: [run, skip]
+      required: true
+    - name: confidence_floor
+      type: enum
+      values: [provisional, validated]
+      required: false
+      default: provisional
+    - name: deliverable_path
+      type: string
+      required: true
+    - name: print_ready_required
+      type: enum
+      values: [yes, no]
+      required: true
+    - name: print_ready_path
+      type: string|null
+      required: false
+    - name: voice_guidelines_path
+      type: string
+      required: true
+    - name: post_archive_backlog
+      type: list[string]|null
+      required: false
+    - name: delegation_policy
+      type: object
+      required: true
+      description: |
+        {mode, subagent_use, pause_on, layer1_retry_threshold, resume_authority}.
+        Per the bootstrap prompt: mode=hybrid, subagent_use=aggressive,
+        layer1_retry_threshold=2, resume_authority=operator-only.
+    - name: model_selection_policy
+      type: object
+      required: true
+      description: |
+        {prefer, fallback_trigger, fallback_target, per_task_overrides}.
+        Per the bootstrap prompt: prefer=cheapest-capable, fallback on
+        layer2-failure to claude-opus-4-7; voice-extraction and structural
+        edits route to opus directly.
+    - name: friction_log_scope
+      type: enum
+      values: [workspace, project]
+      required: true
+      default: project

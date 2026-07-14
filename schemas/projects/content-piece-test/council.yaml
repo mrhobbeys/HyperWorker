@@ -1,0 +1,123 @@
+# schemas/projects/content-piece-test/council.yaml
+# Five council members specific to creator-content piece work. Verifier
+# subagents run with context-asymmetric framing: they see the artifact under
+# review, the OR-001 voice anchor, and the consumes list — never the
+# implementer's reasoning prose.
+
+convergence_rule: all-agree-or-escalate
+
+members:
+  - role: voice-watcher
+    family_default: claude
+    prompt_template_on_activate: |
+      You are reviewing OR-001 for voice-anchor sufficiency before any piece work begins.
+      Read OR-001.voice_anchor (list[string]). Confirm:
+      - Each entry is non-vacuous (more than 1-2 generic sentences; carries specific
+        instructions about how this operator writes — sentence length, register,
+        what they avoid, what they reach for).
+      - First-listed entry dominates on conflict. Confirm there is at least one entry.
+      - Voice anchor is not a marketing-tone description ("authentic," "engaging") but
+        the operator's actual voice fingerprint.
+      Output a single line: PASS or FAIL: <misalignments>.
+
+    prompt_template_on_output: |
+      You are reviewing this output (substack-longform | x-longform | youtube-leadins)
+      for compliance with OR-001.voice_anchor.
+      Read OR-001.voice_anchor verbatim. Sample paragraphs from the output.
+      FAIL if the output reads as polished/professional in ways the voice anchor
+      would reject — corporate fluff, over-explanation, dressing up, manufactured
+      warmth, or removed strong-take leads. PASS if the output sounds like the
+      operator described in voice_anchor would write it.
+      Output a single line: PASS or FAIL: <reason in one phrase>.
+
+  - role: angle-anchor-watcher
+    family_default: claude
+    prompt_template_on_activate: |
+      You are reviewing whether OR-001 + DEC-002 (central angle) is concrete and
+      grounded before piece work begins.
+      Read OR-001.central_angle_supplied and (if true) DEC-002.body verbatim.
+      FAIL if:
+      - central_angle_supplied is true but DEC-002 is missing or generic
+        ("a piece about AI" or "thoughts on productivity" — both fail).
+      - central_angle_supplied is false and OR-001.default_lens is also null
+        (the agent has nothing to anchor T-001 to).
+      PASS if there is a concrete angle OR a populated default_lens for T-001 to apply.
+      Output a single line: PASS or FAIL: <reason>.
+
+    prompt_template_on_output: |
+      You are reviewing whether the final output advances the central angle (DEC-002 or
+      a supersede) without drifting. Read DEC-002.body. Sample the output's lead and
+      closing. FAIL on drift; PASS on concrete advancement.
+      Output a single line: PASS or FAIL: <reason>.
+
+  - role: interpretation-watcher
+    family_default: claude
+    prompt_template: |
+      You are reviewing finding artifacts and final outputs for interpretation-vs-restatement.
+      For each F-NNN with synthesis_role: interview-answer, confirm the finding adds
+      framing, contextual judgment, or compression — not just restating the operator's
+      input verbatim. (Verbatim quotation in service of capture is fine; an entire
+      finding that just echoes the operator's words back is not.)
+      For final outputs, sample paragraphs and confirm each adds at least one
+      interpretive move beyond restating the source material.
+      Output a single line: PASS or FAIL: <which findings/paragraphs restate without interpreting>.
+
+  - role: thinness-watcher
+    family_default: claude
+    prompt_template: |
+      You are reviewing whether the agent padded thin source material rather than
+      refusing per OR-001.thinness_protocol.
+      Read all SRC-NNN inventory + finding count from interview. Count distinct
+      claims, evidence pieces, anecdotes. If material is genuinely thin (e.g., one
+      tweet + zero interview turns of substantive material), confirm the agent emitted
+      an anti_pattern artifact and stopped, OR confirm a robust interview filled the gap.
+      FAIL on padded outputs: restating the same point with different words, filler
+      context unrelated to central angle, summary sections that don't add framing.
+      Output a single line: PASS or FAIL: <padding instances by paragraph>.
+
+  - role: verbatim-keeper-fidelity
+    family_default: claude
+    prompt_template: |
+      You are reviewing whether every operator-approved verbatim_keeper artifact appears
+      byte-for-byte in at least one variant where it logically belongs.
+      For each VK-NNN with operator_approved:true and keep_verbatim:true:
+      - Compute the variants in vk.applies_to_formats (default [substack-longform, x-longform]).
+      - Confirm vk.text appears byte-identical in at least one of those variants.
+      - YouTube lead-ins are exempt unless the keeper was tagged as a hook line.
+      FAIL if the line was silently rewritten or is missing from all applicable variants.
+      Output a single line: PASS or FAIL: <missing VK-IDs and which variants>.
+
+  - role: variant-comparison-watcher
+    family_default: claude
+    prompt_template: |
+      You are reviewing the three variants for meaningful differentiation on
+      ab_variant_axis: publication_format. Pairwise compare:
+      - substack-longform vs x-longform
+      - substack-longform vs youtube-leadins
+      - x-longform vs youtube-leadins
+      FAIL if any two read as paraphrases of each other — same structure, same lead,
+      same closing, only whitespace and small word-swaps differ.
+      PASS if each variant is format-native: Substack has a paywall cliff and a hook
+      that earns the read; X has chunks that each can stand-alone-terminate; YouTube
+      lead-ins are 3-5 sentences each, written for the spoken voice, in three distinct
+      framings (controversy/curiosity/utility).
+      Output a single line: PASS or FAIL: <which pair is too similar>.
+
+triggers:
+  - event: project.activate
+    members: [voice-watcher, angle-anchor-watcher]
+    description: "Bootstrap checkpoint. Confirms OR-001 voice + angle are sufficient before any task runs. Members fire on metadata only (no output yet)."
+
+  - event: phase.complete
+    when: "phase == 'B'"
+    members: [interpretation-watcher, thinness-watcher]
+    description: "After interview phase. Confirms findings add interpretation and material isn't being padded."
+
+  - event: task.complete
+    when: "task.id == 'T-004'"
+    members: [voice-watcher, angle-anchor-watcher, thinness-watcher, verbatim-keeper-fidelity, variant-comparison-watcher]
+    description: "Per-task council on the ab-variant format generation. All five fire."
+
+  - event: project.archive
+    members: [voice-watcher, angle-anchor-watcher]
+    description: "Pre-archive verification."

@@ -1,0 +1,116 @@
+# schemas/projects/course-master-plan-test/schema.yaml
+# In-build schema for the L1 course-master-plan pattern. After validation, save
+# brand-clean as `course-master-plan` via `hw schema save --as course-master-plan`.
+
+schema_id: course-master-plan-test
+harness_version: "5.1.1"
+inherits_from:
+  - report-synthesis           # T-000 inventory pattern + T-001 corpus-scan pattern
+  - marketing-campaign         # external_state.read_back, redirect_implications, lens_anchor pattern
+
+description: |
+  Three-layer L1/L2/L3 orchestrator for multi-module courses on community/classroom
+  platforms. L1 owns the master plan + curriculum sequence (DEC-001) + tier policy
+  (DEC-002) + lens anchor (OR-001.lens_anchor). L2 = per-module / per-course-task /
+  per-promo projects, run in their own sessions. L3 = per-content-piece projects
+  spawned by L2.
+
+bootstrap_questions:
+  - field: course_name
+    prompt: "Course name?"
+    type: string
+    required: true
+    note: "Supersedable; corpus scan in T-002 may surface a refinement."
+
+  - field: course_url
+    prompt: "Course URL on the platform?"
+    type: url
+    required: true
+
+  - field: platform
+    prompt: "Platform name (skool, circle, mighty-networks, discord, other)?"
+    type: enum
+    values: [skool, circle, mighty-networks, discord, other]
+    required: true
+
+  - field: admin_user
+    prompt: "Admin account identifier on the platform?"
+    type: string
+    required: true
+
+  - field: test_member
+    prompt: "Test-member account identifier (optional; null if none)?"
+    type: string|null
+    required: false
+
+  - field: lens_anchor
+    prompt: "Lens — how the operator's content arc is framed. List of strings; first-listed dominates."
+    type: list[string]
+    required: true
+    note: "Inherits the marketing-campaign brand_voice_anchor widening pattern."
+
+  - field: cross_project_scope
+    prompt: "Cross-project scope tag (default: course-<short-name>)?"
+    type: string
+    required: true
+    note: "Used for tagging artifacts on emit; L2/L3 config.yaml subscribes."
+
+  - field: tier_policy_mode
+    prompt: "Tier policy mode (evolving | locked | per-module-decision)?"
+    type: enum
+    values: [evolving, locked, per-module-decision]
+    required: true
+    default: evolving
+
+  - field: promotion_scope
+    prompt: "Promotion scope (in-harness | external)?"
+    type: enum
+    values: [in-harness, external]
+    required: true
+    default: in-harness
+
+  - field: active_model_profile
+    prompt: "Active model profile (default: claude-opus-4-7)?"
+    type: string
+    required: true
+    default: claude-opus-4-7
+
+# Default tasks scaffolded into projects/<id>/tasks/ at bootstrap.
+default_tasks:
+  templates:
+    - 00-source-inventory.md            # T-000 — Phase A.1
+    - 01-platform-familiarization.md    # T-001 — Phase A.2
+    - 02-curriculum-corpus-scan.md      # T-002 — Phase A.3 (inherits report-synthesis T-001 pattern)
+
+# Project-local event kinds (proposed for substrate promotion in v5.1.2 if H-CB1 holds).
+local_event_kinds:
+  - kind: child_project.scaffolded
+    payload_schema:
+      child_project_id: string
+      child_project_type: enum [module, course-task, promo, content-piece]
+      slug: string
+      premise: string
+      awaiting_resources: bool
+    description: |
+      L1 (or L2) emits this when finishing the scaffold of a child project skeleton.
+      After this event, the agent STOPS and surfaces to operator.
+
+  - kind: child_project.resources_ready
+    payload_schema:
+      child_project_id: string
+      resources_inventory: list[object]    # filesystem listing with SHA-256 hashes
+      operator_confirmed: bool
+    description: |
+      Emitted when operator says continue. Pairs with the prior child_project.scaffolded
+      to satisfy the Layer 1 child_project_pause_skipped check.
+
+  - kind: child_project.resources_skipped
+    payload_schema:
+      child_project_id: string
+      reason: string
+      operator_confirmed: bool
+    description: |
+      Alternative pair-event when operator says "continue without resources".
+
+# Friction-log scope at project level (vs workspace default).
+friction_log_scope: project

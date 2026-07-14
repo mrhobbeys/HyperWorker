@@ -55,7 +55,7 @@ Then tell your AI agent:
 
 That's it. The agent reads HARNESS.md, asks you clarifying questions, scaffolds your project from the schema, runs a verification checkpoint, and begins execution.
 
-Sixteen schemas ship as defaults:
+Nineteen schemas ship as defaults:
 
 | Schema | When to use |
 |---|---|
@@ -75,6 +75,9 @@ Sixteen schemas ship as defaults:
 | `cleanroom-rebuild` | Rebuild a legacy app from measured behavior — never its code — behind an enforced wall |
 | `brand-ecosystem-audit` | Audit a brand across every surface it occupies; synthesize strategic paths, not one fixed plan |
 | `market-gap-intelligence` | Four ordered competitive-gap questions answered with MEASURED/OBSERVED evidence, not priors |
+| `content-piece-test` | One piece of creator content fanned out to three format-native variants, voice preserved verbatim |
+| `book-edit-test` | Voice-preserving re-release edit of a shipped manuscript, per-chapter hermetic passes |
+| `course-master-plan-test` | Multi-module course build on a community platform; L1/L2/L3 spawn pattern (working schema) |
 
 If none fit, the agent scaffolds from default templates and offers to capture your derived schema after the project completes.
 
