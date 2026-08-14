@@ -108,7 +108,7 @@ from pathlib import Path, PurePosixPath, PureWindowsPath
 # The substrate version this verifier implements. A schema declaring a
 # harness_version above this is refused (CONTRIBUTING.md §5,
 # core/VERIFICATION.md §Layer 1 check 16).
-HARNESS_VERSION = "6.0.0"
+HARNESS_VERSION = "6.0.1"
 
 CITATION_RE = re.compile(r"\[([A-Z]+)-(\d{3,})#([0-9a-f]{12})\]")
 ARTIFACT_DIRS = ("decisions", "findings", "anti-patterns", "operating-reality",

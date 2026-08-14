@@ -45,6 +45,13 @@ parse_semver = hw_verify.parse_semver
 parse_schema_harness_version = hw_verify.parse_schema_harness_version
 HARNESS_VERSION = hw_verify.HARNESS_VERSION
 
+# One patch level above whatever the harness currently declares. Derived rather
+# than written down: this case exists to prove the gate refuses on a patch-level
+# difference, and a hardcoded literal silently becomes an "equal" case the first
+# time the harness itself ships that patch (it did, at 6.0.1).
+_MAJOR, _MINOR, _PATCH = parse_semver(HARNESS_VERSION)
+NEXT_PATCH_VERSION = f"{_MAJOR}.{_MINOR}.{_PATCH + 1}"
+
 PROJECT = "demo-project"
 SCHEMA = "demo-schema"
 
@@ -116,7 +123,7 @@ def _(tmp):
 def _(tmp):
     reset_ids()
     write_project_md(tmp)
-    write_schema_yaml(tmp, "6.0.1")
+    write_schema_yaml(tmp, NEXT_PATCH_VERSION)
     failures, _notes = check_harness_version(tmp, [ev("project.activate")])
     return (len(failures) == 1, f"expected one failure, got {failures}")
 
