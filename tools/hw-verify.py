@@ -69,6 +69,13 @@ check 22 and core/SUBSTRATE.md §Secrets Gate):
                           runs BEFORE appending, where the refusal is free.
                           Suite: tools/test_secrets_gate.py.
 
+`profile: single-executor` (core/SUBSTRATE.md §Execution Profile) is read the
+same way `lifecycle` is -- schema.yaml wins, then PROJECT.md, unknown reads as
+the `multi-actor` default. Under it, a missing `actor` is not a malformed
+payload (it defaults to `executor`) and citation handles may drop the `#hash`
+suffix; every other check is unchanged, because the hashes are still in the
+artifacts. Suite: tools/test_execution_profile.py.
+
 Relaxed, not tightened: friction.log now needs only a one-line `note` (four
 entries in 130 events -- the six-field form went unused), with the pre-v6 rich
 form still accepted; operator.correction is well-formedness only. Both live in
@@ -1372,6 +1379,136 @@ def check_exclusion_discipline(events: list) -> list:
 
 
 # ---------------------------------------------------------------------------
+# Execution profile (H-S12). core/SUBSTRATE.md §Execution Profile.
+#
+# Field evidence, measured on a one-agent engagement: `actor` was always the
+# same value; the `event` vs `add` kind distinction was "mostly ceremony";
+# `cite:[F-0xx#hash]` handles were "basically never consumed"; the sync-digest
+# bridge was write-only and never read back for recovery. Ceremony that returns
+# nothing on a one-agent run is ceremony an agent learns to fill in nominally.
+#
+# `profile: single-executor` drops the ceremony and nothing else. Hashes stay in
+# the artifacts, the chain stays hash-linked, every Layer 1 check still runs.
+# ---------------------------------------------------------------------------
+
+PROFILES = ("multi-actor", "single-executor")
+DEFAULT_PROFILE = "multi-actor"
+SINGLE_EXECUTOR_DEFAULT_ACTOR = "executor"
+
+PROFILE_VALUE_RE = re.compile(
+    r"profile:\s*[\"'`]?(single-executor|multi-actor)\b", re.IGNORECASE)
+
+
+def parse_schema_profile(path: Path) -> str | None:
+    """Read `profile:` from a schema.yaml. The schema wins over PROJECT.md."""
+    if not path.exists():
+        return None
+    m = PROFILE_VALUE_RE.search(path.read_text(encoding="utf-8"))
+    return m.group(1).lower() if m else None
+
+
+def find_project_profile(workspace: Path, project_id: str | None) -> str:
+    """Resolve a project's execution profile, the way lifecycle is resolved.
+
+    Precedence: the active schema's `schema.yaml` `profile:`, then PROJECT.md
+    (a `## Profile` section's first content line, or an inline `profile:`
+    declaration anywhere in the file), then the documented default
+    `multi-actor`. Unknown reads as the default: a project that declares nothing
+    behaves exactly as it did before v6.0.0.
+    """
+    if not project_id or project_id == "_harness":
+        return DEFAULT_PROFILE
+
+    schema = find_schema_for_project(workspace, project_id)
+    if schema:
+        schema_dir = find_schema_dir(workspace, schema)
+        if schema_dir is not None:
+            declared = parse_schema_profile(schema_dir / "schema.yaml")
+            if declared:
+                return declared
+
+    project_md = workspace / "projects" / project_id / "PROJECT.md"
+    if not project_md.exists():
+        return DEFAULT_PROFILE
+    text = project_md.read_text(encoding="utf-8")
+
+    lines = text.splitlines()
+    for idx, line in enumerate(lines):
+        if line.strip().lower() not in ("## profile", "# profile"):
+            continue
+        for body in lines[idx + 1:]:
+            stripped = body.strip()
+            if not stripped:
+                continue
+            if stripped.startswith("#"):
+                break
+            # An unsubstituted placeholder -- `{{ profile }}`, or the
+            # `<multi-actor | single-executor ...>` line the shipped
+            # project-template carries -- declares nothing. Reading a choice out
+            # of a menu of choices is how a template becomes a decision nobody
+            # made.
+            if "{{" in stripped or stripped.startswith("<"):
+                return DEFAULT_PROFILE
+            lowered = stripped.lower()
+            if "single-executor" in lowered:
+                return "single-executor"
+            if "multi-actor" in lowered:
+                return "multi-actor"
+            break
+        break
+
+    m = PROFILE_VALUE_RE.search(text)
+    if m:
+        return m.group(1).lower()
+    return DEFAULT_PROFILE
+
+
+def check_actor_requirement(workspace: Path, events: list) -> tuple:
+    """`actor` is required under multi-actor and optional under single-executor.
+
+    core/SUBSTRATE.md §Execution Profile. On the engagement that motivated this,
+    `actor` carried one value for ten weeks -- a field whose every value is the
+    same is a field that answers no question. Under `profile: single-executor` a
+    missing `actor` reads as `executor` and is not a defect; under `multi-actor`
+    (the default, so every existing project) behavior is unchanged: `actor` is
+    who wrote this, and on a chain with two writers it is load-bearing.
+
+    Returns (failures, notes). Failures join result["malformed_payloads"] --
+    a missing required top-level field is the same class of defect as a missing
+    payload field. The note records, once per project, that the relaxation is in
+    force, so an operator reading a report can see which rules are off.
+    """
+    failures = []
+    notes = []
+    profiles = {}
+
+    for event in events:
+        project = event.get("project")
+        if project not in profiles:
+            profiles[project] = find_project_profile(workspace, project)
+        actor = event.get("actor")
+        if isinstance(actor, str) and actor.strip():
+            continue
+        if profiles[project] == "single-executor":
+            continue
+        failures.append(
+            f"{event.get('id')}:{event.get('kind')} missing ['actor'] "
+            f"(project {project!r} runs profile: {DEFAULT_PROFILE}; a project "
+            f"with one agent may declare profile: single-executor, which "
+            f"defaults actor to {SINGLE_EXECUTOR_DEFAULT_ACTOR!r})"
+        )
+
+    for project in sorted(p for p in profiles if p):
+        if profiles[project] == "single-executor":
+            notes.append(
+                f"{project}: profile_single_executor "
+                f"(actor optional, defaults to {SINGLE_EXECUTOR_DEFAULT_ACTOR}; "
+                f"digest-bridge steps N/A; citations may use bare ids)"
+            )
+    return failures, notes
+
+
+# ---------------------------------------------------------------------------
 # Secrets gate (Layer 1 check 22, H-S10). core/SUBSTRATE.md §Secrets Gate.
 #
 # Field evidence: a sync digest copied a DSRM password and a local-admin password
@@ -2567,6 +2704,7 @@ def verify(workspace: Path, since: str | None, strict_secrets: bool = False) -> 
         "open_loop_notes": [],
         "secret_warnings": [],
         "strict_secrets": strict_secrets,
+        "profile_notes": [],
         "result": "PASS",
     }
 
@@ -2698,6 +2836,9 @@ def verify(workspace: Path, since: str | None, strict_secrets: bool = False) -> 
     result["open_loop_failures"] = loop_failures
     result["open_loop_notes"] = loop_notes
     result["secret_warnings"] = check_secrets(events)
+    actor_failures, profile_notes = check_actor_requirement(workspace, events)
+    result["malformed_payloads"].extend(actor_failures)
+    result["profile_notes"] = profile_notes
 
     blocking = (
         result["tamper"]
@@ -2760,6 +2901,7 @@ def render(result: dict) -> str:
         f"  evidence_capture:      {len(result['evidence_capture_failures'])} {result['evidence_capture_failures']}",
         f"  open_loops:            {len(result['open_loop_failures'])} {result['open_loop_failures']}",
         f"  open_loop_notes:       {len(result['open_loop_notes'])} {result['open_loop_notes']}",
+        f"  profile_notes:         {len(result['profile_notes'])} {result['profile_notes']}",
         f"  possible_secrets:      {len(result['secret_warnings'])}"
         f"{' (FAIL: --strict-secrets)' if result.get('strict_secrets') and result['secret_warnings'] else ''}"
         f" {result['secret_warnings']}",

@@ -23,6 +23,13 @@
 
 Anchored to `[OR-001#<short-hash>]`. See `operating-reality/OR-001.md`.
 
+## Profile
+
+<multi-actor | single-executor — default `multi-actor`. `single-executor` on a one-agent
+engagement: `actor` becomes optional, digest-bridge steps are N/A, and citation handles may
+drop the `#hash` suffix. The schema's `schema.yaml` wins if it declares one.
+See `core/SUBSTRATE.md` §Execution Profile.>
+
 ## Schema
 
 This project was bootstrapped from `schemas/projects/<schema-name>/` with harness version `5.0`.

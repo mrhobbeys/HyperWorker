@@ -100,7 +100,7 @@ Every event is one JSON line. Order is significant: events MUST be appended, nev
 | `id` | string | `EV-<n>`, monotonically increasing, zero-padded to 4. |
 | `ts` | string | ISO 8601 UTC timestamp. |
 | `kind` | string | Dotted event kind (see Event Kinds below). |
-| `actor` | string | `<role>:<id>` — `executor:T-007`, `planner`, `operator`, `council:reality-calibrator`. |
+| `actor` | string | `<role>:<id>` — `executor:T-007`, `planner`, `operator`, `council:reality-calibrator`. Optional under `profile: single-executor`, where a missing value reads as `executor` (§Execution Profile). |
 | `project` | string | Project ID this event belongs to, or `"_harness"` for harness-level events. |
 | `payload` | object | Kind-specific structured data. |
 | `prev_hash` | string | `hash` of previous event in the chain. First event uses `sha256:0000…`. |
@@ -381,6 +381,8 @@ A citation is **valid** when the cited file exists and its current short-hash ma
 Layer 1 verification (`core/VERIFICATION.md`) checks every citation in every event payload that lands in the log.
 
 Templates and protocols throughout this repo use this exact form. When a template shows `[OR-001#<short-hash>]`, the executor substitutes the current 12-hex short-hash from `hashes.json` at the moment the citation is written.
+
+**Under `profile: single-executor` the `#hash` suffix is optional** — `[F-012]` or a bare `F-012` is a legal handle (§Execution Profile). The hashes stay in the artifacts and in `hashes.json`; only the citing ceremony is dropped, on the evidence that on one-agent runs the handles were never consumed.
 
 ---
 
@@ -1199,6 +1201,30 @@ A prose justification is not a `test_ref`. If you did not run something, the hyp
 | Hypothesis | Claim | Falsifier |
 |---|---|---|
 | H-S6 | Requiring a dynamic `test_ref` to exclude a hypothesis prevents the class of failure where a well-argued static read removes the true cause from the search space. | Agents satisfy the check with a nominal capture that did not exercise the path (a test in name only), or the requirement is heavy enough that they leave everything `suspect` and the matrix stops discriminating. |
+
+---
+
+## Execution Profile (v6.0.0)
+
+**Field evidence, measured on a one-agent engagement:** `actor` carried the same value for ten weeks; the `event` vs `add` kind distinction was "mostly ceremony"; `cite:[F-0xx#hash]` handles were "basically never consumed"; the sync-digest bridge was write-only and never read back for recovery. Ceremony that returns nothing is ceremony an agent fills in nominally, which is worse than not asking.
+
+**Declaration.** `profile: single-executor | multi-actor` in `PROJECT.md` (a `## Profile` section, or an inline `profile:` line), and optionally in the schema's `schema.yaml`. **The schema wins.** Unknown or undeclared reads as `multi-actor` — every existing project behaves exactly as before.
+
+**What `single-executor` drops:**
+
+| Ceremony | Under single-executor |
+|---|---|
+| `actor` on every event | Optional. A missing `actor` reads as `executor`, and is not a malformed payload. |
+| Digest-bridge protocol steps | **N/A.** Skip them; the bridge exists to hand state between actors and there is only one. |
+| `#hash` on citation handles | Optional. `[F-012]` or a bare `F-012` is a legal handle. |
+
+**What it does not drop: anything load-bearing.** The chain is still hash-linked. Artifact projections still carry their hashes, and `hashes.json` still tracks them — so a `single-executor` project can be verified, superseded, and re-cited with hashes at any time, and switching back to `multi-actor` costs nothing. What is dropped is the *citing* ceremony, not the integrity it was built on. Every other Layer 1 check runs unchanged.
+
+**Verifier.** The profile is read the way `lifecycle` is read (§Lifecycle events, `core/LOCK.md` §Ongoing Projects): schema first, then PROJECT.md, unknown → default. Under `single-executor`, `hw verify` reports a `profile_single_executor` note so an operator reading the report can see which rules are relaxed.
+
+| Hypothesis | Claim | Falsifier |
+|---|---|---|
+| H-S12 | Dropping multi-actor ceremony on a one-agent engagement costs no recoverability, because the fields being dropped answered no question that engagement ever asked. | A `single-executor` project later needs a second actor (or a post-hoc audit) and cannot reconstruct who wrote what — or agents declare the profile to escape ceremony on runs that do have several actors. |
 
 ---
 
