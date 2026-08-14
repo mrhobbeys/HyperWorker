@@ -108,6 +108,23 @@ Every event is one JSON line. Order is significant: events MUST be appended, nev
 
 **Hash computation.** The `hash` field is the SHA-256 of the line's JSON object with `hash` itself omitted, keys sorted lexicographically, and no whitespace, serialized per the Canonical Serialization rule below. Truncate to 12 hex characters when displaying short form (`a3f9c2b1e0f4`). Full hash is recorded in the event line.
 
+### Deriving the Next Event ID
+
+**The next event ID is the chain tail's ID plus one. Nothing else is an input.**
+
+Read the last line of `.hyperworker/events.jsonl` — the same line `hw add` already reads to get `prev_hash` — parse its `id`, increment. One read, one source, one answer.
+
+Never derive the next ID from project-scoped state: not the last event carrying this project's `project` field, not `TASK-STATE.yaml`, not a projection, not a session handoff, and not the agent's own memory of what it last wrote. `events.jsonl` is workspace-scoped (§File Locations); the ID sequence is a property of the log, not of any project inside it. A project-scoped derivation is correct only in the degenerate case where the workspace holds exactly one project and exactly one writer, and it fails silently the moment either stops being true.
+
+**The field incident (2026-07, ten-week deployment).** Two agents worked one workspace. The resuming agent computed its next ID from the last event *of its own project* rather than from the chain tail, and appended `EV-0116` through `EV-0120` — IDs the other agent had already used, with entirely different content. Every one of the ten events had a correct `prev_hash` (each was appended to the real tail), so hash-chain verification found nothing wrong and `hw verify` returned **PASS** on a log holding ten events under five names. The chain was intact; the identifiers were not, and nothing checked them.
+
+Two things follow, and both now exist as code rather than as this paragraph:
+
+- Event IDs are unique across the whole log, and strictly increasing in append order. Duplicate IDs, or an ID no greater than one already seen, are Layer 1 FAILs (`duplicate_event_id`, `non_monotonic_event_id`; see `core/VERIFICATION.md` §Layer 1 check 14). The duplicate report names both line numbers, actors, and projects, because deciding which of two same-named events to keep is a human judgment about content that the verifier cannot make.
+- Gaps are legal. IDs must increase; they need not be contiguous. A verifier that demanded contiguity would reject a legitimately truncated or `--since`-verified prefix.
+
+Note that this is the *identifier* half of the Single-Writer Rule below. The rule prevents the collision; this check detects it when the rule was not followed.
+
 ---
 
 ## Canonical Serialization for Hashing
@@ -361,7 +378,7 @@ Append a typed-artifact event and regenerate its projection.
 2. Determine `artifact_id`. If the input declares an `id`, use it (must be unique within kind). Otherwise generate the next ID for the kind: scan `events.jsonl` for `<kind>.add` events, find the highest numeric suffix, increment by one. Format: `<PREFIX>-<NNN>` where prefix is `DEC | F | AP | OR` for decision/finding/anti-pattern/operating-reality.
 3. **Citation validation (pre-append).** If the artifact body contains citations `[<KIND>-<ID>#<hash>]`, run Layer 1 citation checks (see `core/VERIFICATION.md` §Layer 1) against the current `hashes.json` *before* anything is written. Any broken or stale citation aborts with a structured error naming the citation and the artifact's current short-hash; nothing lands in the log. The agent corrects the citation and retries. (Changed in v5.2.1: earlier versions appended the event first and reversed it with a supersede-to-null, leaving a rejection pair in the chain for every mistyped citation. Citation checking is a read-only computation; there is no reason to dirty the log to perform it. The supersede-to-null path remains only for defects discovered *after* append — see `core/VERIFICATION.md` §Layer 1 On failure.)
 4. Read the last line of `events.jsonl`; let `prev_hash` be its `hash` (or `sha256:0000…0000` if the log is empty).
-5. Build the event JSON object: `{id, ts, kind, actor, project, payload, prev_hash}` where `payload` contains the artifact frontmatter and body, and `id` is `EV-<next>`.
+5. Build the event JSON object: `{id, ts, kind, actor, project, payload, prev_hash}` where `payload` contains the artifact frontmatter and body, and `id` is `EV-<next>` — derived from the tail line already read in step 4, never from project-scoped state (§Deriving the Next Event ID).
 6. Compute `hash` per the Hash computation rule above. Append the full event line (with `hash`) to `events.jsonl`.
 7. **Regenerate the artifact projection.** Render `projects/<project>/<kind>s/<artifact-id>.md` using the rendering protocol in `core/TYPED-ARTIFACTS.md`. The projection MUST be byte-identical to what a re-render from events would produce.
 8. Compute the projection's SHA-256, take the first 12 hex chars, and update `hashes.json` for that path.

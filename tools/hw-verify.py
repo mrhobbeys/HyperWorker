@@ -538,6 +538,89 @@ def check_bootstrap_probe(events: list) -> list:
     return failures
 
 
+# ---------------------------------------------------------------------------
+# v6.0.0 verifier hardening. Checks below implement core/VERIFICATION.md
+# §Layer 1 rows 14-18, each derived from a field incident where the promised
+# refusal existed only as prose.
+# ---------------------------------------------------------------------------
+
+EVENT_ID_RE = re.compile(r"^EV-(\d+)$")
+
+
+def parse_event_id(event_id) -> int | None:
+    """Numeric suffix of an `EV-<n>` id, or None if the id is not that shape.
+
+    Schema-extended IDs that do not match are skipped by the monotonicity check
+    rather than reported: the closed-set discipline for IDs lives at `hw add`
+    time, and an unrecognized shape is not evidence of a collision.
+    """
+    if not isinstance(event_id, str):
+        return None
+    m = EVENT_ID_RE.match(event_id.strip())
+    return int(m.group(1)) if m else None
+
+
+def _event_origin(event: dict, line_no: int) -> str:
+    """Human-adjudicable location of an event: which line, written by whom, for
+    which project. Duplicate IDs are resolved by a human reading two events with
+    the same name; this is the information that read needs.
+    """
+    return (f"line {line_no} (actor={event.get('actor')!r}, "
+            f"project={event.get('project')!r})")
+
+
+def check_id_integrity(events: list, line_numbers: list | None = None) -> tuple:
+    """Layer 1 check 14: event IDs are unique and strictly increasing.
+
+    The field incident this implements (2026-07, ten-week deployment): two agents
+    appended to one chain; the resuming agent derived its next ID from the last
+    event *of its own project* instead of from the chain tail, so EV-0116..EV-0120
+    exist twice with different content. Both runs linked `prev_hash` correctly, so
+    hash-chain verification passed and `hw verify` returned PASS on a log with ten
+    events and five names. See core/SUBSTRATE.md §Deriving the Next Event ID.
+
+    Returns (duplicates, non_monotonic). A duplicated ID is reported only as a
+    duplicate; re-reporting it as non-monotonic would double-count one defect.
+    """
+    if line_numbers is None:
+        line_numbers = list(range(1, len(events) + 1))
+
+    positions = defaultdict(list)
+    for idx, event in enumerate(events):
+        positions[event.get("id")].append(idx)
+
+    duplicates = []
+    for event_id, indices in positions.items():
+        if len(indices) < 2:
+            continue
+        where = "; ".join(_event_origin(events[i], line_numbers[i]) for i in indices)
+        duplicates.append(
+            f"duplicate_event_id: {event_id} appears {len(indices)} times - {where}"
+        )
+    duplicates.sort()
+    duplicated_ids = {eid for eid, idx in positions.items() if len(idx) > 1}
+
+    non_monotonic = []
+    highest = None  # (numeric_id, index)
+    for idx, event in enumerate(events):
+        numeric = parse_event_id(event.get("id"))
+        if numeric is None:
+            continue
+        if highest is not None and numeric <= highest[0]:
+            if event.get("id") not in duplicated_ids:
+                prev_idx = highest[1]
+                non_monotonic.append(
+                    f"non_monotonic_event_id: {event.get('id')} at "
+                    f"{_event_origin(event, line_numbers[idx])} does not exceed "
+                    f"{events[prev_idx].get('id')} at "
+                    f"{_event_origin(events[prev_idx], line_numbers[prev_idx])}"
+                )
+        if highest is None or numeric > highest[0]:
+            highest = (numeric, idx)
+
+    return duplicates, non_monotonic
+
+
 def parse_verification_yaml_checked_claims(path: Path) -> list:
     """Minimal YAML reader for verification.yaml's `checked_claims.required_for`
     list. Mirrors the block-list convention already used by
@@ -964,15 +1047,27 @@ def find_projection_path(workspace: Path, artifact_id: str, hashes_index: dict) 
     return None
 
 
-def load_events(events_path: Path) -> list:
+def load_events_with_lines(events_path: Path) -> tuple:
+    """Load events plus the 1-based file line each came from.
+
+    The line numbers are not derivable from list position once blank lines are
+    skipped, and duplicate-ID adjudication needs the real line to open the file
+    at. See check_id_integrity.
+    """
     events = []
+    line_numbers = []
     with events_path.open(encoding="utf-8") as f:
-        for raw in f:
+        for line_no, raw in enumerate(f, start=1):
             line = raw.strip()
             if not line:
                 continue
             events.append(json.loads(line))
-    return events
+            line_numbers.append(line_no)
+    return events, line_numbers
+
+
+def load_events(events_path: Path) -> list:
+    return load_events_with_lines(events_path)[0]
 
 
 def verify(workspace: Path, since: str | None) -> dict:
@@ -990,6 +1085,8 @@ def verify(workspace: Path, since: str | None) -> dict:
         "stale_citations": [],
         "unknown_event_kinds": [],
         "malformed_payloads": [],
+        "duplicate_event_ids": [],
+        "non_monotonic_event_ids": [],
         "scope_completeness_failures": [],
         "external_state_readback_failures": [],
         "external_state_readback_warnings": [],
@@ -1004,7 +1101,7 @@ def verify(workspace: Path, since: str | None) -> dict:
         result["error"] = f"events.jsonl not found at {events_path}"
         return result
 
-    events = load_events(events_path)
+    events, line_numbers = load_events_with_lines(events_path)
     result["events_scanned"] = len(events)
 
     skip_until = since
@@ -1102,6 +1199,9 @@ def verify(workspace: Path, since: str | None) -> dict:
                     f"[{artifact_id}#{cited_short}] @ {event['id']} (current: {current})"
                 )
 
+    duplicates, non_monotonic = check_id_integrity(events, line_numbers)
+    result["duplicate_event_ids"] = duplicates
+    result["non_monotonic_event_ids"] = non_monotonic
     result["scope_completeness_failures"] = check_scope_completeness(workspace, events)
     esrb_failures, esrb_warnings = check_external_state_readback(workspace, events)
     result["external_state_readback_failures"] = esrb_failures
@@ -1117,6 +1217,8 @@ def verify(workspace: Path, since: str | None) -> dict:
         or result["missing_projections"]
         or result["broken_citations"]
         or result["malformed_payloads"]
+        or result["duplicate_event_ids"]
+        or result["non_monotonic_event_ids"]
         or result["scope_completeness_failures"]
         or result["external_state_readback_failures"]
         or result["bootstrap_probe_failures"]
@@ -1140,6 +1242,8 @@ def render(result: dict) -> str:
         f"  stale_citations:       {len(result['stale_citations'])} {result['stale_citations']}",
         f"  unknown_event_kinds:   {len(result['unknown_event_kinds'])} {result['unknown_event_kinds']}",
         f"  malformed_payloads:    {len(result['malformed_payloads'])} {result['malformed_payloads']}",
+        f"  duplicate_event_ids:   {len(result['duplicate_event_ids'])} {result['duplicate_event_ids']}",
+        f"  non_monotonic_ids:     {len(result['non_monotonic_event_ids'])} {result['non_monotonic_event_ids']}",
         f"  scope_completeness:    {len(result['scope_completeness_failures'])} {result['scope_completeness_failures']}",
         f"  ext_state_readback:    {len(result['external_state_readback_failures'])} {result['external_state_readback_failures']}",
         f"  ext_state_warnings:    {len(result['external_state_readback_warnings'])} {result['external_state_readback_warnings']}",
