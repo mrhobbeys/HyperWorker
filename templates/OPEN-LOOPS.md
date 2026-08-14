@@ -2,18 +2,20 @@
 
 > **Projection of the `loop.open` / `loop.close` events for one project.** Lives at `projects/<project-id>/OPEN-LOOPS.md`. Regenerated on every loop event; never hand-edited (`core/SUBSTRATE.md` §Projection rules).
 >
-> Why this file exists: a gated action once sat unconsumed for five weeks because "waiting on the operator's word" was a sentence in a message rather than a row in a table. `hw status` leads with anything here marked OVERDUE.
+> Why this file exists: a gated action once sat unconsumed for five weeks because "waiting on the operator's word" was a sentence in a message rather than a row in a table. This file records the rows; `hw status` reads them against today's date and leads with anything OVERDUE.
 
 ---
 
 ## Open
 
-Newest first. `Age` is days since `opened_at`; a loop is **OVERDUE** once `Age` exceeds `Stale after`.
+Newest first. Every column is a field the events recorded -- nothing here is computed from today's date.
 
-| Loop | Waiting on | Opened | Age | Stale after | Description |
-|---|---|---|---|---|---|
-| L-007 | external | YYYY-MM-DD | 3d | 7d | <one line: what is waiting, and what happens when it lands> |
-| L-003 | operator-word | YYYY-MM-DD | **37d — OVERDUE** | 7d | <one line> |
+| Loop | Waiting on | Opened | Stale after | Description |
+|---|---|---|---|---|
+| L-007 | external | YYYY-MM-DD | 7d | <one line: what is waiting, and what happens when it lands> |
+| L-003 | operator-word | YYYY-MM-DD | 7d | <one line> |
+
+**Liveness is not rendered here.** A loop is overdue once `Opened + Stale after` is in the past, which is a different answer every day for the same event prefix -- so computing it into this file would mean the same chain renders different bytes tomorrow, breaking the byte-determinism rule (`core/SUBSTRATE.md` §Projection rules, rule 2) and staling every citation to this projection overnight. `hw status` computes it at read time and leads with an **OVERDUE OPEN LOOPS** block, which is already its documented home (`core/SUBSTRATE.md` §`hw status`).
 
 `Waiting on` is one of `operator-word`, `external`, `other-agent`, `scheduled`.
 
@@ -29,15 +31,15 @@ Oldest first; the record of what a loop turned into.
 
 ## Rendering protocol
 
-A fresh agent must produce this file byte-identically from an event prefix plus a date (`core/SUBSTRATE.md` §Projection rules, rule 2). `Age` and the OVERDUE marker are the one date-dependent part; everything else is pure replay.
+A fresh agent must produce this file byte-identically from an event prefix alone (`core/SUBSTRATE.md` §Projection rules, rule 2). Pure replay: no clock is read at render time.
 
 1. Filter `events.jsonl` to `loop.open` and `loop.close` events for this `project`, in append order.
 2. A loop is open if its `loop.open` has no `loop.close` carrying the same `loop_id`. Open loops render in §Open ordered by `opened_at` descending (newest first); closed loops in §Closed ordered by `closed_at` ascending.
-3. `Age` is whole days from `opened_at` to today, rendered `<n>d`. When `Age` exceeds `stale_after_days` (default `7` when the payload omits it), render it bold with ` — OVERDUE` appended.
+3. `Opened` is `opened_at`, date only. `Stale after` is `stale_after_days` as recorded, rendered `<n>d` (default `7` when the payload omits it). Both are copied, never computed.
 4. `Description` and `Resolution` are the payload's fields, first line only, no line breaks.
 5. Write the file, compute its SHA-256, and update `hashes.json` for `projects/<project-id>/OPEN-LOOPS.md`.
 
-Re-render on every `loop.open` and `loop.close`, and on any `hw status` that recomputes staleness (the age column moves with the calendar even when no event lands).
+Re-render on every `loop.open` and `loop.close` -- and only then. `hw status` reads this file and computes overdueness against today; it never re-renders it, because nothing in it moves with the calendar.
 
 ## See also
 

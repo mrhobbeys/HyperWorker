@@ -28,19 +28,20 @@ One row per cycle, oldest first. `Closed` and `Next due` are blank for the open 
 
 - **Open:** `C-NNN` opened `YYYY-MM-DD`. Recurring tasks for this cycle: see `hw next-step`.
 - **Idle:** last cycle `C-NNN` closed `YYYY-MM-DD`; next due `YYYY-MM-DD`.
-- **OVERDUE:** next cycle was due `YYYY-MM-DD` and no `cycle.open` has followed. `hw status` leads with this line — the weekly sweep stops depending on anyone remembering it is Tuesday (`core/LOCK.md` §Ongoing Projects).
+
+**Overdue is not rendered here.** Whether `Next due` has passed is a different answer every day for the same event prefix, so computing it into this file would mean the same chain renders different bytes tomorrow -- breaking the byte-determinism rule (`core/SUBSTRATE.md` §Projection rules, rule 2) and staling every citation to this projection overnight. `hw status` compares `Next due` against today at read time and leads with the OVERDUE line, which is already its documented home (`core/SUBSTRATE.md` §`hw status`, `core/LOCK.md` §Ongoing Projects) — the weekly sweep stops depending on anyone remembering it is Tuesday.
 
 ---
 
 ## Rendering protocol
 
-A fresh agent must be able to produce this file byte-identically from an event prefix (`core/SUBSTRATE.md` §Projection rules, rule 2).
+A fresh agent must be able to produce this file byte-identically from an event prefix (`core/SUBSTRATE.md` §Projection rules, rule 2). Pure replay: no clock is read at render time.
 
 1. Filter `events.jsonl` to `cycle.open` and `cycle.close` events for this `project`, in append order.
 2. Walk them pairwise. Each `cycle.open` starts a row keyed by its `cycle_id`; the `cycle.close` carrying the same `cycle_id` fills that row's `Closed` (`closed_at`, date only), `Next due` (`next_due`), and `Summary` (`summary`, first line, no line breaks). An unmatched trailing `cycle.open` renders as the open row with `—` in both date columns and `(open)` as the summary.
 3. `Cadence` comes from the most recent `cycle.open` payload (`cadence`, `cadence_days`); before the first cycle both read from `OR-001`.
 4. `Next due` in §Cadence is the `next_due` of the last `cycle.close`; `(open cycle)` if a later `cycle.open` has no matching close, `(none yet)` if no cycle has closed.
-5. §Status renders OVERDUE when the last `cycle.close.next_due` is earlier than today and no `cycle.open` follows it — the same computation `hw status` performs (`core/SUBSTRATE.md` §`hw status`).
+5. §Status renders **Open** when a `cycle.open` has no matching close, and **Idle** otherwise, carrying the last close's `closed_at` and `next_due` verbatim. It never compares a date against today; `hw status` does that at read time.
 6. Write the file, compute its SHA-256, and update `hashes.json` for `projects/<project-id>/CYCLES.md`.
 
 Re-render on every `cycle.open` and `cycle.close`. `active_project.md` is re-rendered in the same step: the pointer stays on the project (an ongoing project does not archive at cycle close) and only its `Next due:` line changes.
