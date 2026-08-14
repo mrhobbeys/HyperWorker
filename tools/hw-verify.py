@@ -81,6 +81,16 @@ entries in 130 events -- the six-field form went unused), with the pre-v6 rich
 form still accepted; operator.correction is well-formedness only. Both live in
 check_note_payloads. Suites: test_exclusion_discipline.py, test_evidence_capture.py,
 test_open_loops.py, test_one_line_events.py.
+
+Identifier typing: a payload whose identifier fields carry the wrong type is a
+malformed payload (a blocking FAIL), never a traceback. `events.jsonl` is
+append-only, so an operator cannot delete the offending event -- a verifier that
+raises turns one bad payload into a workspace that can never be verified again,
+and reports nothing about the rest of the chain. check_identifier_types() names
+the field and the type; every check reads ids through payload_id() /
+event_project(), so nothing type-dependent (a dict key, a set member, a
+`sorted()`, a `join()`, a `Path` segment) ever sees a non-string.
+Suite: tools/test_malformed_ids.py.
 """
 
 import argparse
@@ -255,6 +265,121 @@ def collect_citations(payload) -> list:
     return found
 
 
+# ---------------------------------------------------------------------------
+# Identifier typing (v6.0.0)
+#
+# The log is append-only, so a malformed payload can never be deleted -- it can
+# only be reported. A verifier that raises on one is worse than useless: the
+# operator gets a traceback instead of a report, learns nothing about the other
+# 129 events, and has no way to make the crash go away short of rewriting
+# history. Every check below therefore reads identifier fields through
+# payload_id() / event_project(), which yield None for anything that is not a
+# usable id string, and check_identifier_types() reports the bad value once as a
+# malformed payload (a blocking Layer 1 FAIL). Nothing type-dependent -- a dict
+# key, a set member, a `sorted()`, a `', '.join()`, a `Path` segment -- ever
+# sees a list, an int or None.
+# ---------------------------------------------------------------------------
+
+# Payload fields that name something. Each is used somewhere as a dict key, a
+# set member, a sort/join input, or a filesystem path segment.
+# `evidence.capture.id` is deliberately absent: check_evidence_capture already
+# type-checks it and reports `evidence_id_malformed`, and one defect earns one
+# report.
+IDENTIFIER_PAYLOAD_FIELDS = {
+    "project.activate": ("project_id",),
+    "project.park": ("project_id",),
+    "project.archive": ("project_id",),
+    "project.wrap": ("project_id",),
+    "bootstrap.scope_locked": ("project_id",),
+    "session.handoff": ("project_id",),
+    "cycle.open": ("project_id", "cycle_id"),
+    "cycle.close": ("project_id", "cycle_id"),
+    "loop.open": ("loop_id",),
+    "loop.close": ("loop_id",),
+}
+
+
+def is_usable_id(value) -> bool:
+    """True when a value can safely act as an identifier: a non-blank string."""
+    return isinstance(value, str) and bool(value.strip())
+
+
+def describe_bad_id(value) -> str:
+    """How a malformed identifier is named in a report. Never the bare value."""
+    if value is None:
+        return "absent"
+    return f"{type(value).__name__} {value!r}"
+
+
+def payload_id(event: dict, field: str):
+    """An identifier from an event payload, or None if it is missing or not a
+    usable string. Callers skip the event on None; the defect is reported once
+    by check_identifier_types (or, for an absent required field, by the
+    required-payload-field check).
+    """
+    payload = event.get("payload")
+    if not isinstance(payload, dict):
+        return None
+    value = payload.get(field)
+    return value if is_usable_id(value) else None
+
+
+def event_project(event: dict):
+    """The event's `project`, or None if it is missing or not a usable string.
+
+    `project` groups every per-project check, so a list here would be an
+    unhashable dict key and an int would be a `Path` segment of the wrong type.
+    Grouping under None means the check skips the event, exactly as it already
+    skips a project-less harness event.
+    """
+    value = event.get("project")
+    return value if is_usable_id(value) else None
+
+
+def check_identifier_types(events: list) -> list:
+    """Payload identifiers are strings, and payloads are mappings.
+
+    Returns strings for result["malformed_payloads"]: an id of the wrong type is
+    the same class of defect as a missing required field, and blocks PASS the
+    same way. An *absent* field is not reported here -- that is the
+    required-payload-field check's job, and reporting it twice would double-count
+    one defect.
+    """
+    failures = []
+    for event in events:
+        event_id = event.get("id")
+        kind = event.get("kind")
+
+        payload = event.get("payload")
+        if payload is not None and not isinstance(payload, dict):
+            failures.append(
+                f"{event_id}:{kind} payload is {type(payload).__name__}, "
+                f"expected a mapping"
+            )
+            continue
+
+        project = event.get("project")
+        if project is not None and not is_usable_id(project):
+            failures.append(
+                f"{event_id}:{kind} project is {describe_bad_id(project)}, "
+                f"expected a project-id string"
+            )
+
+        if not isinstance(payload, dict):
+            continue
+        for field in IDENTIFIER_PAYLOAD_FIELDS.get(kind, ()):
+            if field not in payload:
+                continue
+            value = payload[field]
+            if not is_usable_id(value):
+                failures.append(
+                    f"{event_id}:{kind} {field} is {describe_bad_id(value)}, "
+                    f"expected an id string"
+                )
+
+    return failures
+
+
 def parse_scope_items_from_project_md(project_md_path: Path) -> list:
     """Parse PROJECT.md §Scope > ### Included bullets.
 
@@ -361,7 +486,13 @@ def find_schema_for_project(workspace: Path, project_id: str) -> str | None:
     """Read PROJECT.md §Schema line to get schema name. Falls back to scanning
     the file for the canonical 'bootstrapped from `schemas/projects/<name>/`'
     sentence.
+
+    A project id that is not a usable string names no directory: return None
+    rather than building a path out of it. The malformed id is already a
+    blocking FAIL from check_identifier_types.
     """
+    if not is_usable_id(project_id):
+        return None
     project_md = workspace / "projects" / project_id / "PROJECT.md"
     if not project_md.exists():
         return None
@@ -377,7 +508,7 @@ def check_scope_completeness(workspace: Path, events: list) -> list:
     failures = []
     by_project = defaultdict(list)
     for ev in events:
-        by_project[ev.get("project")].append(ev)
+        by_project[event_project(ev)].append(ev)
 
     for project_id, project_events in by_project.items():
         if not project_id or project_id == "_harness":
@@ -485,7 +616,7 @@ def check_external_state_readback(workspace: Path, events: list) -> tuple:
 
     by_project = defaultdict(list)
     for ev in events:
-        by_project[ev.get("project")].append(ev)
+        by_project[event_project(ev)].append(ev)
 
     for project_id, project_events in by_project.items():
         if not project_id or project_id == "_harness":
@@ -570,7 +701,7 @@ def check_bootstrap_probe(events: list) -> list:
     failures = []
     by_project = defaultdict(list)
     for ev in events:
-        by_project[ev.get("project")].append(ev)
+        by_project[event_project(ev)].append(ev)
 
     for project_id, project_events in by_project.items():
         if not project_id or project_id == "_harness":
@@ -721,10 +852,17 @@ def lock_target(event: dict) -> str | None:
     None for `_harness`-scoped meta events that name no project — those are
     harness-level bookkeeping (toolchain anchors, friction, soul anchors) and
     never move the Lock.
+
+    Also None when the id is present but not a usable string. A project id of
+    the wrong type names no directory and cannot key the Lock walk; it is
+    reported once as a malformed payload by check_identifier_types, and the
+    walk here proceeds on strings only.
     """
-    payload = event.get("payload") or {}
+    payload = event.get("payload")
+    if not isinstance(payload, dict):
+        payload = {}
     target = payload.get("project_id") or event.get("project")
-    if not target or target == "_harness":
+    if not is_usable_id(target) or target == "_harness":
         return None
     return target
 
@@ -922,6 +1060,8 @@ def find_project_lifecycle(workspace: Path, project_id: str) -> str | None:
     was never substituted. Unknown means the terminal-lifecycle check stands down
     rather than guessing.
     """
+    if not is_usable_id(project_id):
+        return None
     project_md = workspace / "projects" / project_id / "PROJECT.md"
     if not project_md.exists():
         return None
@@ -972,7 +1112,7 @@ def check_cycle_lifecycle(workspace: Path, events: list) -> list:
     failures = []
     by_project = defaultdict(list)
     for event in events:
-        by_project[event.get("project")].append(event)
+        by_project[event_project(event)].append(event)
 
     for project_id, project_events in by_project.items():
         if not project_id or project_id == "_harness":
@@ -985,8 +1125,9 @@ def check_cycle_lifecycle(workspace: Path, events: list) -> list:
         open_cycle = None  # (cycle_id, event_id)
         for event in project_events:
             kind = event.get("kind")
-            payload = event.get("payload") or {}
-            cycle_id = payload.get("cycle_id")
+            # A cycle_id of the wrong type reads as absent here and renders as
+            # `<no cycle_id>`; check_identifier_types reports the type itself.
+            cycle_id = payload_id(event, "cycle_id")
 
             if kind in ("cycle.open", "cycle.close") and lifecycle == "terminal":
                 failures.append(
@@ -1066,6 +1207,7 @@ def check_open_loops(events: list) -> tuple:
       - `loop.close` with no matching open      -> loop_close_without_open
       - a `loop_id` opened twice in one project -> duplicate_loop_open
       - a handoff omitting a loop open then     -> handoff_missing_open_loops
+      - a `loop.open` with no usable `loop_id`  -> malformed_loop_id
 
     Loops are never reopened: a recurrence is a new L id, so a second open of the
     same `loop_id` is a duplicate whether or not the first was closed.
@@ -1082,7 +1224,7 @@ def check_open_loops(events: list) -> tuple:
     notes = []
     by_project = defaultdict(list)
     for event in events:
-        by_project[event.get("project")].append(event)
+        by_project[event_project(event)].append(event)
 
     for project_id, project_events in by_project.items():
         if not project_id or project_id == "_harness":
@@ -1093,12 +1235,28 @@ def check_open_loops(events: list) -> tuple:
 
         for event in project_events:
             kind = event.get("kind")
-            payload = event.get("payload") or {}
+            payload = event.get("payload")
             if not isinstance(payload, dict):
                 payload = {}
-            loop_id = payload.get("loop_id")
+            # `loop_id` keys `opened`, joins the open set, sorts into the
+            # handoff report and joins into its message. Anything that is not a
+            # usable id string reads as None here and never reaches any of
+            # those; check_identifier_types reports the type as a malformed
+            # payload, and an absent required field is already reported by the
+            # required-payload-field check.
+            loop_id = payload_id(event, "loop_id")
 
             if kind == "loop.open":
+                if loop_id is None:
+                    # Nothing to open: no id means no row anything can count,
+                    # which is the whole failure this check exists to catch.
+                    failures.append(
+                        f"{project_id}: malformed_loop_id "
+                        f"({event.get('id')} loop.open carries loop_id "
+                        f"{describe_bad_id(payload.get('loop_id'))}; a loop with "
+                        f"no usable L id cannot be paired, counted or handed off)"
+                    )
+                    continue
                 if loop_id in opened:
                     failures.append(
                         f"{project_id}: duplicate_loop_open "
@@ -1111,6 +1269,9 @@ def check_open_loops(events: list) -> tuple:
                 open_now.add(loop_id)
 
             elif kind == "loop.close":
+                # A close with no usable id closes nothing, which is exactly
+                # loop_close_without_open; it renders as `<no loop_id>` and the
+                # type (if there was one) is reported separately.
                 if loop_id not in open_now:
                     detail = ("no loop is open under that id"
                               if loop_id not in opened
@@ -1416,7 +1577,7 @@ def find_project_profile(workspace: Path, project_id: str | None) -> str:
     `multi-actor`. Unknown reads as the default: a project that declares nothing
     behaves exactly as it did before v6.0.0.
     """
-    if not project_id or project_id == "_harness":
+    if not is_usable_id(project_id) or project_id == "_harness":
         return DEFAULT_PROFILE
 
     schema = find_schema_for_project(workspace, project_id)
@@ -1483,7 +1644,10 @@ def check_actor_requirement(workspace: Path, events: list) -> tuple:
     profiles = {}
 
     for event in events:
-        project = event.get("project")
+        # A `project` of the wrong type cannot key `profiles` and cannot build a
+        # PROJECT.md path; it reads as no project (the default profile), and
+        # check_identifier_types reports the type as a malformed payload.
+        project = event_project(event)
         if project not in profiles:
             profiles[project] = find_project_profile(workspace, project)
         actor = event.get("actor")
@@ -2190,7 +2354,7 @@ def check_schema_declared_layer1(workspace: Path, events: list) -> tuple:
 
     by_project = defaultdict(list)
     for event in events:
-        by_project[event.get("project")].append(event)
+        by_project[event_project(event)].append(event)
 
     for project_id, project_events in by_project.items():
         if not project_id or project_id == "_harness":
@@ -2358,7 +2522,11 @@ def collect_claim_entries(events: list) -> list:
     entries = []
     for ev in events:
         kind = ev.get("kind")
-        payload = ev.get("payload") or {}
+        payload = ev.get("payload")
+        if not isinstance(payload, dict):
+            # A payload that is not a mapping carries no claim block. It is
+            # reported once by check_identifier_types; nothing here reads it.
+            continue
         if kind in CLAIM_BEARING_KINDS:
             claim = payload.get("claim")
             if claim is not None:
@@ -2413,7 +2581,7 @@ def check_claims_required(workspace: Path, events: list) -> list:
     failures = []
     by_project = defaultdict(list)
     for ev in events:
-        by_project[ev.get("project")].append(ev)
+        by_project[event_project(ev)].append(ev)
 
     for project_id, project_events in by_project.items():
         if not project_id or project_id == "_harness":
@@ -2748,7 +2916,11 @@ def verify(workspace: Path, since: str | None, strict_secrets: bool = False) -> 
         else:
             required = REQUIRED_PAYLOAD_FIELDS.get(kind)
             if required:
-                payload = event.get("payload") or {}
+                payload = event.get("payload")
+                # A payload that is not a mapping has every required field
+                # missing, and is separately reported by check_identifier_types.
+                if not isinstance(payload, dict):
+                    payload = {}
                 missing = [f for f in required if f not in payload]
                 if missing:
                     result["malformed_payloads"].append(
@@ -2831,6 +3003,7 @@ def verify(workspace: Path, since: str | None, strict_secrets: bool = False) -> 
     result["checked_claims_required_failures"] = check_claims_required(workspace, events)
     result["exclusion_failures"] = check_exclusion_discipline(events)
     result["evidence_capture_failures"] = check_evidence_capture(events)
+    result["malformed_payloads"].extend(check_identifier_types(events))
     result["malformed_payloads"].extend(check_note_payloads(events))
     loop_failures, loop_notes = check_open_loops(events)
     result["open_loop_failures"] = loop_failures
