@@ -1,8 +1,27 @@
 # Changelog — HyperWorker
 
-## Unreleased (2026-07-14, branch `v5.3/programs`) — Programs, ongoing lifecycle, single-writer rule, checked claims
+## 6.0.0 (2026-08-14) — UNRELEASED, in progress
 
-The v5.3 core, derived from both field reports (`reference/field-reports/`). Four primitives and one bugfix; every primitive carries a hypothesis and falsifier. Pending local testing before release.
+The unification release. Two lines of development that had diverged at `2e1fd54` — `main` (field-derived schema packs plus the over-specificity sweep) and `v5.3/programs` (Programs, ongoing lifecycle, single-writer rule, checked claims) — are merged here on `v6.0/unification`, and the harness version is made coherent across every file that declares one. The major bump is warranted by the substrate additions carried over from the v5.3 line, not by a breaking change to existing projects: v5.2.x projects continue to validate.
+
+**This section is in progress.** Everything under §Landed is committed; everything under §Pending lands via subsequent commits before release.
+
+### Landed — branch unification
+
+- **`v5.3/programs` merged with `main`.** The two branches turned out to have touched disjoint file sets — `main` only the 13 field-derived schema packs, `v5.3` only `core/`, `tools/`, the top-level docs and the new `program` pack — so the merge carried zero conflicts and both sides survive intact. Verified structurally: after the merge, all 13 swept packs are byte-identical to `main`, and the only schema content differing from `main` is the new `program` pack.
+- **Over-specificity sweep across the 13 field-derived packs** (from `main`, `a605b74`; previously undocumented here). Parameterizes what one operator's workflow had hardcoded, keeping the real vendor names as `e.g.` examples: ad network / mediation platform become bootstrap questions, and two site-monetization task templates are renamed accordingly — `02-adsense-plan.md` → `02-primary-network-plan.md`, `03-ezoic-optimization-plan.md` → `03-mediation-platform-plan.md`. State-portal, mail-provider, market and platform assumptions opened up; chat-session phrasing became project phrasing; operator residue removed (literal paths, browser codenames, real site metrics in acceptance criteria, real filenames). Methodology untouched.
+
+### Landed — version coherence (fixes a functional bug)
+
+- **Harness version set to `6.0.0` everywhere.** The repo had drifted into an incoherent state: `HARNESS.md` title said v5.2.1, the README badge said 5.2.1, `templates/executor-prompt.md` said v5.2.0, CONTRIBUTING §5 told schema authors to pin `harness_version: "5.2.0"`, and across the 20 shipped schemas 16 declared `5.2.0`, three declared `5.1.1`, and only `program` declared `5.3.0`.
+- This was not cosmetic. CONTRIBUTING §5 states that *the harness MUST refuse to run a schema whose `harness_version` exceeds the harness's own version* — so a harness identifying as 5.2.1 was obliged to refuse the `program` schema pinned at 5.3.0, making the newest schema unrunnable by the rule the repo itself declares. The `5.1.1` stragglers were the mirror problem: schemas silently under-pinned against a substrate they actually depend on.
+- Changed: `HARNESS.md` title, `README.md` version badge, `CONTRIBUTING.md` title and the §3 pin instruction, `templates/executor-prompt.md` preamble, and `harness_version: "6.0.0"` in all 20 `schemas/projects/*/schema.yaml` including `program`. Historical version references in prose (feature-provenance annotations such as "Execution mode (v5.2.0)", CHANGELOG history, and field-report observations) are deliberately left alone — they date when a primitive landed and are not declarations of the current version.
+
+### Landed — shipped in 6.0.0: Programs, ongoing lifecycle, single-writer rule, checked claims
+
+*(Formerly carried as "Unreleased (2026-07-14, branch `v5.3/programs`)". There is no separate v5.3 release; this work ships as part of 6.0.0.)*
+
+The v5.3 core, derived from both field reports (`reference/field-reports/`). Four primitives and one bugfix; every primitive carries a hypothesis and falsifier.
 
 - **Single-Writer Rule (`core/SUBSTRATE.md`, H-S5)** — one `events.jsonl` has at most one writer; parallel actors write draft files and one convergence writer appends serially. From two dated field incidents of concurrent-append corruption (EV-id collisions, forked chains). Layer 1 surfaces violations as `chain_breaks`.
 - **Ongoing lifecycle (`core/LOCK.md` §Ongoing Projects, H-L2)** — `lifecycle: ongoing` projects work in cycles (`cycle.open`/`cycle.close` events, `CYCLES.md` projection, `hw cycle` protocol) with `next_due` computed onto the close event; `hw status` leads with OVERDUE when it passes. Replaces the field-improvised `deferred (ongoing)` terminal state and cadence-in-prose. `hw wrap` on an ongoing project is valid only when the recurring need itself ends.
@@ -12,7 +31,19 @@ The v5.3 core, derived from both field reports (`reference/field-reports/`). Fou
 - **Fix: `check_scope_completeness` false positive (FL-024, `tools/hw-verify.py`)** — retroactive `scope.complete` events appended after the last `session.handoff` now satisfy the check (forward-scan fallback). 7-case test suite added.
 - **`reference/FAILURE-MODES.md`** — concurrent-writer and perpetual-work entries added; the single-instance-lock "workaround, not a feature" note superseded by §Programs.
 
-Deferred to v5.3 fast-follows (tracked in the field reports): test-gated exclusion (`suspect` vs `excluded` with `test_ref`), secrets refused at `hw add`, frontier staleness clock, `evidence.capture` event kind, ledger-digest projection, `profile: single-executor`, conditional-task primitive, `hw amend` tooling.
+Deferred fast-follows (tracked in the field reports): test-gated exclusion (`suspect` vs `excluded` with `test_ref`), secrets refused at `hw add`, frontier staleness clock, `evidence.capture` event kind, ledger-digest projection, `profile: single-executor`, conditional-task primitive, `hw amend` tooling. Some of these are pulled forward into 6.0.0 — see §Pending below.
+
+### Pending in 6.0.0 — lands via subsequent commits
+
+Placeholders. These are in scope for the 6.0.0 release and are not yet written; each gets a real entry when its commit lands.
+
+- **Verifier hardening** — *pending.* Further `tools/hw-verify.py` tightening beyond the FL-024 scope-completeness fix and the checked-claims replay already landed above. Entry to be written when the commit lands.
+- **Field-evidence features** — *pending.* The evidence-capture side of the field-report backlog (`evidence.capture` event kind and the primitives that hang off it). Entry to be written when the commit lands.
+- **Diverse-agent docs** — *pending.* Documentation for running the harness across heterogeneous agent/model fleets. Entry to be written when the commit lands.
+
+### Also shipping in 6.0.0
+
+The three earlier gather sections below — "Unreleased (2026-07-13)" (machine-2 field gather), "Unreleased (2026-07-13)" (two more field-derived schemas) and "Unreleased (2026-07-03)" (eight field-derived project schemas) — were never cut as their own release. They ship as part of 6.0.0 and are left in place below as the record of how the schema corpus was assembled.
 
 ## Unreleased (2026-07-13) — Machine-2 field gather: three creator/education schemas; second field report
 
