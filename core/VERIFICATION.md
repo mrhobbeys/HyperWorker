@@ -234,6 +234,16 @@ The harness writes `council.invoke` at trigger, `council.report` for each member
 
 **Friction prompt signal.** A `council.escalated` event whose subject task has `risk_level: critical` emits a `friction.log.prompt` with `trigger: council_non_convergence_critical`. Critical-risk non-convergence is a strong signal that the schema's council composition or convergence rule mis-specifies the task's review needs.
 
+### Independence
+
+**Agreement is not verification unless the agreeing parties are independent.** Two members of the same model family reviewing the same artifact in the same context — and, most sharply, an agent and the subagents it spawned — produce one opinion stated twice. The second statement carries no information the first did not: same priors, same blind spots, same reading of the same bytes. Asking "is this right?" of something that shares your context reliably returns yes, and the yes is worth nothing.
+
+What raises confidence instead is **ground truth**: re-run the command and read its output, re-stat the file, diff the artifact. `hw verify --claims` exists for exactly this reason — a predicate replayed against the world is independent of whoever asserted it, and no amount of agreement substitutes. When a member's finding cites another agent's agreement as its basis, treat the finding as unsupported.
+
+The pattern that has actually worked in the field is an **unanchored red team**: adversarial review commissioned from an agent with no engagement history — one that did not help build the plan, was not present for the decisions, and has no commitment to the framing. It is the absence of history that does the work; a reviewer who watched the plan being made inherits its assumptions along with its context.
+
+*Field evidence (6.0.1):* both executor field reports name this independently. One recorded same-model agreement between itself and its own subagents as an anti-pattern after acting on it, and adopted the rule of demanding re-executed commands rather than concurrence; the same report credits an unanchored red-team pass with materially improving a migration plan "precisely because it was unanchored." `family:` on a council member (below) is the configured form of this; context asymmetry is the weaker default when only one family is available.
+
 ### Cross-Family Verification (Opt-In)
 
 If the operator configures multiple AI families (e.g., Claude + Copilot CLI), council members can be drawn from different families. Family diversity is configured per role:
