@@ -54,7 +54,7 @@ methodology. Match the operator/brand voice if declared.
 - [ ] ≥1 finding contradicts or complicates the original hypothesis.
 - [ ] Numbers come from a tool with a date, or a labeled formula on tool inputs.
 - [ ] Tool-gap sections are marked hypotheses-to-verify, not presented as facts.
-- [ ] Channel reality checked (SERP ownership, LSA eligibility, software-vs-service intent).
+- [ ] Channel reality checked (SERP ownership, local-ads-program eligibility e.g. LSA where applicable, software-vs-service intent).
 - [ ] A skeptic could trace every recommendation back to evidence.
 
 ---
@@ -72,8 +72,10 @@ third-party heuristic, labeled as such.
 - **E-E-A-T is NOT a ranking factor** - it is what Google's raters assess, not a
   measured ranking input. Never recommend an action "to improve E-E-A-T for
   rankings"; recommend the concrete underlying fix and cite Google docs.
-- **Domain authority / domain strength** (Moz/Ahrefs constructs) are [ESTIMATED]
-  winnability heuristics only - never written as [MEASURED] Google ranking factors.
+- **Domain authority / domain strength** (e.g. Moz/Ahrefs-style domain-authority
+  constructs, or whatever equivalent metric the available tooling provides) are
+  [ESTIMATED] winnability heuristics only - never written as [MEASURED] Google
+  ranking factors.
 - Any recommendation resting on a ranking-factor claim cites Google documentation
   by URL, or is labeled a hypothesis.
 - **Structured data is not a free win.** Google has deprecated several rich-result

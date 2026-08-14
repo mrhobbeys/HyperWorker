@@ -7,7 +7,7 @@ description: |
   post-hack server migration broke (images, CSS, JS, internal links,
   redirects), triage by impact, propose fixes as drafts for operator approval,
   implement approved fixes, and verify on production. Monetization, SEO, and
-  DMCA are SEPARATE sub-projects (other chats). Hack remediation is a SEPARATE
+  DMCA are SEPARATE sub-projects. Hack remediation is a SEPARATE
   Recovery program — coordinate, do not execute.
 
 bootstrap_questions:
@@ -20,7 +20,7 @@ bootstrap_questions:
     type: string
     required: true
   - id: access_available
-    prompt: "Which access is available for this site? (WP admin / cPanel / SFTP / DNS / Search Console)"
+    prompt: "Which access is available for this site? (CMS admin, e.g., WP admin / cPanel / SFTP / DNS / Search Console)"
     type: list[string]
     required: true
   - id: known_issues

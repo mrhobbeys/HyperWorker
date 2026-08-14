@@ -37,7 +37,7 @@ The bootstrap inventory sweep already produced a verified file list via `bootstr
 7. **Register each candidate-content file:** `source_role: candidate-content`, `round: candidate`, `weight: contextual`, `chapter_id: null`. Content disposition is determined later by T-004 candidates-evaluation.
 8. After all `chapter-source` artifacts are registered, update `superseded_by` on older rounds (per SUBSTRATE.md §Superseded Artifact Back-Link).
 9. **Banned-pattern seed registration.** For each item in OR-001.banned_patterns_seed (default ["em dash"]), write a banned-pattern artifact with `source: operator-direct`, `confidence: validated`. Run `hw add banned-pattern < draft.md` per substrate protocol. The em-dash artifact's `pattern` is the literal Unicode em dash character; `pattern_kind: unicode-codepoint`; `pattern_class: punctuation`; `replacement_rule: "em dash → parentheses for parenthetical scope, ellipsis for trailing thought, comma for in-line clause (operator preference)"`.
-10. **Canonical-facts seeding.** Populate the Canonical facts table in `00-REFERENCE-rules.md` with at minimum: book title, book short title, book ASIN, book listing URL (from OR-001.book_metadata). Add any operator-declared brand/product/framework names known at this stage.
+10. **Canonical-facts seeding.** Populate the Canonical facts table in `00-REFERENCE-rules.md` with at minimum: book title, book short title, book platform ID (ISBN/ASIN/etc.), book listing URL (from OR-001.book_metadata). Add any operator-declared brand/product/framework names known at this stage.
 11. Answer @@SCAN markers from `00-REFERENCE-rules.md`.
 
 ## What this task is NOT
@@ -56,9 +56,9 @@ Not chapter splitting. The canonical manuscript is registered as one artifact in
 - **Archive-original files registered:** <count>
 - **Archive-edited files registered:** <count>
 - **Candidate-content files registered:** <count>
-- **Round chains identified:** <list of supersedes chains, e.g., "Formated Chapter 1 V2 → Edited Chapter 1 → (chapter 1 region of Completed Book)">
+- **Round chains identified:** <list of supersedes chains, e.g., "Chapter 1 Draft V2 → Chapter 1 Edited → (chapter 1 region of the canonical manuscript)">
 - **Duplicate-by-hash files collapsed:** <list>
 - **Banned-pattern seed artifacts registered:** BP-001 through BP-NNN
 - **Canonical facts seeded:** <list>
-- **Discoveries:** <e.g., "Formated Chapter 10 V1.docx exists but no V2; chain ends at V1 for that chapter">
+- **Discoveries:** <e.g., "Chapter 10 Draft V1.docx exists but no V2; chain ends at V1 for that chapter">
 - **Recommended follow-up:** "T-001 chapter-split should run next; canonical manuscript is the source-of-truth input."

@@ -33,8 +33,8 @@ bootstrap_questions:
     type: string
     required: true
 
-  - id: book_asin
-    prompt: "Current Amazon ASIN (if Kindle-published)?"
+  - id: book_platform_id
+    prompt: "Current platform-specific identifier for the published edition, if any (e.g., Amazon ASIN, ISBN, Kobo/Apple Books ID)?"
     type: string|null
     required: false
 

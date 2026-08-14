@@ -17,7 +17,8 @@ tiers:
     purpose: |
       Serve the brand's real declared goal and real identity. The owned hub should own the
       brand's name; the rest support it. Don't invent positioning the operator didn't ask
-      for; surface options. Respect real-name vs pen-name exposure.
+      for; surface options. Respect real-name vs alias/persona exposure (e.g. pen name,
+      stage name, DBA) where one is declared.
     examples:
       - "Recommendations advance OR.primary_goal; out-of-goal tangents are dropped or flagged."
       - "Authority that should land on the owned hub but lands on a marketplace/social is named as a leak."

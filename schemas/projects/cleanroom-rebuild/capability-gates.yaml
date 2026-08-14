@@ -25,19 +25,19 @@ task_capabilities:
     write_zones: [observed]
     delegation_recommended: true
     rationale: "Per-screen capture is hermetic. Vision description runs on a LOCAL VLM, keeping original imagery off any build context."
-    description: "Drive the original GUI (AHK), screenshot each state, describe via local vision model, build the navigation graph. Writes OBS."
+    description: "Drive the original GUI via the declared gui_driver (e.g., AutoHotkey or another UI-automation tool), screenshot each state, describe via local vision model, build the navigation graph. Writes OBS."
 
   data-layer-behavior-trace:
     required_tools: [file_write, app_driver, sql_trace, sql_query]
     read_zones: [observed]
     write_zones: [observed]
-    description: "Run a SQL Server trace + DB before/after diff per user action — black-box measurement of what each screen does to data. Writes OBS."
+    description: "Run a SQL trace (e.g., SQL Server Profiler/Extended Events, or the equivalent for the original's RDBMS) + DB before/after diff per user action — black-box measurement of what each screen does to data. Writes OBS."
 
   hardware-io-capture:
     required_tools: [file_write, app_driver, io_monitor]
     read_zones: [observed]
     write_zones: [observed]
-    description: "Capture printer / cash-drawer / MSR / sig-pad byte sequences and OPOS calls. Writes OBS."
+    description: "Capture peripheral byte sequences and device-protocol calls (e.g., printer / cash-drawer / card-reader / sig-pad for a retail POS, or whatever hardware the original drives — OPOS or another device-protocol standard as applicable). Writes OBS."
 
   # ---------- SPEC ROOM (reads OBS, writes the wall's clean output) ----------
   spec-author:
@@ -52,7 +52,7 @@ task_capabilities:
 
   # ---------- BUILD ROOM (WALLED — no original, no observed/) ----------
   build-from-spec:
-    executor: local_model            # runs on the declared build_executor (LM Studio); NOT the orchestrator
+    executor: local_model            # runs on the declared build_executor (e.g., LM Studio or another isolated local endpoint); NOT the orchestrator
     required_tools: [file_read, file_write]
     read_zones: [spec, src]          # MAY NOT read observed/
     write_zones: [src]

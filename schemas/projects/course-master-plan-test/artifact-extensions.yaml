@@ -31,9 +31,9 @@ operating-reality:
       required: true
 
     - name: platform
-      type: enum
-      values: [skool, circle, mighty-networks, discord, other]
+      type: string
       required: true
+      description: "e.g., skool, circle, mighty-networks, discord — or any other community/classroom platform."
 
     - name: admin_user
       type: string
@@ -185,7 +185,7 @@ new_kinds:
       - name: child_project_id
         type: string
         required: true
-        description: "The actual project ID under projects/ (e.g., module-03-network-fundamentals)"
+        description: "The actual project ID under projects/ (e.g., module-03-<topic-slug>)"
       - name: child_project_type
         type: enum
         values: [module, course-task, promo, content-piece]

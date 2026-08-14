@@ -3,9 +3,10 @@ schema_id: site-monetization
 schema_version: 1.0
 harness_version: "5.2.0"
 description: |
-  Per-site Monetization workstream. Audit and restore ad revenue: AdSense
-  (mediated THROUGH Ezoic on Ezoic sites), Ezoic optimization (identity
-  coverage, rewarded ads, placements, ads.txt), and video-program re-entry.
+  Per-site Monetization workstream. Audit and restore ad revenue: the primary
+  display-ad network (e.g., AdSense), optionally run through a mediation /
+  optimization platform (e.g., Ezoic — identity coverage, rewarded ads,
+  placements, ads.txt), and video-ad program re-entry.
   REPORT-FIRST: the worker proposes; the OPERATOR executes anything that needs
   a login, credentials, payment, "activate", "accept terms", or account
   linking. Review & Repair and SEO are separate sub-projects.
@@ -15,16 +16,16 @@ bootstrap_questions:
     prompt: "Which site? (domain)"
     type: string
     required: true
-  - id: adsense_pubid
-    prompt: "AdSense publisher ID (pub-...), or null."
+  - id: primary_ad_network
+    prompt: "Primary display-ad network + publisher/site ID (e.g., AdSense, pub-...), or null."
     type: string|null
     required: true
-  - id: ezoic_id
-    prompt: "Ezoic site ID, or null."
+  - id: mediation_platform
+    prompt: "Ad mediation/optimization platform + site ID, if one sits in front of the primary network (e.g., Ezoic), or null if none."
     type: string|null
     required: true
   - id: access_available
-    prompt: "Access available (AdSense login / Ezoic login / WP admin / Search Console)."
+    prompt: "Access available (e.g., primary-network login / mediation-platform login / CMS admin / Search Console)."
     type: list[string]
     required: true
   - id: monetization_goal
@@ -32,7 +33,7 @@ bootstrap_questions:
     type: string
     required: true
   - id: known_state
-    prompt: "Known monetization state to carry in (AdSense step, /openvideo, video program), or null."
+    prompt: "Known monetization state to carry in (e.g., primary-network onboarding step, video-program status), or null."
     type: string|null
     required: true
 
@@ -51,8 +52,8 @@ default_tasks:
   templates:
     - "00-scope-access.md"
     - "01-audit-monetization-state.md"
-    - "02-adsense-plan.md"
-    - "03-ezoic-optimization-plan.md"
+    - "02-primary-network-plan.md"
+    - "03-mediation-platform-plan.md"
     - "04-video-program-plan.md"
     - "05-operator-execution-checklist.md"
     - "06-verify.md"

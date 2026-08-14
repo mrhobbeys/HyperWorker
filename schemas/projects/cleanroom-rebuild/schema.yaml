@@ -1,8 +1,9 @@
 # schemas/projects/cleanroom-rebuild/schema.yaml
 # Cleanroom reverse-engineer-and-rebuild of a legacy application.
 # Observation room (may face the original) produces specs; build room (walled,
-# local models) implements from specs only. Authored for the CRE rebuild;
-# reusable for any "rebuild abandonware on a modern stack from our own data" job.
+# local models) implements from specs only. Authored from one operator's
+# abandonware rebuild; reusable for any "rebuild abandonware on a modern stack
+# from our own data" job.
 
 schema_id: cleanroom-rebuild
 schema_version: 1.0

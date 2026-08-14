@@ -7,7 +7,7 @@ competitor: "[CMP-NNN#hash]"
 cluster: "<query cluster / topic>"
 page: null                 # competitor URL targeting it
 ranks: null                # 'verified pos N' | 'inferred-not-verified' | 'no'
-volume: null               # Keyword Planner range/number | 'unknown'
+volume: null               # e.g. Keyword Planner range/number | 'unknown'
 cpc: null                  # top-of-page bid range (commercial-value signal)
 intent: commercial         # commercial | local | informational | navigational
 posture: moat              # moat (defended) | gap (neglected → client opening) | contested

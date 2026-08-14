@@ -72,7 +72,7 @@ Decisions with `synthesis_role: preservation-rule`. Each chapter pass `consumes:
 
 ## Canonical facts — do not normalize
 
-Brand names, product names, framework names, dates, URLs, ASINs, and other specific tokens that must appear verbatim wherever they appear.
+Brand names, product names, framework names, dates, URLs, platform IDs (ISBN, ASIN, etc.), and other specific tokens that must appear verbatim wherever they appear.
 
 | Fact | Form | Reason |
 |---|---|---|

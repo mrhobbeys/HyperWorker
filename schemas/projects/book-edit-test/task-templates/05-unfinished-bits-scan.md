@@ -22,7 +22,7 @@ acceptance_criteria:
 
 ## Objective
 
-Walk every post-split chapter and surface signals of unfinished work the author left mid-draft. The author noted at bootstrap that the original was written under challenge-group time pressure and contains unfinished bits — placeholders the author intended to come back to. Each finding gets an operator disposition (leave / expand / cut) before Phase B chapter passes begin so the per-chapter passes know what to do with each placeholder.
+Walk every post-split chapter and surface signals of unfinished work the author left mid-draft. The author noted at bootstrap that the original was written under time pressure (e.g., a challenge group, hackathon, or deadline crunch) and contains unfinished bits — placeholders the author intended to come back to. Each finding gets an operator disposition (leave / expand / cut) before Phase B chapter passes begin so the per-chapter passes know what to do with each placeholder.
 
 ## Step-by-Step Instructions
 
@@ -77,5 +77,5 @@ Walk every post-split chapter and surface signals of unfinished work the author 
   - leave: <count>
   - expand: <count>
   - cut: <count>
-- **Discoveries:** <e.g., "Chapter 7 has six 'come back to this' markers; chapter 9 has none — uneven completion across the book confirms the challenge-group time-pressure pattern operator described">
+- **Discoveries:** <e.g., "Chapter 7 has six 'come back to this' markers; chapter 9 has none — uneven completion across the book confirms the time-pressure pattern the operator described">
 - **Recommended follow-up:** "T-006 edit-philosophy-per-chapter can run next; per-chapter passes T-007 will consume the dispositions for their chapter."

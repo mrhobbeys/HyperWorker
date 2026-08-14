@@ -22,7 +22,7 @@ tags: []
 
 ## Captured detail
 
-<The substance of the capture. For a screen: the vision-model description of the layout/fields/controls. For a sql-trace: the statements issued. For a db-diff: the row-level before/after delta. For hardware-io: the byte sequence / OPOS calls. Raw artifacts (screenshots, trace files, byte dumps) live at artifact_path; this section is the readable summary the spec room consumes.>
+<The substance of the capture. For a screen: the vision-model description of the layout/fields/controls. For a sql-trace: the statements issued. For a db-diff: the row-level before/after delta. For hardware-io: the byte sequence / device-protocol calls (e.g., OPOS). Raw artifacts (screenshots, trace files, byte dumps) live at artifact_path; this section is the readable summary the spec room consumes.>
 
 ## Provenance (wall note)
 

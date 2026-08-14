@@ -4,7 +4,8 @@
 Evaluate a brand across ALL its surfaces — owned hub (website), social properties,
 marketplaces/retailers, review sites — to see how it is currently **seen and found**,
 then hand the operator a **menu of strategic paths** (not one fixed plan). Proven on an
-Acme Corp-style author-brand engagement.
+Acme Corp-style brand engagement (e.g. an author/creator brand — the same spine applies
+to a company or product brand).
 
 ## The spine (shared with market-gap-intelligence)
 **Fan-out -> manifest -> synthesize to a paths menu.** Here the *unit* is a brand
@@ -33,8 +34,9 @@ are"** (per-property ground truth) from **"where things should be"** (the synthe
 
 ## Dispatch mode (operator chooses; director recommends)
 `single-agent` for <=4 surfaces with low divergence risk; `separate-chats` otherwise — and
-**always for social/login surfaces** (FB, LinkedIn, IG, X, YouTube), which need a sustained
-**agent-driven** browser where the human assists only at login / an irreducible click.
+**always for social/login surfaces** (e.g. FB, LinkedIn, IG, X, YouTube, TikTok, or any
+other platform that needs a logged-in session), which need a sustained **agent-driven**
+browser where the human assists only at login / an irreducible click.
 This protects the operator's attention (HyperWorker is an executive-function prosthesis):
 agents do the work; humans are pulled in only for the irreducible.
 

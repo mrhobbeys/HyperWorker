@@ -25,11 +25,13 @@ Per-piece source corpus lives at `{{ input_folder }}` (default: `projects/<piece
 
 ## Deliverables
 
-Three publication-format-native variants, written to `{{ deliverable_path }}` (default: workspace-parent `outputs/<piece-slug>/`):
+Publication-format-native variants — one per entry in `target_formats` (OR-001.formats) — written to `{{ deliverable_path }}` (default: workspace-parent `outputs/<piece-slug>/`). Default example (three formats):
 
 - `substack-longform.md` — hook → free section → paywall cliff (marked) → insight section → closing
 - `x-longform.md` — thread / article with chunks each able to terminate the piece
 - `youtube-leadins.md` — three sub-options × 3-5 sentences, one per framing (controversy / curiosity / utility)
+
+(If the operator declared different target_formats at bootstrap, the actual ids/structures/filenames replace these.)
 
 ## Phase shape
 

@@ -11,7 +11,7 @@ consumes:
   - "[OR-001#<short-hash>]"
   - "[OBS-NNN#<short-hash>]"  # the peripheral inventory OBS for the device this branch captures
 acceptance_criteria:
-  - "For each in-scope peripheral (printer, cash drawer, MSR, sig-pad, scale), the byte sequences and OPOS/device calls for each operation are captured as OBS (observation_type: hardware-io) with capture_method: io-monitor and source_ref = device + operation."
+  - "For each in-scope peripheral (e.g., printer, cash drawer, card reader, sig-pad, or scale for a retail POS — or whatever devices the original drives), the byte sequences and device-protocol calls (e.g., OPOS) for each operation are captured as OBS (observation_type: hardware-io) with capture_method: io-monitor and source_ref = device + operation."
   - "Each hardware-io OBS records the exact byte sequence / call trace as MEASURED on the wire — not inferred from driver source or decompilation."
   - "Every OBS carries source=original, zone=observed, consumable_by_build=false; this task writes only to observed/."
   - "Zero Tier 1 violations from 00-REFERENCE-rules."
@@ -31,7 +31,7 @@ Branch one subagent per device via `hw branch T-004 device-NNN`. Subagents need 
 
 1. Recite OR-001 and the assigned peripheral OBS. SCAN (not a build-room task).
 2. Attach `io_monitor` to the device port / OPOS channel.
-3. Drive the original to perform each device operation (print receipt, open drawer, read MSR swipe, capture signature, read scale weight).
+3. Drive the original to perform each device operation (e.g., print receipt, open cash drawer, read a card swipe, capture a signature, read a scale weight — or whatever operations the original's peripherals perform).
 4. Record the byte sequence / call trace for each operation. Write OBS: `observation_type: hardware-io`, `capture_method: io-monitor`, `source_ref` = device + operation. Store raw captures under `observed/hardware/` and reference in `artifact_path`.
 5. `hw add observation < draft-obs-NNN.md`. Confirm `source: original`, `zone: observed`, `consumable_by_build: false`.
 

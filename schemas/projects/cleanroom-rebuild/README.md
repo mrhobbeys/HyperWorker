@@ -12,7 +12,7 @@ Three rooms, one inviolable wall between spec and build:
 
 - **Observation room** may face the original. Produces `observation` (OBS) artifacts: `source=original`, zone `observed/`, **NOT consumable by build**.
 - **Spec room** reads OBS and writes `spec` (SPEC) and `behavior-rule` (BR): `source=cleanroom`, zone `spec/`, **build-consumable**. The only family that reads `observed/` and writes `spec/`.
-- **Build room** runs on an isolated local model (LM Studio) and implements from SPEC/BR ONLY. It cannot read `observed/`, cannot run the original (no smoke run), cannot read its binaries or decompilation (no peek).
+- **Build room** runs on an isolated local model (e.g., LM Studio or another walled local endpoint) and implements from SPEC/BR ONLY. It cannot read `observed/`, cannot run the original (no smoke run), cannot read its binaries or decompilation (no peek).
 
 The wall is enforced four ways, not by good intentions:
 

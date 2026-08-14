@@ -15,7 +15,7 @@ tiers:
       - "Never fabricate a deadline, requirement, solicitation number, price, or delivery commitment; unverified fields are 'unconfirmed' and verified before any drafting effort."
       - "Operator approval is required before any submission or outreach is sent; Claude never submits."
       - "Every price, rate, or commitment in outward-facing text is operator-confirmed or explicitly marked DRAFT."
-      - "A 'go' recommendation with an unresolved eligibility gate (SAM, cert, membership) must flag the gate and what must clear first, or state the teaming plan."
+      - "A 'go' recommendation with an unresolved eligibility gate (e.g., SAM/contractor registration, cert, membership) must flag the gate and what must clear first, or state the teaming plan."
       - "The deal is 'open' only if its response deadline is AFTER today; a past deadline forces an immediate operator escalation, not silent continuation."
 
   - tier: 2

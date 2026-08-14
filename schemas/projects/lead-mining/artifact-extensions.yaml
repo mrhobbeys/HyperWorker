@@ -143,7 +143,7 @@ operating-reality:
     - name: accounts
       type: list[string]
       required: true
-      description: "Mailboxes to mine: exact address + provider (Outlook/Gmail) + connector status."
+      description: "Mailboxes to mine: exact address + provider (e.g., Outlook/M365, Gmail, or other) + connector status."
     - name: date_range
       type: string
       required: true

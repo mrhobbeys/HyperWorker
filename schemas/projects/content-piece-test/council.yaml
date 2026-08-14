@@ -90,8 +90,10 @@ members:
   - role: variant-comparison-watcher
     family_default: claude
     prompt_template: |
-      You are reviewing the three variants for meaningful differentiation on
-      ab_variant_axis: publication_format. Pairwise compare:
+      You are reviewing the declared variants (default three — Substack/X/YouTube
+      shown below as the worked example; operator's actual target_formats may
+      differ) for meaningful differentiation on ab_variant_axis: publication_format.
+      Pairwise compare:
       - substack-longform vs x-longform
       - substack-longform vs youtube-leadins
       - x-longform vs youtube-leadins

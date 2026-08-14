@@ -34,11 +34,11 @@ bootstrap_questions:
     type: string
     required: true
   - id: geographies
-    prompt: "Geographies in scope? (e.g., OK + TX/KS/AR/MO + federal remote-deliverable)"
+    prompt: "Geographies in scope? (e.g., 'OK + TX/KS/AR/MO + federal remote-deliverable', or 'CA only', or 'nationwide federal')"
     type: list[string]
     required: true
   - id: registration_status
-    prompt: "Registration/eligibility status that gates bidding (SAM.gov? OK Supplier Portal? set-aside certs?). Be honest about what's NOT done."
+    prompt: "Registration/eligibility status that gates bidding (SAM.gov? your state's vendor/supplier portal? set-aside certs?). Be honest about what's NOT done."
     type: object
     required: true
   - id: subcontracting

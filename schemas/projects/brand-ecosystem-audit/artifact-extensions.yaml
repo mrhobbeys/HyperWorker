@@ -10,7 +10,7 @@ new_kinds:
     schema:
       - {name: id, type: string, pattern: "PROP-\\d{3,}", required: true}
       - {name: name, type: string, required: true}
-      - {name: platform, type: string, required: true, description: "website | youtube | instagram | facebook | x | linkedin | amazon | goodreads | other"}
+      - {name: platform, type: string, required: true, description: "free text naming the platform, e.g. website | youtube | instagram | facebook | x | linkedin | amazon | goodreads | other (not an exhaustive list)"}
       - {name: url_or_handle, type: string, required: true}
       - name: role
         type: enum

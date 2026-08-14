@@ -20,7 +20,8 @@ members:
     prompt_template: |
       You are checking that the go/no-go call is honest. Read OR-001
       eligibility_gates. For any Finding or Decision recommending "go":
-      - Every unresolved gate (SAM, cert, membership, teaming) must be
+      - Every unresolved gate (e.g., SAM/contractor registration, cert,
+        membership, teaming — or whatever gate types this deal uses) must be
         explicitly flagged with what must clear first, or covered by a
         stated teaming plan.
       - A "go" that silently ignores an open gate fails.

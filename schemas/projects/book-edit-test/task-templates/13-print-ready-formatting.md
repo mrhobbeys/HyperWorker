@@ -38,7 +38,7 @@ acceptance_criteria:
 
 ## Objective
 
-Take the polished content manuscript at `OR-001.deliverable_path` and produce a print-ready laid-out version at `OR-001.print_ready_path` suitable for POD print pipelines (KDP Print, IngramSpark) or operator-declared specifications. The substantive content does not change in this task — only layout, typography, and document structure.
+Take the polished content manuscript at `OR-001.deliverable_path` and produce a print-ready laid-out version at `OR-001.print_ready_path` suitable for POD print pipelines (e.g., KDP Print, IngramSpark, or another print-on-demand service) or operator-declared specifications. The substantive content does not change in this task — only layout, typography, and document structure.
 
 ## Step-by-Step Instructions
 
@@ -83,13 +83,13 @@ Take the polished content manuscript at `OR-001.deliverable_path` and produce a 
 
 **Trim-size + margin = page count.** Operator typically has a target page count (e.g., POD pricing tier breaks at certain page counts). The trim/margin/font-size combination determines page count. If the result misses the target by enough to matter, surface and let operator decide trade-offs (smaller font + more margin? bigger trim?).
 
-**Image-resolution check is a real check.** Self-published books often ship with low-resolution images that look fine on Kindle and bad in print. The 300 DPI bar is the print standard. The operator may accept lower (a screenshot can be 96 DPI and still legible) but the choice should be explicit.
+**Image-resolution check is a real check.** Self-published books often ship with low-resolution images that look fine on-screen (e.g., on Kindle or another e-reader) and bad in print. The 300 DPI bar is the print standard. The operator may accept lower (a screenshot can be 96 DPI and still legible) but the choice should be explicit.
 
 **ISBN may not be available.** If the print release uses a new ISBN, it may be assigned by the POD service after the file is uploaded. Leave a placeholder (`ISBN: [pending]`) and document in the completion report; the operator updates the copyright page after assignment.
 
 **PDF sample render is critical.** Docx is not WYSIWYG for print at the trim-size scale. The PDF render is the operator's actual review surface; if the docx looks fine and the PDF doesn't, the PDF is right.
 
-**Print-ready vs ebook.** This task targets print. The polished manuscript at deliverable_path is the source for both print (T-013 output) and a Kindle update (post-archive backlog item — separate task, separate file path; the Kindle update reflows to device, which is a different layout problem). T-013 does not produce the Kindle file.
+**Print-ready vs ebook.** This task targets print. The polished manuscript at deliverable_path is the source for both print (T-013 output) and an ebook-platform update (post-archive backlog item — separate task, separate file path; e-reader reflow, e.g. for Kindle, is a different layout problem). T-013 does not produce the ebook file.
 
 ## Completion Report (filled by executor)
 
@@ -109,4 +109,4 @@ Take the polished content manuscript at `OR-001.deliverable_path` and produce a 
 - **Operator decision:** approved | revised | rejected
 - **Failure scenarios documented (per critical risk):** 3
 - **Discoveries:** <e.g., "Sample PDF revealed chapter-opener treatment looked sparse at 6x9; operator opted for drop-cap on first paragraph">
-- **Recommended follow-up:** "Project ready for hw wrap; post-archive backlog includes Amazon listing update for {{ book_short_title }}."
+- **Recommended follow-up:** "Project ready for hw wrap; post-archive backlog includes updating the book's platform listing(s) (e.g., Amazon) for {{ book_short_title }}."

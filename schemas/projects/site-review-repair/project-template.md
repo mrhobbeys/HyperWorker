@@ -15,7 +15,7 @@ Bring <site_domain> back to a clean, correctly-rendering, fully-linked state aft
 - Broken internal links and migration redirects.
 - Triage, operator-approved fix plan, implementation, production verification, handoff.
 ### Explicitly Excluded
-- Monetization, SEO, DMCA (separate sub-chats).
+- Monetization, SEO, DMCA (separate sub-projects).
 - Hack/malware remediation (separate Recovery program — hand items off).
 - Any other site or program.
 

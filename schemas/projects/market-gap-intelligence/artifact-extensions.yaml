@@ -67,7 +67,7 @@ new_kinds:
       - {name: cluster, type: string, required: true, description: "The query cluster / topic."}
       - {name: page, type: string|null, required: false, description: "Competitor URL targeting it."}
       - {name: ranks, type: string|null, required: false, description: "SERP-verified position, or 'inferred-not-verified', or 'no'."}
-      - {name: volume, type: string|null, required: false, description: "Keyword Planner range/number, or 'unknown'."}
+      - {name: volume, type: string|null, required: false, description: "Search-volume range/number from a keyword-volume tool (e.g. Google Ads Keyword Planner), or 'unknown'."}
       - {name: cpc, type: string|null, required: false, description: "Top-of-page bid range = commercial-value signal."}
       - {name: intent, type: enum, values: [commercial, local, informational, navigational], required: true}
       - name: posture

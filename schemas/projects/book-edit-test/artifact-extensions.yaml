@@ -7,8 +7,8 @@ new_kinds:
   - kind: chapter-source
     description: |
       Represents an input file registered for editing. One artifact per file
-      (Completed Book.docx as canonical; archived/edited round files as
-      reference-pinned). Created during T-000 corpus-inventory; immutable once
+      (the canonical manuscript file, e.g. `Manuscript.docx`, as canonical;
+      archived/edited round files as reference-pinned). Created during T-000 corpus-inventory; immutable once
       registered. Hash-citable. Inherits the round/supersedes shape from
       report-synthesis's `source` kind, adapted for chapter-grain content.
     schema:
@@ -58,7 +58,7 @@ new_kinds:
         values: [primary, secondary, contextual]
         required: true
         default: secondary
-        description: "primary = source-of-truth for live edits (typically Completed Book.docx and post-split-chapter files); secondary = older rounds; contextual = candidate or notes."
+        description: "primary = source-of-truth for live edits (typically the canonical manuscript file and post-split-chapter files); secondary = older rounds; contextual = candidate or notes."
       - name: hash
         type: string
         required: true
@@ -348,7 +348,7 @@ operating-reality:
     - name: book_metadata
       type: object
       required: true
-      description: "{title, short_title, asin, listing_url, target_release}."
+      description: "{title, short_title, platform_id, listing_url, target_release}."
     - name: source_manuscript_path
       type: string
       required: true

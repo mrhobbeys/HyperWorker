@@ -10,9 +10,12 @@ inherited_from: report-synthesis
 description: |
   Take raw inputs (tweets, voice memos, notes, originating articles), an operator
   voice anchor, and an optional central angle (or a default lens for surfacing
-  one), and produce three publication-format-native variants in one ab-variant
-  pass: Substack longform, X longform, YouTube lead-ins. The schema is
-  brand-clean: per-piece OR-001 carries the operator's voice and lens verbatim;
+  one), and produce the operator's declared publication-format-native variants
+  in one ab-variant pass. Default example (three formats): Substack longform,
+  X longform, YouTube lead-ins — the operator's actual target_formats
+  (declared at bootstrap, captured verbatim in OR-001.formats) may name
+  different platforms or a different count. The schema is brand-clean:
+  per-piece OR-001 carries the operator's voice, lens, and formats verbatim;
   the schema declares only field shapes, not the operator's content.
 
 bootstrap_questions:
@@ -36,6 +39,23 @@ bootstrap_questions:
     prompt: "Did the operator supply an explicit central angle for this piece? If yes, capture as DEC-002 verbatim."
     type: bool
     required: true
+  - id: target_formats
+    prompt: >
+      The publication-format-native variants this piece should produce, as a
+      list of {id, structure, audience, framings?}. Default (the worked
+      example used throughout this schema's task templates and council
+      checks): three formats — substack-longform (hook -> free section ->
+      paywall cliff -> insight section -> closing), x-longform
+      (standalone-terminable chunks), youtube-leadins (3 sub-options x 3-5
+      sentences across controversy/curiosity/utility framings). Replace with
+      the operator's actual channels (e.g., a newsletter, LinkedIn, a podcast
+      script) and adjust T-004's ab_variant_count to match.
+    type: list[object]
+    required: true
+    default:
+      - {id: substack-longform, structure: "hook -> free section -> paywall cliff -> insight section -> closing", audience: "paying + free subscribers"}
+      - {id: x-longform, structure: "standalone-terminable chunks", audience: "X timeline"}
+      - {id: youtube-leadins, structure: "3 sub-options x 3-5 sentences, one per framing", audience: "viewers deciding whether to click", framings: ["controversy", "curiosity", "utility"]}
   - id: input_folder
     prompt: "Per-piece inputs folder path (default: projects/<slug>/inputs/). Created at scaffold-time empty; operator populates post-kickoff."
     type: string

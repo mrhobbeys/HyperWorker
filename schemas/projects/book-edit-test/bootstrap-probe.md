@@ -34,7 +34,7 @@ For each folder, the operator confirms which files are in scope:
 
 ## Round inference
 
-When archive folders contain naming conventions like `Formated Chapter N V1.docx` and `Formated Chapter N V2.docx`, the probe infers a round chain (V1 → V2). The chain inference is presented to the operator for confirmation; the probe does not silently lock the chain. If the operator's manuscript history is not naming-convention-driven (e.g., timestamped backups, branch-named files), the operator names the chain explicitly.
+When archive folders contain naming conventions like `Chapter N Draft V1.docx` and `Chapter N Draft V2.docx` (or similarly versioned filenames), the probe infers a round chain (V1 → V2). The chain inference is presented to the operator for confirmation; the probe does not silently lock the chain. If the operator's manuscript history is not naming-convention-driven (e.g., timestamped backups, branch-named files), the operator names the chain explicitly.
 
 ## Chapter-count estimate
 

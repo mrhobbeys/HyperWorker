@@ -35,7 +35,7 @@ bootstrap_questions:
     type: object
     required: true
   - id: eligibility_gates
-    prompt: "Anything that gates our ability to win it (SAM, cert, membership, teaming)?"
+    prompt: "Anything that gates our ability to win it (e.g., government contractor registration/SAM, certifications, membership, teaming — or your context's equivalent gates)?"
     type: object
     required: true
 includes:

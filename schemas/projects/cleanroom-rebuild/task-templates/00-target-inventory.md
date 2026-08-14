@@ -29,7 +29,7 @@ Enumerate the original system's surface so the observation and spec phases have 
 2. SCAN: answer the @@SCAN markers. (This is NOT a build-room task; @@SCAN_1_1/1_2 answer "not a build-room task"; @@SCAN_1_3 answers "no — inventory only enumerates the surface, it does not read binaries/decompilation.")
 3. Drive the original via the declared observation oracle. Enumerate screens/forms; for each, write an OBS with `observation_type: screen`, `capture_method: gui-driver` (or manual), and `source_ref` = the screen id/name.
 4. Query the original's database catalog (`sql_query`). For each table/view, write an OBS with `observation_type: sql-trace` or `other`, `capture_method: sql-query`, `source_ref` = the object name.
-5. List peripherals (printer, cash drawer, MSR, sig-pad, scale). For each, write an OBS with `observation_type: hardware-io`, `capture_method: manual`, `source_ref` = device name.
+5. List peripherals the original drives, if any (e.g., printer, cash drawer, card/badge reader, sig-pad, scale for a retail POS; or sensors, actuators, and other device I/O for other hardware-driven systems). For each, write an OBS with `observation_type: hardware-io`, `capture_method: manual`, `source_ref` = device name.
 6. Write each via `hw add observation < draft-obs-NNN.md` per substrate protocol. Confirm every OBS has `source: original`, `zone: observed`, `consumable_by_build: false`.
 7. Populate PROJECT.md §Scope: Included = the surface to rebuild; Excluded = screens/tables/devices out of scope (cite OR-001.excluded_scope).
 
