@@ -1,10 +1,52 @@
 # HyperWorker v6.0.0
 
-> **Read this file first.** It is the entry point. An AI agent that reads only this file learns what HyperWorker is, where the parts live, and how to bootstrap a project. Stop after this file only when you do not yet need to act; before any state-changing operation, read `core/SUBSTRATE.md` too.
+> **Read this file first. It is the entry point for any agent, from any vendor.** The next four sections are what you need before you touch anything. Everything after them is detail you can come back for.
 
-A project management harness for AI agents. The thesis: frontier harnesses succeed by making agent compliance **structurally enforceable**, not verbally requested. Verbal rules ("be careful," "do not skip steps," "don't fabricate citations") drift the moment context fills. Structural primitives — hash-cited artifacts, append-only events, capability-gated subagents, verification pyramids — do not.
+## What this is
 
-v5.0 was a clean break from v4.1.1. v5.0.1 closed documentation and template gaps surfaced by a strategic-foundation synthesis run. v5.1 added structural primitives surfaced by a second empirical run (friction-log event kind, council-report projection, session-handoff event kind, ab-variant delivery mode, delegation-policy and model-selection-policy OR fields, synthesis T-001 corpus-scan task). v5.1.1 added five Layer 1 primitives surfaced by an asset-update run on a real CMS (`scope.complete` events, `external_state.read_back`, bootstrap inventory sweep, edit-vs-create-vs-delete enumeration, redirect-coverage rollup).
+HyperWorker is a project-management harness for AI agents. It is a repository of markdown and YAML — no install, no binary, no service to call. You operate it by reading files and appending lines to a file.
+
+State lives in one append-only event log, `.hyperworker/events.jsonl`. Every human-readable file that summarizes state — a decision, a task list, a ledger — is a **projection**: regenerated from the log, never authoritative. When a projection and the log disagree, the log is right.
+
+The thesis is that agent compliance should be **structurally enforceable, not verbally requested**. Verbal rules ("be careful", "don't skip steps") drift the moment context fills. Hashes, citations, schemas, and event records do not: they can be checked without asking you whether you complied.
+
+This file names no AI product, assumes no particular toolset, and assumes nothing about how much you can hold at once. What you can actually *do* is something you declare and the harness gates on — see §If you are not the usual agent.
+
+## The five things you must never do
+
+Each one is a failure that already happened, in production, at cost.
+
+1. **Never edit the Truth Layer during execution.** `HARNESS.md`, `core/`, `templates/`, `schemas/`, `tools/` are harness infrastructure; project work never rewrites them. Never hand-edit a projection either — it is overwritten on the next regeneration, and your edit is silently gone. Write to the Mutable Surface (`PROJECT.md`, rules, task instructions) or append an event. See §Boundary Rule.
+2. **Never append to a chain you do not own.** One `events.jsonl` has at most one writer at any moment. If you are a parallel actor — a delegated subagent, a council member, a sibling session — write a **draft file** in your own directory and let the single convergence writer append. Concurrency lives *between* harness instances, never inside one. See `core/SUBSTRATE.md` §Single-Writer Rule.
+3. **Never mark a hypothesis `excluded` without a test.** A careful static read is an argument, not a test; it lands at `suspect` and no further. `excluded` requires a `test_ref` naming something that actually ran — an `evidence.capture` id, or a claim predicate that was evaluated. Ruling a cause out is the most expensive thing you can do, because everything after it is searched somewhere else. See `core/SUBSTRATE.md` §Exclusion Discipline.
+4. **Never put a secret in an event.** The log is append-only, so a credential written into it is permanent; the only remediation is rotating it in the real world. Store by reference: `[REDACTED-SECRET]` plus a pointer to where the value lives. `hw add` refuses the append on a hit. See `core/SUBSTRATE.md` §Secrets Gate.
+5. **Never claim posted, delivered, or done without re-reading it at the destination.** Not the copy's return code, not the absence of an error, not the source file still being there — the destination path, read back. "Posted" and "received" are different facts. See `core/SUBSTRATE.md` §Transport Rules.
+
+## Recovery Order — how you start, every time
+
+Whether you are bootstrapping, resuming a project, or picking up after context was compacted, read in this order and **stop as soon as you can act**:
+
+1. **`hw verify`.** If the chain is broken, nothing below it is trustworthy. Fix that first.
+2. **`projects/<id>/LEDGER.md`.** The generated newest-first digest: what was done, decided, found, opened and closed, in reverse order. One screen usually answers "where are we."
+3. **`projects/<id>/SESSION-HANDOFF.md`.** The closing agent's transfer: open operator questions, open loops, the recommended first action.
+4. **The task** — `task.md`, plus exactly what its `consumes:` list names, plus the project's rules file. Nothing else is mounted; that is deliberate (`core/ATOMICITY.md` §Hermetic Working Set).
+
+Then, and only as the work actually needs them: raw artifacts, `OPEN-LOOPS.md`, `ELIMINATION.md`. `events.jsonl` comes **last**, and only when two things above disagree. It is the authority, not the reading path: it answers *what happened*, and replaying it to answer *where are we* costs about what doing the work again costs.
+
+The order is field-derived. Across a ten-week deployment a newest-first ledger beat the event log for context recovery every time; the closing interview ranked the log last. v6.0.0 generates the ledger rather than asking anyone to maintain one (`core/SUBSTRATE.md` §Narrative Ledger).
+
+Before your first **state-changing** operation, also read `core/SUBSTRATE.md` — it is the protocol for every `hw` operation.
+
+## If you are not the usual agent
+
+Nothing here is written for one model or one vendor, and nothing adapts to you automatically. If you are new to this workspace, declare what you can do at session start rather than discovering it mid-task:
+
+1. **Write or refresh `.hyperworker/agents/<your-agent-id>.yaml`** with a `provides:` list of the tool capabilities you actually have (`file_read`, `file_write`, `web_browse`, `shell_exec`, …). This file is the input to the capability gate, not a description of you — it is compared against each task's `required_tools`. See `core/ATOMICITY.md` §Capability Gates.
+2. **Name yourself in the session record.** The `actor` field on the events you write, and `closing_actor` on the `session.handoff` you write when you stop, are how the next agent knows who did what. If you are not the agent the last handoff assumed, say so there.
+3. **When you cannot meet a gate, emit `capability.gap` — do not improvise.** If a task's `required_tools` is not a subset of your `provides:`, the correct move is the gap event naming the missing tools, so the operator can run it in-line, extend a profile, or dispatch elsewhere. Substituting a tool you were not granted is the failure the gate exists to prevent.
+4. **If a protocol here is genuinely ambiguous for your environment, append a one-line `friction.log` and keep going.** Guessing silently is what makes a harness undiagnosable. One line is the whole obligation.
+
+There is no per-model guide to find, and there is no hidden instruction set you are missing. If a rule matters, it is enforced by a schema, a required template field, or a `hw verify` FAIL — not by a document you were supposed to have read.
 
 ---
 
@@ -189,9 +231,7 @@ If unsure, check `core/SUBSTRATE.md` §Boundary Rule.
 
 ## Friction Logs
 
-Friction logs capture what was unclear, what required training-derived gap-filling, what felt ceremonial, what surprised the operator, and what worked well. The failure mode is post-hoc reconstruction: at the end of a run, the operator tries to remember every place the harness rubbed wrong. Memory loses the specifics; the log gets vague generalities; the next patch cycle misses the actual fixes.
-
-v5.1 makes friction capture a substrate event kind (`friction.log`). Capture is structural rather than operator-instructed.
+A friction log captures what was unclear, what you had to fill in from training rather than from the harness, what felt like ceremony, and what surprised the operator. The failure mode it prevents is post-hoc reconstruction: at the end of a run nobody remembers the specifics, so the next patch cycle fixes the wrong things. Capture is a substrate event kind (`friction.log`), not a habit anyone has to remember.
 
 ### The protocol (one step)
 
@@ -203,20 +243,11 @@ note: "The recitation band rejected three honest paraphrases in a row."
 
 No artifact file. No projection to hand-write. `category`, `severity` and `task_id` are optional — add them if they are already in your head, skip them if they are not. Promoting a friction into an anti-pattern or a finding is a **later, optional** act, done if and when the friction turns out to matter.
 
-Why so bare: a ten-week deployment produced **four** friction entries in 130 events. The mechanism existed and the operator wanted it; filling six fields felt heavier than the value, so the run's best lessons went uncaptured. A one-line note that gets written beats a structured entry that does not. The pre-v6 six-field form still verifies and is still available for anyone who wants it (see `core/SUBSTRATE.md` §Friction Log Event Kind).
+Why so bare: a ten-week deployment produced **four** friction entries in 130 events. The mechanism existed and the operator wanted it; filling six fields felt heavier than the value, so the run's best lessons went uncaptured. A one-line note that gets written beats a structured entry that does not.
 
-| Default location | Path | Use |
-|---|---|---|
-| Workspace | `friction-log.md` at workspace root | Default. Projection of `friction.log` events scoped to the workspace. |
-| Per-project | `projects/<id>/friction-log.md` | Per-project log when the project's `config.yaml` declares `friction_log_scope: project`. |
+The projection lands at `friction-log.md` at workspace root, or `projects/<id>/friction-log.md` when the project's `config.yaml` declares `friction_log_scope: project`. It regenerates from events; hand-edits are overwritten.
 
-The projection regenerates from `friction.log` events on every new entry. Hand-edits are overwritten on next regeneration; new entries are recorded by appending `friction.log` events (`hw add friction-log < draft.md`-style protocol; see `core/SUBSTRATE.md` §Friction Log Event Kind for the payload schema).
-
-**Substrate auto-prompts.** The harness emits `friction.log.prompt` informational events when observable signals fire: Layer 1 verification failing on the same check ≥3 times in a task, Layer 2 verification failing, agent output containing training-fill markers, an operator mid-flow directive captured as a Decision, or council non-convergence on a critical-risk task. Read each prompt and decide whether to follow with an actual `friction.log` event. See `core/SUBSTRATE.md` §Friction Log Event Kind for the heuristic table.
-
-**Categories (optional).** A slim entry may carry any `category` string, or none. The pre-v6 rich form's `type` vocabulary is: `REGRESSION` (something that worked before broke), `CONFIRMATION` (a previously-logged friction was resolved by a patch), `NEW-SCHEMA` (the friction is schema-specific), `NEW-CROSS` (cross-schema; affects multiple schemas), `TRAINING-FILL` (the agent filled a gap from training rather than the harness), `OPERATOR-CONFUSION` (the operator was unsure what the harness expected).
-
-The pre-v5.1 working-artifact form (`bootstrap-friction-log.md`) is retained for projects that started under v5.0 / v5.0.1 and have not yet emitted any `friction.log` events; on the first event, the projection switches to `friction-log.md`.
+The rest is owned by `core/SUBSTRATE.md` §Friction Log Event Kind: the payload schema, the pre-v6 six-field form (still accepted, so no chain migrates), the optional category vocabulary, and the `friction.log.prompt` heuristics that make the harness ask instead of hoping someone remembers.
 
 ---
 
@@ -273,11 +304,13 @@ Every command has a documented protocol in `core/SUBSTRATE.md`. Operate them by 
 
 ---
 
-## Per-Model Profiles
+## Model Profiles
 
-Different models respond differently to the same harness primitives. v5.0 ships profiles for the major frontier models so harness behavior adapts declaratively. See `templates/models/README.md` for the field reference and the override-precedence rules. The active profile is selected at scaffold time and frozen into `.hyperworker/models/`.
+`templates/models/*.yaml` are **declarative config the harness reads, not guides an agent reads about itself.** A profile sets a handful of thresholds — the recitation overlap band, when to warn on context fill, default council size, the cost/capability/speed ranks `model_selection_policy` resolves against. The operator picks one at scaffold time; it is frozen into `.hyperworker/models/`. `default.yaml` is deliberately conservative and is the right answer whenever the running model is unknown or the roster is mixed.
 
-Profiles document what each model does *differently*, not which is "better." Where a model's behavior is documented in a postmortem (e.g., Anthropic's 2026-04-23 4.7 postmortem on suppress-concise-directives), the profile cites it. Operators add profiles over time; the directory is a library, not a fixed set.
+There is deliberately **no per-model instruction document** anywhere in this repo, and adding one is out of scope (`VISION.md`). Agents reliably read the entry point and whatever a task forces them through, and nothing else — so a document explaining how *your* model should behave is a document that will not be read at the moment it matters. Anything that must hold for every agent is enforced structurally instead: a schema field, a required template section, or a `hw verify` FAIL.
+
+Field reference and override precedence: `templates/models/README.md`. Profiles record what a model does *differently*, never which is "better"; the directory is a library operators extend, not a fixed set.
 
 ---
 
@@ -292,20 +325,6 @@ Before delegating any task, confirm:
 - `hw verify` returns `OK` (or, on a fresh project, an empty-log `OK`).
 
 If any check fails, STOP. Report what is missing. The operator resolves before execution begins.
-
----
-
-## Recovery Order
-
-Picking up cold — a new session, or the same session after a compaction — read in this order and stop as soon as you can act:
-
-1. **`hw verify`.** If the chain is broken, nothing below it is trustworthy. Fix that first.
-2. **`projects/<id>/LEDGER.md`.** The generated newest-first digest: what was done, decided, found, opened and closed, in reverse order. One screen usually answers "where are we."
-3. **`projects/<id>/SESSION-HANDOFF.md`.** The closing agent's transfer: open operator questions, open loops, the recommended first action.
-4. **Raw artifacts** — decisions, findings, `OPEN-LOOPS.md`, `ELIMINATION.md`, the task file — as the work actually needs them.
-5. **`events.jsonl`** last, and only when something above disagrees with something else. It is the authority, not the reading path: it answers *what happened*, and replaying it to answer *where are we* costs about what doing the work again costs.
-
-The order is field-derived. Across a ten-week deployment, a hand-kept newest-first ledger beat the event log for context recovery every time; the exit interview ranked the log last. v6.0.0 generates the ledger rather than asking an operator to maintain one (`core/SUBSTRATE.md` §Narrative Ledger).
 
 ---
 
