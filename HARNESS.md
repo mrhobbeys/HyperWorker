@@ -189,6 +189,18 @@ Friction logs capture what was unclear, what required training-derived gap-filli
 
 v5.1 makes friction capture a substrate event kind (`friction.log`). Capture is structural rather than operator-instructed.
 
+### The protocol (one step)
+
+**Append one `friction.log` event with a `note`. That is the whole thing.**
+
+```
+note: "The recitation band rejected three honest paraphrases in a row."
+```
+
+No artifact file. No projection to hand-write. `category`, `severity` and `task_id` are optional — add them if they are already in your head, skip them if they are not. Promoting a friction into an anti-pattern or a finding is a **later, optional** act, done if and when the friction turns out to matter.
+
+Why so bare: a ten-week deployment produced **four** friction entries in 130 events. The mechanism existed and the operator wanted it; filling six fields felt heavier than the value, so the run's best lessons went uncaptured. A one-line note that gets written beats a structured entry that does not. The pre-v6 six-field form still verifies and is still available for anyone who wants it (see `core/SUBSTRATE.md` §Friction Log Event Kind).
+
 | Default location | Path | Use |
 |---|---|---|
 | Workspace | `friction-log.md` at workspace root | Default. Projection of `friction.log` events scoped to the workspace. |
@@ -198,7 +210,7 @@ The projection regenerates from `friction.log` events on every new entry. Hand-e
 
 **Substrate auto-prompts.** The harness emits `friction.log.prompt` informational events when observable signals fire: Layer 1 verification failing on the same check ≥3 times in a task, Layer 2 verification failing, agent output containing training-fill markers, an operator mid-flow directive captured as a Decision, or council non-convergence on a critical-risk task. Read each prompt and decide whether to follow with an actual `friction.log` event. See `core/SUBSTRATE.md` §Friction Log Event Kind for the heuristic table.
 
-**Categories.** Use these `type` values in payloads: `REGRESSION` (something that worked before broke), `CONFIRMATION` (a previously-logged friction was resolved by a patch), `NEW-SCHEMA` (the friction is schema-specific), `NEW-CROSS` (cross-schema; affects multiple schemas), `TRAINING-FILL` (the agent filled a gap from training rather than the harness), `OPERATOR-CONFUSION` (the operator was unsure what the harness expected).
+**Categories (optional).** A slim entry may carry any `category` string, or none. The pre-v6 rich form's `type` vocabulary is: `REGRESSION` (something that worked before broke), `CONFIRMATION` (a previously-logged friction was resolved by a patch), `NEW-SCHEMA` (the friction is schema-specific), `NEW-CROSS` (cross-schema; affects multiple schemas), `TRAINING-FILL` (the agent filled a gap from training rather than the harness), `OPERATOR-CONFUSION` (the operator was unsure what the harness expected).
 
 The pre-v5.1 working-artifact form (`bootstrap-friction-log.md`) is retained for projects that started under v5.0 / v5.0.1 and have not yet emitted any `friction.log` events; on the first event, the projection switches to `friction-log.md`.
 

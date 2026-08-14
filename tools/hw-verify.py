@@ -114,8 +114,14 @@ KNOWN_EVENT_KINDS = {
 # Required payload fields per v5.1 event kind. None means no per-kind structural
 # check beyond schema validation (which is out of scope for hw verify; it lives
 # in the schema-validation step at hw add time).
+# The pre-v6.0.0 rich friction.log form. Still accepted; no longer the price of
+# admission. See check_note_payloads and core/SUBSTRATE.md §Friction Log Event Kind.
+FRICTION_RICH_FIELDS = ("type", "description", "surfaced_by", "severity")
+
 REQUIRED_PAYLOAD_FIELDS = {
-    "friction.log": ("type", "description", "surfaced_by", "severity"),
+    # friction.log is validated by check_note_payloads, which accepts either the
+    # v6.0.0 slim form (note) or the pre-v6 rich form -- an either/or a flat
+    # required-field list cannot express.
     "friction.log.prompt": ("trigger", "signal_summary"),
     "session.handoff": ("project_id", "closing_actor", "recommended_first_action"),
     "scope.complete": ("scope_items",),
@@ -993,6 +999,50 @@ def check_cycle_lifecycle(workspace: Path, events: list) -> list:
 EVIDENCE_ID_RE = re.compile(r"^ED-\d{3,}$")
 EVIDENCE_ID_CITE_RE = re.compile(r"\bED-\d{3,}\b")
 HYPOTHESIS_STATUSES = ("open", "suspect", "excluded")
+
+
+def check_note_payloads(events: list) -> list:
+    """One-line event kinds: `friction.log` (v6.0.0 slim form) and future kin.
+
+    core/SUBSTRATE.md §Friction Log Event Kind. Field evidence: four friction
+    entries in 130 events across ten weeks. The mechanism existed and the
+    operator wanted it; six fields "felt heavier than the value" and the run's
+    best lessons went uncaptured. The payload is now one line.
+
+    Well-formed means: a non-empty `note`, OR the full pre-v6 rich set. Both
+    verify -- v5.1-v5.3 chains keep passing and nobody has to migrate a log.
+
+    Returns strings for result["malformed_payloads"]: a payload that is neither
+    shape is the same class of defect as a missing required field.
+    """
+    failures = []
+    for event in events:
+        kind = event.get("kind")
+        if kind != "friction.log":
+            continue
+        payload = event.get("payload")
+        if not isinstance(payload, dict):
+            payload = {}
+
+        note = payload.get("note")
+        if isinstance(note, str) and note.strip():
+            continue
+
+        missing_rich = [f for f in FRICTION_RICH_FIELDS if f not in payload]
+        if not missing_rich:
+            continue
+
+        if "note" in payload:
+            failures.append(
+                f"{event.get('id')}:friction.log note is empty "
+                f"(one line is the whole obligation)"
+            )
+        else:
+            failures.append(
+                f"{event.get('id')}:friction.log missing ['note'] "
+                f"(or the pre-v6 rich set, which is missing {missing_rich})"
+            )
+    return failures
 
 
 def check_evidence_capture(events: list) -> list:
@@ -2230,6 +2280,7 @@ def verify(workspace: Path, since: str | None) -> dict:
     result["checked_claims_required_failures"] = check_claims_required(workspace, events)
     result["exclusion_failures"] = check_exclusion_discipline(events)
     result["evidence_capture_failures"] = check_evidence_capture(events)
+    result["malformed_payloads"].extend(check_note_payloads(events))
 
     blocking = (
         result["tamper"]

@@ -230,7 +230,7 @@ The harness defines a closed set. Schema extensions must add kinds via the proje
 
 | Kind | Payload |
 |---|---|
-| `friction.log` | `{type, patch_id, description, surfaced_by, severity, suggested_target}` — see §Friction Log Event Kind below for field semantics. |
+| `friction.log` | `{note}` required; `{category, severity, task_id}` optional. One line, one event (v6.0.0). The pre-v6 rich form `{type, patch_id, description, surfaced_by, severity, suggested_target}` is still accepted. See §Friction Log Event Kind. |
 | `friction.log.prompt` | `{trigger, task_id, signal_summary}` — informational; the harness emits this when an auto-prompt heuristic fires. The agent reads the prompt event and decides whether to follow it with an actual `friction.log` entry. |
 
 ### Session events
@@ -674,16 +674,20 @@ The flag is locked at task authoring; an executor cannot opt into a lightweight 
 
 `friction.log` makes friction capture a substrate event, not an operator-instructed prose habit. The failure mode this fixes: the operator says "log friction as you encounter it" at project start; the agent acknowledges; thirty turns later the prompt has been compacted out and friction signal evaporates as an unprompted prose habit. The closing v5.0 lead-magnet run lost real-time friction signal exactly this way. v5.1 makes the harness do the prompting and the recording so the agent's compliance does not depend on remembering a verbal request that is no longer in context.
 
-**Payload schema.**
+**Field evidence (v6.0.0):** four `friction.log` entries in 130 events across ten weeks. The mechanism existed, the operator wanted it, and it went unused because filling six fields "felt heavier than the value." The best lessons of the engagement went uncaptured. So the payload is now one line.
+
+**The protocol is one step: append one event.** No artifact file. No projection to hand-write. No classification to get right. Promotion to an anti-pattern or a finding is a **later, optional** act — a separate event, done when the friction turns out to matter, by whoever notices. Getting the note onto the log is the whole obligation.
+
+**Payload schema (v6.0.0).**
 
 | Field | Type | Meaning |
 |---|---|---|
-| `type` | enum | `REGRESSION`, `CONFIRMATION`, `NEW-SCHEMA`, `NEW-CROSS`, `TRAINING-FILL`, `OPERATOR-CONFUSION`. The category the friction maps to in the patch-cycle vocabulary. |
-| `patch_id` | string \| null | The harness patch ID this friction targets if known (e.g., `B-1`); otherwise `null`. |
-| `description` | string | 1-3 sentences. Specific enough that a future patch author can decide whether the friction has been addressed. |
-| `surfaced_by` | string | `operator`, `executor:T-NNN`, `council:<role>`, or `harness` (substrate auto-detected). |
-| `severity` | enum | `blocking`, `non-blocking`. Blocking means the agent could not proceed without the operator resolving the friction; non-blocking means it was visible but did not stop work. |
-| `suggested_target` | enum \| null | `v5.x-doc-patch`, `v5.x-substrate`, `schema-specific`, or `unclear`. The agent's best guess at what kind of fix this needs. |
+| `note` | string | **Required. The only required field.** One line, in whatever words are at hand. "The recitation band rejected three honest paraphrases in a row." |
+| `category` | string \| null | Optional. Free text or one of the pre-v6 categories below, if a category is obvious at the moment of writing. Do not stop to decide. |
+| `severity` | enum \| null | Optional. `blocking` \| `non-blocking`. |
+| `task_id` | string \| null | Optional. The task in flight, if any. |
+
+**Pre-v6 rich form (still accepted).** v5.1-v5.3 chains carry `{type, patch_id, description, surfaced_by, severity, suggested_target}` and keep verifying: `type` ∈ `REGRESSION`, `CONFIRMATION`, `NEW-SCHEMA`, `NEW-CROSS`, `TRAINING-FILL`, `OPERATOR-CONFUSION`; `patch_id` the harness patch this targets or `null`; `description` 1-3 sentences; `surfaced_by` `operator` / `executor:T-NNN` / `council:<role>` / `harness`; `severity` `blocking` / `non-blocking`; `suggested_target` the guessed fix shape. An event is well-formed if it carries `note`, **or** the full rich set; anything else FAILs as a malformed payload. The rich form remains available to anyone who wants it — it is no longer the price of admission.
 
 **Auto-prompt heuristics.** The harness emits a `friction.log.prompt` event (informational; agent decides whether to follow it with an actual `friction.log`) when any of the following observable signals fire:
 
@@ -713,6 +717,12 @@ The auto-prompt heuristics above are starting points. The false-positive rate is
 > Regenerable from `friction.log` events. Operator and agent observations of harness friction. Hand-edits are overwritten on next regeneration; capture additions via `friction.log` events.
 
 ## Active
+
+<Slim entries (v6.0.0) render as one line each, newest last — one line in, one line out:>
+
+- `EV-NNNN` — <note> <(category, severity, T-NNN — only the optional fields that are set, in parentheses; omitted entirely when none are)>
+
+<Rich entries (pre-v6) keep their block form:>
 
 ### F-NNN — <type>: <description first line>
 
