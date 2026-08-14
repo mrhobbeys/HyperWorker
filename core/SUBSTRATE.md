@@ -1070,6 +1070,8 @@ A bare event kind requires every event of that kind to carry a `claim:` block wi
 
 **Layer 1 enforcement.** See `core/VERIFICATION.md` §Layer 1. Two independent checks: (1) any `claim:` block present anywhere in the chain, required or not, must be structurally well-formed (single known predicate kind, `checked_at`, `passed` present) — malformed claims fail `checked_claims_malformed` regardless of schema config; (2) for event kinds a schema marks `required_for`, a matching event without a well-formed, `passed: true` claim fails `checked_claims_missing` (block absent or malformed) or `checked_claims_predicate_failed` (block present, well-formed, `passed: false`). Both are structural failures — a `task.complete` claiming a file was posted, checked, and found absent should never reach `complete` state quietly.
 
+**Where the predicate comes from matters.** For anything that moved a file between two places, the claim is the re-stat at the **destination** path, not at the source and not at the path the agent intended to write — see §Transport Rules, which is the protocol these predicates make checkable.
+
 **Replay mode — `hw verify --claims`.** A second, opt-in mode: instead of (or alongside) integrity replay, walk every recorded `claim:` block in the chain and re-evaluate its `predicate` against the world *now*. This is a fundamentally different question than integrity replay answers — "is the event log internally consistent" versus "is what the log asserts still (or ever) true" — so the two run and report independently; a `--claims` FAIL never flips the integrity `result` field and vice versa. Report format and CLI flags are specified in `core/VERIFICATION.md` §Claim Replay.
 
 | Hypothesis | Claim | Falsifier |
@@ -1201,6 +1203,28 @@ A prose justification is not a `test_ref`. If you did not run something, the hyp
 | Hypothesis | Claim | Falsifier |
 |---|---|---|
 | H-S6 | Requiring a dynamic `test_ref` to exclude a hypothesis prevents the class of failure where a well-argued static read removes the true cause from the search space. | Agents satisfy the check with a nominal capture that did not exercise the path (a test in name only), or the requirement is heavy enough that they leave everything `suspect` and the matrix stops discriminating. |
+
+---
+
+## Transport Rules (v6.0.0)
+
+**Field evidence, two incidents.** A two-way mailbox sync used `/MIR` on the pull leg; the push leg failed, the pull leg mirrored, and four un-pushed replies were **silently deleted**. Separately, "posted" reports were repeatedly false — three independent systems recorded files as posted that did not exist. The fix that held was one sentence: *a message is not posted until you re-stat the file at the same directory you read the inbound message from.*
+
+This is protocol, not code. Anything that moves a file between two places — instances, mailboxes, drop directories, another machine — follows four rules.
+
+**(a) Sync is additive on both legs. Never mirror; never delete on pull.** A mirror flag makes one side's absence authoritative over the other side's presence, and a half-completed round trip turns that into data loss. Deletion, if it is ever wanted, is a separate deliberate act on the side that owns the file — never a side effect of copying.
+
+**(b) Write, then re-stat.** No event may claim a file was delivered or posted without **re-reading it at the destination path**. Not the return code of the copy, not the absence of an error, not the source file still being there: the destination, read back. Where the schema requires claims (§Checked Claims), cite the re-stat as the predicate — `file_exists` on the destination path, or `file_sha256` when the content matters — so the assertion is machine-checkable and replayable rather than a sentence in a report.
+
+**(c) Sent artifacts are immutable.** Once something has left, it does not change. A correction is a **new versioned filename**, never an in-place edit — the other side may have already read the old bytes, and an in-place edit makes two parties disagree about what was said with nothing to point at. This covers documents and scripts, not just messages: silently editing a script that someone else already pulled is the same failure with worse consequences.
+
+**(d) Delivery is asynchronous. "Posted" and "received" are different facts.** Posting is something you did; receipt is something that happened to someone else. Only a reply, or a re-stat at the destination, is evidence of receipt. Record them as separate claims; never let one event assert both.
+
+No verifier change beyond what §Checked Claims already covers: a re-stat recorded as a `file_exists` / `file_sha256` predicate is checked structurally by Layer 1 check 13 and re-evaluated by `hw verify --claims`. The rules above are what the agent must do; the claim is what makes having done it visible.
+
+| Hypothesis | Claim | Falsifier |
+|---|---|---|
+| H-S13 | Additive-only transport plus a re-stat at the destination eliminates both silent deletion and false "posted", because neither survives a read-back at the place the file was supposed to land. | Agents re-stat the source path (or the path they meant to write) and record a passing claim anyway — the check confirms a file that was never at the destination — or additive-only sync accumulates enough stale files that operators reinstate mirroring. |
 
 ---
 
