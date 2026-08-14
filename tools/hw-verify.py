@@ -43,6 +43,25 @@ performed (core/VERIFICATION.md §Layer 1 checks 14-18):
 Each ships with a test suite: tools/test_id_integrity.py,
 test_lock_enforcement.py, test_harness_version.py, test_cycle_lifecycle.py,
 test_program_checks.py.
+
+v6.0.0 field evidence: three more checks and two relaxations, each from a
+documented failure of the same ten-week production deployment
+(core/VERIFICATION.md §Layer 1 checks 19-21):
+
+  19 Exclusion discipline  a hypothesis is `excluded` only with a test_ref
+                           naming a dynamic test (AP-008: a static read struck
+                           the true root cause off the list; ~19 attempts burned)
+  20 Evidence capture      evidence.capture well-formedness and ED-id uniqueness
+                           (raw output survived only when hand-copied by a human)
+  21 Open loops            loop.open/loop.close pairing, and a session.handoff
+                           that omits a loop open at that point (a fully gated
+                           action sat unconsumed for five weeks)
+
+Relaxed, not tightened: friction.log now needs only a one-line `note` (four
+entries in 130 events -- the six-field form went unused), with the pre-v6 rich
+form still accepted; operator.correction is well-formedness only. Both live in
+check_note_payloads. Suites: test_exclusion_discipline.py, test_evidence_capture.py,
+test_open_loops.py, test_one_line_events.py.
 """
 
 import argparse
