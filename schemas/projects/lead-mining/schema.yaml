@@ -6,7 +6,7 @@
 # include/exclude rule = a Decision.
 schema_id: lead-mining
 schema_version: 1.0
-harness_version: "5.2.0"
+harness_version: "6.0.0"
 description: |
   Harvest, dedupe, filter, verify, and enrich inbound email contacts across the
   operator's mailboxes into a single master lead list with each contact's

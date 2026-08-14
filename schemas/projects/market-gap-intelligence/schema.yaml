@@ -3,7 +3,7 @@
 
 schema_id: market-gap-intelligence
 schema_version: 1.0
-harness_version: "5.2.0"
+harness_version: "6.0.0"
 description: |
   Given one client (or your own business) and a market question — "how do we
   rank this", "niche vs generalist", "which vertical", "what content wins" —

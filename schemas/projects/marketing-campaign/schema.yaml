@@ -3,7 +3,7 @@
 
 schema_id: marketing-campaign
 schema_version: 1.0
-harness_version: "5.2.0"
+harness_version: "6.0.0"
 description: |
   Lead-generation funnels, email sequences, landing pages, paid-ad creative,
   and similar campaign work where brand rules and platform limits dominate.

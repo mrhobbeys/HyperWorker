@@ -4,7 +4,7 @@
 
 schema_id: book-edit-test
 schema_version: 0.1
-harness_version: "5.1.1"
+harness_version: "6.0.0"
 inherits_from: report-synthesis
 borrows_primitives_from: [marketing-campaign]   # delivery_mode: live-edit, external_state.read_back, scope-shrink-watcher
 description: |

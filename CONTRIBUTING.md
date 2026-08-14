@@ -1,4 +1,4 @@
-# Contributing to HyperWorker v5.2.0
+# Contributing to HyperWorker v6.0.0
 
 v5.0 is a structural test of a hypothesis. The bar for changes is high. This document explains what we want, what we don't, and how contributions are evaluated.
 
@@ -78,7 +78,7 @@ If you copy an existing schema as a starting point, expect to rewrite every file
 Step-by-step walkthrough.
 
 1. **Pick the closest existing schema** (`marketing-campaign`, `report-synthesis`, `software-feature-ship`, `client-onboarding`, `event-planning`, or `compliance-audit`) and copy its directory to `schemas/projects/<new-name>/`.
-2. **Rewrite `schema.yaml`.** Set `schema_id`, `schema_version: 1.0`, `harness_version: "5.2.0"`. Write `description` (2–3 sentences). Replace `bootstrap_questions` with questions appropriate to the domain (operating-reality fields plus any domain-specific scope declarations). Update `default_tasks.templates` to reference the new task templates.
+2. **Rewrite `schema.yaml`.** Set `schema_id`, `schema_version: 1.0`, `harness_version: "6.0.0"`. Write `description` (2–3 sentences). Replace `bootstrap_questions` with questions appropriate to the domain (operating-reality fields plus any domain-specific scope declarations). Update `default_tasks.templates` to reference the new task templates.
 3. **Rewrite `precedence-tiers.yaml`.** Identify Tier 1 (immutable source-fidelity / NON-NEGOTIABLE), Tier 2 (operator-asserted scope), Tier 3 (project-derived facts), Tier 4 (style / voice). Place `@@SCAN_n_m` markers at decision-boundaries. The compressed rules file (regenerated at bootstrap) carries these markers; the executor answers each via `task.scan` events.
 4. **Rewrite `artifact-extensions.yaml`.** Declare any new artifact kinds the schema needs beyond the OR base set (decision, finding, anti-pattern, operating-reality). For each new kind, declare canonical fields + types. Use `field_overrides` to mark base OR fields optional or to widen their types.
 5. **Rewrite `capability-gates.yaml`.** Declare the v5.1.1 mandatory `scope_completeness:` block (every schema accepts `[complete, deferred, excluded-after-discovery, escalated]` by default; tighten only if the schema's delivery shape genuinely forbids some terminal states). Declare `external_state_readback:` if the schema's tasks mutate external state. Declare any schema-specific capability gates (e.g., per-task-kind required tools).

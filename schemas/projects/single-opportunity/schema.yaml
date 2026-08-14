@@ -3,7 +3,7 @@
 # requirements -> solution & pricing -> proposal -> submit & follow-up -> close.
 schema_id: single-opportunity
 schema_version: 1.0
-harness_version: "5.2.0"
+harness_version: "6.0.0"
 description: |
   A dedicated project for a single high-value opportunity the operator wants to
   stay on top of. Captures the deal facts, requirements, solution/pricing,

@@ -11,7 +11,7 @@
 
 schema_id: program
 schema_version: 1.0
-harness_version: "5.3.0"
+harness_version: "6.0.0"
 description: |
   Orchestrate N concurrent workstream harness instances under one operator goal
   without any orchestration primitive entering the substrate. Every workstream is a

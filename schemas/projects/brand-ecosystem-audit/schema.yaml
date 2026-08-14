@@ -3,7 +3,7 @@
 
 schema_id: brand-ecosystem-audit
 schema_version: 1.0
-harness_version: "5.2.0"
+harness_version: "6.0.0"
 description: |
   Evaluate a brand across ALL its surfaces — owned hub (website), social properties,
   marketplaces/retailers, review sites — to see how it is currently SEEN and FOUND,

@@ -7,7 +7,7 @@
 
 schema_id: cleanroom-rebuild
 schema_version: 1.0
-harness_version: "5.2.0"
+harness_version: "6.0.0"
 description: |
   Reproduce a legacy application on a modern stack WITHOUT copying its code.
   A strict two-room wall separates OBSERVATION (drive the original, capture

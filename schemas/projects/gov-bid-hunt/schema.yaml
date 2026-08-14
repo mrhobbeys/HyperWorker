@@ -10,7 +10,7 @@
 
 schema_id: gov-bid-hunt
 schema_version: 1.0
-harness_version: "5.2.0"
+harness_version: "6.0.0"
 description: |
   Find, qualify, and pursue government (federal / state / local / tribal /
   cooperative) bid opportunities for a single service-line segment. Every

@@ -3,7 +3,7 @@
 # brand-clean as `course-master-plan` via `hw schema save --as course-master-plan`.
 
 schema_id: course-master-plan-test
-harness_version: "5.1.1"
+harness_version: "6.0.0"
 inherits_from:
   - report-synthesis           # T-000 inventory pattern + T-001 corpus-scan pattern
   - marketing-campaign         # external_state.read_back, redirect_implications, lens_anchor pattern

@@ -1,5 +1,5 @@
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
-![Version: 5.2.1](https://img.shields.io/badge/Version-5.2.1-blue.svg)
+![Version: 6.0.0](https://img.shields.io/badge/Version-6.0.0-blue.svg)
 
 # HyperWorker
 

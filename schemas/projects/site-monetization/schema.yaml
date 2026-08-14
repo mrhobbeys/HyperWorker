@@ -1,7 +1,7 @@
 # schemas/projects/site-monetization/schema.yaml
 schema_id: site-monetization
 schema_version: 1.0
-harness_version: "5.2.0"
+harness_version: "6.0.0"
 description: |
   Per-site Monetization workstream. Audit and restore ad revenue: the primary
   display-ad network (e.g., AdSense), optionally run through a mediation /

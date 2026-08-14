@@ -1,7 +1,7 @@
 # schemas/projects/site-seo/schema.yaml
 schema_id: site-seo
 schema_version: 1.0
-harness_version: "5.2.0"
+harness_version: "6.0.0"
 description: |
   Per-site SEO recovery workstream, run as an ORDERED sequence of deep-focus phases. Report-first:
   the worker diagnoses and proposes; the operator/dev/server-side crew execute changes. Each phase

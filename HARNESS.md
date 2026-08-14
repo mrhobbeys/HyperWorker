@@ -1,4 +1,4 @@
-# HyperWorker v5.2.1
+# HyperWorker v6.0.0
 
 > **Read this file first.** It is the entry point. An AI agent that reads only this file learns what HyperWorker is, where the parts live, and how to bootstrap a project. Stop after this file only when you do not yet need to act; before any state-changing operation, read `core/SUBSTRATE.md` too.
 
