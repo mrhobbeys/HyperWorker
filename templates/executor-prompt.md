@@ -31,6 +31,15 @@ The failure mode: the agent reads the task, skims the consumed artifacts, and pr
 1. **Recite each artifact in `consumes:`** by writing a paraphrase to `consumed-inputs.md`. The harness rejects paraphrases outside the configured overlap band — too little overlap means you likely did not read the source; a near-verbatim echo means you transcribed instead of processed. Rewrite in your own words, keeping the source's IDs, numbers, and named constraints, until accepted.
 2. **Answer every `@@SCAN_n_m:` marker** in the project's compressed rules file by emitting a short token-level answer. The harness records each as a `task.scan` event.
 
+## Immediately before your first state-changing action (v6.0.0) — MANDATORY
+
+**Re-read `task.md` right now, one moment before you act.** Not at dispatch; you already did that, and that is exactly how this was lost.
+
+- If the frontmatter declares `read_only_pass: true`: **no mutation this session.** Read, measure, capture evidence (`evidence.capture`), and report what you found. Then stop.
+- Otherwise: proceed.
+
+Why this step is mandatory rather than advisory (EV-0042): a "read-only this pass" gate was added to an already-issued task and never reached the executor, because the executor was working from the copy of the file it had loaded at dispatch. The gate was correct and it lost a race. The task file is the Mutable Surface — it can change under you, and this is the one moment where that matters. See `core/SUBSTRATE.md` §Read-Only Pass.
+
 ## Boundaries
 
 - Read only what is in `consumes:` (plus `00-REFERENCE-rules.compressed.md`, `task.md`, `templates/executor-prompt.md`). The hermetic working set is structurally enforced; reading a related-but-undeclared artifact corrupts the recitation projection and the dependency graph.

@@ -10,6 +10,11 @@ delivery_mode: constrained      # prescribed | constrained | bounded-iteration |
 # ab_variant_count: 3                # integer, range 2-5; default 3
 # ab_variant_axis: "primary CTA framing"  # string; the dimension variants differ on
 depends_on: []
+# read_only_pass: true               # optional (v6.0.0) — read, measure, capture, report;
+                                      # mutate nothing this pass. May be added AFTER the task
+                                      # is issued; the executor picks it up by re-reading this
+                                      # file immediately before its first state-changing
+                                      # action. See SUBSTRATE.md §Read-Only Pass.
 # lightweight_completion: true       # optional — see SUBSTRATE.md §Lightweight Completion.
                                       # When true, completion report is a 3-line summary
                                       # (acceptance criteria result, outputs, follow-up).

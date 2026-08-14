@@ -698,6 +698,22 @@ The flag is locked at task authoring; an executor cannot opt into a lightweight 
 
 ---
 
+## Read-Only Pass (Optional Task Frontmatter, v6.0.0)
+
+**Field evidence:** EV-0042 — a "read-only this pass" gate was added to an already-issued task and never reached the executor before it acted.
+
+The task file is the Mutable Surface (§Boundary Rule); the executor reads it once, at dispatch. Anything the planner or operator adds after that moment is invisible to an agent already working from the copy in its context. The gate existed, was correct, and lost a race.
+
+**The field.** `read_only_pass: true` in `task.md` frontmatter (structure documented in `core/ATOMICITY.md` §Task Frontmatter) and carried into `TASK-STATE.yaml` by the task-state projection. When true, the task may read, measure, capture evidence, and report — and must mutate nothing this session.
+
+**The rule that makes it work.** IMMEDIATELY before its first state-changing action, the executor **re-reads the task file** (`templates/executor-prompt.md`). Not at dispatch — dispatch already happened, which is exactly how the race was lost. If `read_only_pass` is true at that read, no mutation happens this session and the executor reports instead.
+
+Unlike `lightweight_completion`, this flag is **not** locked at authoring: being addable mid-flight is the entire point. Clearing it is a planner act, and the pass that follows is a new pass.
+
+No verifier change. A check would have to decide which of an executor's actions were mutations, and it would arrive after the write it was meant to prevent — the enforcement that works here is re-reading the file one moment before acting.
+
+---
+
 ## Friction Log Event Kind
 
 `friction.log` makes friction capture a substrate event, not an operator-instructed prose habit. The failure mode this fixes: the operator says "log friction as you encounter it" at project start; the agent acknowledges; thirty turns later the prompt has been compacted out and friction signal evaporates as an unprompted prose habit. The closing v5.0 lead-magnet run lost real-time friction signal exactly this way. v5.1 makes the harness do the prompting and the recording so the agent's compliance does not depend on remembering a verbal request that is no longer in context.

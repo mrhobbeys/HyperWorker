@@ -73,6 +73,7 @@ acceptance_criteria:
 | `depends_on` | Task IDs that must be `complete` before this task is `pending → in_progress`. |
 | `consumes` | Typed-artifact citations the task reads as upstream working set. Hermetic: nothing else is mounted. |
 | `acceptance_criteria` | Layer 2 verification targets. Each must be observable and pass/fail. |
+| `read_only_pass` | Optional (v6.0.0). `true` means: read, measure, capture evidence, report — mutate nothing this pass. Unlike the other frontmatter fields it may be added **after** the task is issued, and the executor picks it up by re-reading `task.md` immediately before its first state-changing action (`templates/executor-prompt.md`). From EV-0042, where exactly such a gate was added to an issued task and never reached the executor before it acted. See `core/SUBSTRATE.md` §Read-Only Pass. |
 
 ---
 
@@ -135,6 +136,7 @@ An optional council role, `variant-comparison-watcher`, may be added to a schema
 1. Group `task.create` events by `phase`. For each phase, list tasks in ID order.
 2. For each task, compute current status as the most recent `task.status` event's `to` value (or `pending` if no status events). If the latest event is `task.complete`, status is `complete`.
 3. Write `consumes` and `depends_on` from frontmatter (which the `task.create` payload captured).
+4. Write `read_only_pass: true` for any task whose `task.md` currently declares it (v6.0.0). This one field is re-read from `task.md` at render time rather than taken from the `task.create` payload — the gate exists precisely to be addable after the task was issued. Omit the key when false.
 
 ```yaml
 project: "<project-id>"
@@ -150,6 +152,7 @@ phases:
         risk_level: standard
         depends_on: []
         consumes: ["[OR-001#a3f9...]"]
+        read_only_pass: true          # v6.0.0, optional; present only when task.md declares it
         completed_at: "2026-04-26T11:14:09Z"
   2:
     name: "Nurture"
