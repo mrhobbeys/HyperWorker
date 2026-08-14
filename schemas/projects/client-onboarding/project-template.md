@@ -28,7 +28,7 @@ Onboard <Client Name> onto the platform within the contractual SLA, with the int
 
 ## Schema
 
-Bootstrapped from `schemas/projects/client-onboarding/` with harness version `5.0`.
+Bootstrapped from `schemas/projects/client-onboarding/` with harness version `6.0.0`.
 
 ## Completion Criteria
 

@@ -66,7 +66,7 @@ Every item below came out of a real deployment failure, not a design session. Mo
 
 **Work with no end state is first-class.** `lifecycle: ongoing` projects run in cycles with a computed next-due date. **Programs** run N concurrent workstreams, each in its own instance, coordinated by an orchestrator that is itself just a locked project.
 
-Twenty-two Layer 1 checks, 13 test suites, 329 cases, plus a pinned golden fixture.
+Twenty-two Layer 1 checks, 14 test suites, 363 cases, plus a pinned golden fixture.
 
 ## Getting started
 
@@ -204,7 +204,7 @@ Concretely:
 
 This is a theory, not a finding. Each primitive in v5.0 has an explicit hypothesis and an explicit falsifier (see `core/*.md` §Hypothesis sections). v5.1 will retire whatever fails its falsifier in real use. Read [VISION.md](VISION.md) for the full posture.
 
-There is no migration path. v4.1.1 remains on its own branch as the prior theory. Operators with running v4.1.1 projects complete them on v4.1.1; new projects start on v5.0.
+There is no migration path. v4.1.1 remains on its own branch as the prior theory. Operators with running v4.1.1 projects complete them on v4.1.1; new projects start on 6.0.0.
 
 ## Structure
 
@@ -214,7 +214,7 @@ core/                  — the five mechanisms, the substrate, the tools contrac
 templates/             — executor prompt, task/project/artifact/projection skeletons, model profiles
 schemas/               — twenty bootstrap-ready project schemas + artifact schemas
 reference/             — validation, failure modes, field reports, the file-mailbox pattern
-tools/                 — reference verifier, golden fixture, 13 test suites
+tools/                 — reference verifier, golden fixture, 14 test suites
 CHANGELOG.md           — version history
 VISION.md              — opinionated scope and theory document
 CONTRIBUTING.md        — schema authoring and the bar for changes

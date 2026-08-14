@@ -27,7 +27,7 @@ Anchored to `[OR-001#<short-hash>]`. CI/CD provider and required status checks d
 
 ## Schema
 
-Bootstrapped from `schemas/projects/software-feature-ship/` with harness version `5.0`.
+Bootstrapped from `schemas/projects/software-feature-ship/` with harness version `6.0.0`.
 
 ## Completion Criteria
 

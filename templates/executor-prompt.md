@@ -43,7 +43,7 @@ Why this step is mandatory rather than advisory (EV-0042): a "read-only this pas
 ## Boundaries
 
 - Read only what is in `consumes:` (plus `00-REFERENCE-rules.compressed.md`, `task.md`, `templates/executor-prompt.md`). The hermetic working set is structurally enforced; reading a related-but-undeclared artifact corrupts the recitation projection and the dependency graph.
-- Use only tools the harness composed for you. Tool absence means the task was not delegated to you; surface a `capability_gap`, do not improvise.
+- Use only tools the harness composed for you. Tool absence means the task was not delegated to you; surface a `capability.gap`, do not improvise.
 
 ## Stops
 

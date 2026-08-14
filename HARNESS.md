@@ -16,7 +16,7 @@ This file names no AI product, assumes no particular toolset, and assumes nothin
 
 Each one is a failure that already happened, in production, at cost.
 
-1. **Never edit the Truth Layer during execution.** `HARNESS.md`, `core/`, `templates/`, `schemas/`, `tools/` are harness infrastructure; project work never rewrites them. Never hand-edit a projection either — it is overwritten on the next regeneration, and your edit is silently gone. Write to the Mutable Surface (`PROJECT.md`, rules, task instructions) or append an event. See §Boundary Rule.
+1. **Never edit the Truth Layer during execution.** `HARNESS.md`, `core/`, `templates/`, `schemas/`, `reference/`, `tools/` are harness infrastructure; project work never rewrites them. Never hand-edit a projection either — it is overwritten on the next regeneration, and your edit is silently gone. Write to the Mutable Surface (`PROJECT.md`, rules, task instructions) or append an event. See §Boundary Rule.
 2. **Never append to a chain you do not own.** One `events.jsonl` has at most one writer at any moment. If you are a parallel actor — a delegated subagent, a council member, a sibling session — write a **draft file** in your own directory and let the single convergence writer append. Concurrency lives *between* harness instances, never inside one. See `core/SUBSTRATE.md` §Single-Writer Rule.
 3. **Never mark a hypothesis `excluded` without a test.** A careful static read is an argument, not a test; it lands at `suspect` and no further. `excluded` requires a `test_ref` naming something that actually ran — an `evidence.capture` id, or a claim predicate that was evaluated. Ruling a cause out is the most expensive thing you can do, because everything after it is searched somewhere else. See `core/SUBSTRATE.md` §Exclusion Discipline.
 4. **Never put a secret in an event.** The log is append-only, so a credential written into it is permanent; the only remediation is rotating it in the real world. Store by reference: `[REDACTED-SECRET]` plus a pointer to where the value lives. `hw add` refuses the append on a hit. See `core/SUBSTRATE.md` §Secrets Gate.
@@ -324,7 +324,7 @@ Before delegating any task, confirm:
 - `.hyperworker/events.jsonl` exists (or is empty for a fresh init).
 - `.hyperworker/config.yaml` declares an active model profile.
 - `projects/active_project.md` resolves to a project with `PROJECT.md`, `00-REFERENCE-rules.md`, and at least one task.
-- `hw verify` returns `OK` (or, on a fresh project, an empty-log `OK`).
+- `hw verify` returns `PASS` (on a fresh project, an empty log still returns `PASS`; a *missing* `events.jsonl` is a FAIL, not an empty log).
 
 If any check fails, STOP. Report what is missing. The operator resolves before execution begins.
 

@@ -32,7 +32,7 @@ See `core/SUBSTRATE.md` §Execution Profile.>
 
 ## Schema
 
-This project was bootstrapped from `schemas/projects/<schema-name>/` with harness version `5.0`.
+This project was bootstrapped from `schemas/projects/<schema-name>/` with harness version `6.0.0`.
 
 ## Completion Criteria
 

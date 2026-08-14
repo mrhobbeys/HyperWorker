@@ -1,6 +1,6 @@
 # Contributing to HyperWorker v6.0.0
 
-v5.0 is a structural test of a hypothesis. The bar for changes is high. This document explains what we want, what we don't, and how contributions are evaluated.
+v6.0.0 is a structural test of a hypothesis. The bar for changes is high. This document explains what we want, what we don't, and how contributions are evaluated.
 
 ## What we want
 
@@ -8,7 +8,7 @@ v5.0 is a structural test of a hypothesis. The bar for changes is high. This doc
 
 - **Per-model profile additions.** A new profile for a model not yet in `templates/models/`. Cite observed behaviors with evidence — postmortems, framework docs, sample-size-disclosed observations. Do not declare a model "worse" than another.
 
-- **Sharper failure-mode documentation.** `reference/FAILURE-MODES.md` should grow as v5.0 is observed in real use. Document failures that fall *outside* any hypothesis in the spec — these indicate missing primitives.
+- **Sharper failure-mode documentation.** `reference/FAILURE-MODES.md` should grow as v6.0.0 is observed in real use. Document failures that fall *outside* any hypothesis in the spec — these indicate missing primitives.
 
 - **Structural check refinements.** Better citation-validation logic, tighter recitation overlap heuristics, deterministic compression improvements. Each refinement must produce an effect verifiable without asking the agent if it complied.
 
@@ -24,7 +24,7 @@ v5.0 is a structural test of a hypothesis. The bar for changes is high. This doc
 
 - **CLI implementations of `hw`.** `hw` is an agent protocol, deliberately. A binary CLI is a downstream tool, not core. We won't merge a Python or Node implementation that becomes the new dependency for using the harness.
 
-- **Migration tooling from v4.1.1.** v5.0 is a clean break. Helping operators move artifacts from one harness to another is welcome as a separate downstream project; it is not part of v5.0.
+- **Migration tooling from v4.1.1.** v6.0.0 is a clean break. Helping operators move artifacts from one harness to another is welcome as a separate downstream project; it is not part of v6.0.0.
 
 ## The bar
 

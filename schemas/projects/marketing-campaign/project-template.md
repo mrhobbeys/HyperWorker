@@ -28,7 +28,7 @@ Anchored to `[OR-001#<short-hash>]`. See `operating-reality/OR-001.md`.
 
 ## Schema
 
-This project was bootstrapped from `schemas/projects/marketing-campaign/` with harness version `5.0`.
+This project was bootstrapped from `schemas/projects/marketing-campaign/` with harness version `6.0.0`.
 
 ## Completion Criteria
 

@@ -1,4 +1,4 @@
-# HyperWorker Vision (v5.0)
+# HyperWorker Vision (v6.0.0)
 
 ## Posture
 

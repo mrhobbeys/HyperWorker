@@ -12,7 +12,7 @@ Pick a domain you know well that is *not* one of the shipped default schemas (se
 
 1. `HARNESS.md`, `core/SUBSTRATE.md`, `core/{LOCK,ATOMICITY,TYPED-ARTIFACTS,VERIFICATION,PRECEDENCE}.md` readable.
 2. `templates/`, `schemas/artifacts/`, `schemas/projects/`, `templates/models/` exist with documented contents.
-3. `hw verify` on a fresh `.hyperworker/` returns `OK` (empty log is OK).
+3. `hw verify` on a fresh `.hyperworker/` returns `PASS` (an empty log still PASSes; a missing `events.jsonl` is a FAIL).
 
 **Pass criterion.** No missing files.
 
@@ -89,7 +89,7 @@ The first three are configuration. The rest indicate either mis-authoring or, ra
 # Validation: <Domain>
 **Date:** <YYYY-MM-DD>
 **Validator:** <name / role>
-**Harness version:** 5.0
+**Harness version:** 6.0.0
 
 ## Schema used
 <default name | custom>

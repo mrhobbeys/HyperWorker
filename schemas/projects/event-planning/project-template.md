@@ -24,7 +24,7 @@ Plan and execute <Event Name> on <event_date> for <target_headcount> attendees, 
 
 ## Schema
 
-Bootstrapped from `schemas/projects/event-planning/` with harness version `5.0`.
+Bootstrapped from `schemas/projects/event-planning/` with harness version `6.0.0`.
 
 ## Completion Criteria
 
