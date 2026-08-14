@@ -22,6 +22,8 @@ The operator's convention decides which prefix a channel uses. **A sender never 
 
 When a message arrives on a prefix the convention does not sanction: **answer it on the convention's prefix, and say so in the reply.** Do not answer on the unsanctioned prefix (that ratifies it), and do not refuse to answer (that loses the content). One line is enough: *"Received as `XX-007`; `XX` is not a sanctioned prefix on this channel, so this reply is filed as `DCR-018`. Please use `DC-` here."*
 
+**Prefix issuance precedes first use.** The sanctioned prefix is issued before the channel's first message, not settled after one has already gone out. A sidequest opened on a sender-minted prefix and was reassigned mid-stream; the first message had to be voided and both executors were briefly holding two candidate reply series for one conversation. Issuing the prefix is part of opening the channel — a channel whose prefix is still being decided is not open yet.
+
 ## Three message classes, not two
 
 Requests and replies are the first two. The third is real and formalizing it beats forbidding it:
@@ -110,6 +112,35 @@ When an orchestrator carries content from one channel into another, mark it `REL
 ## Urgent goes to the human directly
 
 **The operator does not read the bus.** Anything the human must see urgently goes to the human channel, directly, with the **finding first** — not the preamble, not the methodology, not the context that led to it. A mailbox is for machine-to-machine correspondence; it is not, and was never, a notification system.
+
+---
+
+## Field additions (6.0.1)
+
+Two executors on unrelated engagements, asked independently for friction and harness feedback, converged on the same set of mailbox failures. Each rule below is one of them, stated as short as it will go.
+
+**The synced path contract belongs in a README inside the mailbox.** Which subtree actually propagates — commonly `outbox/` and nothing above it — is a fact the executor must have on arrival, not one it derives from a delivery that never happened. An executor wrote two deliverables to the mailbox's parent folder, where nothing syncs; both were silently undelivered and surfaced only when the operator said "mail didn't land." The contract is a property of the mailbox, so it is documented in the mailbox: a `README.md` beside `outbox/` naming exactly what propagates and what does not.
+
+**Verify by exact-path stat, never by directory enumeration.** On a flaky or redirected share the two are not equivalent: enumerating a wedged RDP-redirected link hung for minutes (one tool timeout) while an exact-path existence check on a file in that same directory returned immediately, and the scheduled copy kept working throughout. A share can be present at the root and un-enumerable below it. Since §Write, then re-stat, then claim posted already requires you to name the destination path, stat that path — listing the directory buys nothing and can wedge the session.
+
+**Never read a file the instant it appears.** On an async-synced share the file's name arrives before its bytes. Wait for a **stable, non-zero size** — two consecutive stats agreeing — before reading. A mailbox watcher read a file mid-copy and delivered an empty body to its executor as if it were the message.
+
+**Transient sync errors are routine, not incidents.** Intermittent access-denied and copy-tool failures (robocopy exit 16 among them) are the normal weather on these links. The handling is a retry loop plus a re-stat of the destination, every time, not an escalation. What would actually remove the uncertainty is a **protocol-level delivery ack** — a receipt from the far side rather than an inference from the near side. That does not exist yet; both executors named it as the wanted fix, and it is carried as a known gap in `CHANGELOG.md`.
+
+**Drain and sort the whole inbox, detect supersedes and urgency, then act.** Messages arrive in bursts, and a later message in one burst routinely supersedes an earlier one's method or jumps the queue. Read everything waiting, order it, resolve what supersedes what and what is urgent — and only then take the first action. An executor acted on a message that a message already sitting in the same burst had superseded.
+
+To make that sortable by something other than prose, two header fields join §Every message is self-contained, both optional and both machine-readable:
+
+```
+Supersedes: <message id this replaces, or absent>
+Priority:   normal | urgent
+```
+
+`Supersedes:` states the relationship §Corrections are new numbers already requires in words; `Priority:` is what lets an urgent item be found without reading every body first. Neither replaces reading the messages — they make the sort cheap enough that draining first stops being the expensive option.
+
+**An alarm is not a logger; ship both and never conflate them.** A tripwire that writes only when it trips holds no history — there is nothing to read afterward for trend, baseline, or "when did this start." An operator reasonably assumed the storage tripwire was also the log source ("I thought logs came from the tripwire?") and it never had been. Alarm and logger are two tools with two purposes: the alarm interrupts, the logger accumulates. Say which one a thing is in its own header, and if the question "what did it look like an hour ago" matters, something must have been writing an hour ago.
+
+**Prefix issuance precedes first use.** Stated in full under §Prefixes are assigned, never chosen — a channel whose prefix is still being decided is not open yet.
 
 ---
 
