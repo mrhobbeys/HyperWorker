@@ -962,6 +962,460 @@ def check_cycle_lifecycle(workspace: Path, events: list) -> list:
     return failures
 
 
+# Legal `workstream.status` transitions, from the program schema's
+# artifact-extensions.yaml. A status that does not change (X -> X) is also legal:
+# the schema's own T-004 refreshes `last_rollup_citation` by re-adding the
+# workstream artifact, which is a metadata write, not a status change.
+LEGAL_WORKSTREAM_TRANSITIONS = {
+    ("active", "parked"), ("parked", "active"),
+    ("active", "promoted"), ("active", "retired"), ("active", "done"),
+    ("parked", "retired"), ("promoted", "retired"),
+}
+
+
+def iter_top_level_yaml_blocks(text: str):
+    """Yield (block_name, block_body) for each top-level key in a YAML file.
+
+    Comment lines are dropped so a commented-out declaration is not read as a
+    live one. Dependency-free by design, matching parse_capability_gates_yaml.
+    """
+    name = None
+    body = []
+    for line in text.splitlines():
+        if line.strip().startswith("#"):
+            continue
+        header = re.match(r"^([A-Za-z_][A-Za-z0-9_-]*):\s*(.*)$", line)
+        if header and not line.startswith((" ", "\t")):
+            if name is not None:
+                yield name, "\n".join(body)
+            name, body = header.group(1), []
+            continue
+        if name is not None:
+            body.append(line)
+    if name is not None:
+        yield name, "\n".join(body)
+
+
+def parse_capability_gates_declared_checks(path: Path) -> set:
+    """Layer 1 check names a schema's capability-gates.yaml declares and enforces.
+
+    The convention the `program` pack established: a block declaring a custom
+    Layer 1 check carries `layer1_check_name: <name>` and `enforce: true` (e.g.
+    `spawn_pause:`, `registry_consistency:`, `rollup_citation:`). Reading the
+    declaration rather than hardcoding a schema name keeps the machinery
+    schema-agnostic per CONTRIBUTING.md §4: any schema that declares one of the
+    implemented checks gets it.
+    """
+    if not path.exists():
+        return set()
+    declared = set()
+    for _name, body in iter_top_level_yaml_blocks(path.read_text(encoding="utf-8")):
+        check = re.search(r"^\s+layer1_check_name:\s*([A-Za-z0-9_.-]+)\s*$",
+                          body, re.MULTILINE)
+        if not check:
+            continue
+        enforce = re.search(r"^\s+enforce:\s*(\S+)\s*$", body, re.MULTILINE)
+        if enforce and enforce.group(1).strip('"').strip("'").lower() in (
+                "false", "no", "off"):
+            continue
+        declared.add(check.group(1))
+    return declared
+
+
+def artifact_fields(payload: dict) -> dict:
+    """Flatten a typed-artifact `.add` payload to its field map.
+
+    The documented shape is flat (`{artifact_id, fields...}`, core/SUBSTRATE.md
+    §Typed-artifact events); a `frontmatter:` / `fields:` nesting is tolerated
+    because task.create already uses `frontmatter`. Top-level keys win.
+    """
+    fields = {}
+    for key in ("frontmatter", "fields", "artifact"):
+        nested = payload.get(key)
+        if isinstance(nested, dict):
+            fields.update(nested)
+    for key, value in payload.items():
+        if key in ("frontmatter", "fields", "artifact"):
+            continue
+        fields[key] = value
+    return fields
+
+
+def reverses_list(value) -> list:
+    """`reverses:` accepts a single ID or a list (v5.3). Normalize to a list."""
+    if not value:
+        return []
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list):
+        return [v for v in value if isinstance(v, str) and v]
+    return []
+
+
+def collect_workstream_artifacts(project_events: list) -> tuple:
+    """Fold `workstream.add` events into per-artifact state.
+
+    One artifact may be written more than once: a status change is a NEW
+    artifact carrying `reverses:`, but a `last_rollup_citation` refresh re-adds
+    the SAME artifact id with `reverses:` unset (program schema T-004 step 5).
+    So state is merged forward per id, and every add is kept in order so the
+    roll-up check can tell the current citation from a prior cycle's.
+
+    Returns (artifacts, superseded, issues) where artifacts maps
+    ws_id -> {fields, adds, order} and superseded is the set of ws_ids some
+    other artifact reverses (or that declare their own `superseded_by`).
+    """
+    artifacts = {}
+    issues = []
+    order = 0
+    for event in project_events:
+        if event.get("kind") != "workstream.add":
+            continue
+        fields = artifact_fields(event.get("payload") or {})
+        ws_id = fields.get("artifact_id") or fields.get("id")
+        if not ws_id:
+            issues.append(
+                f"{event.get('id')} workstream.add carries no artifact_id"
+            )
+            continue
+        entry = artifacts.get(ws_id)
+        if entry is None:
+            artifacts[ws_id] = {"fields": dict(fields), "adds": [(event, fields)],
+                                 "order": order}
+            order += 1
+        else:
+            entry["fields"].update(fields)
+            entry["adds"].append((event, fields))
+
+    superseded = set()
+    for ws_id, entry in artifacts.items():
+        for old_id in reverses_list(entry["fields"].get("reverses")):
+            superseded.add(old_id)
+        if entry["fields"].get("superseded_by"):
+            superseded.add(ws_id)
+
+    return artifacts, superseded, issues
+
+
+def check_spawn_pause(project_id: str, project_events: list) -> list:
+    """Program Layer 1 check `spawn_pause_skipped`.
+
+    From schemas/projects/program/capability-gates.yaml: a workstream artifact
+    with `origin: spawned` must be preceded, in order, by
+    `workstream.spawn_proposed` and a `workstream.spawn_decided` with
+    `decision: approved` and `operator_confirmed: true`. A declined proposal must
+    never be followed by a registration. `origin: existing-registered`
+    workstreams are exempt - they describe instances that predate the program.
+
+    Only the event that FIRST registers a workstream is gated: a later add for
+    the same id (citation refresh) or an add carrying `reverses:` (a status
+    supersede of an already-approved workstream) is not a new spawn.
+
+    Ambiguity resolved: the workstream artifact schema has no `proposal_id`
+    field, so the YAML's "matching proposal_id" cannot always be read off the
+    registration. When the add carries one, it is matched exactly. When it does
+    not, the check consumes the earliest approved-and-confirmed proposal that
+    precedes the registration and is not already spoken for - one pause per
+    spawned workstream, which is the property the gate exists to enforce.
+    """
+    failures = []
+
+    proposals = {}
+    decisions = {}
+    for idx, event in enumerate(project_events):
+        kind = event.get("kind")
+        payload = event.get("payload") or {}
+        proposal_id = payload.get("proposal_id")
+        if not proposal_id:
+            continue
+        if kind == "workstream.spawn_proposed":
+            proposals.setdefault(proposal_id, (idx, event))
+        elif kind == "workstream.spawn_decided":
+            decisions[proposal_id] = (idx, event)
+
+    declined = {pid for pid, (_i, ev) in decisions.items()
+                if (ev.get("payload") or {}).get("decision") == "declined"}
+
+    approved = sorted(
+        (idx, pid)
+        for pid, (idx, ev) in decisions.items()
+        if (ev.get("payload") or {}).get("decision") == "approved"
+        and (ev.get("payload") or {}).get("operator_confirmed") is True
+        and pid in proposals and proposals[pid][0] < idx
+    )
+
+    consumed = set()
+    seen_artifacts = set()
+
+    for idx, event in enumerate(project_events):
+        if event.get("kind") != "workstream.add":
+            continue
+        fields = artifact_fields(event.get("payload") or {})
+        ws_id = fields.get("artifact_id") or fields.get("id")
+        proposal_id = fields.get("proposal_id")
+
+        if proposal_id and proposal_id in declined:
+            failures.append(
+                f"{project_id}: spawn_pause_skipped "
+                f"({event.get('id')} registers {ws_id or '<no id>'} for "
+                f"proposal {proposal_id}, which the operator DECLINED at "
+                f"{decisions[proposal_id][1].get('id')})"
+            )
+            continue
+
+        first_registration = bool(ws_id) and ws_id not in seen_artifacts
+        if ws_id:
+            seen_artifacts.add(ws_id)
+        if reverses_list(fields.get("reverses")) or not first_registration:
+            continue
+        if str(fields.get("origin") or "").strip().lower() != "spawned":
+            continue
+
+        if proposal_id:
+            proposal = proposals.get(proposal_id)
+            decision = decisions.get(proposal_id)
+            if proposal is None or proposal[0] >= idx:
+                failures.append(
+                    f"{project_id}: spawn_pause_skipped "
+                    f"({event.get('id')} registers spawned workstream "
+                    f"{ws_id} for proposal {proposal_id}; no preceding "
+                    f"workstream.spawn_proposed for that proposal_id)"
+                )
+                continue
+            if decision is None or decision[0] >= idx:
+                failures.append(
+                    f"{project_id}: spawn_pause_skipped "
+                    f"({event.get('id')} registers spawned workstream "
+                    f"{ws_id} for proposal {proposal_id}; no preceding "
+                    f"workstream.spawn_decided - the agent did not wait for the "
+                    f"operator)"
+                )
+                continue
+            decision_payload = decision[1].get("payload") or {}
+            if (decision_payload.get("decision") != "approved"
+                    or decision_payload.get("operator_confirmed") is not True):
+                failures.append(
+                    f"{project_id}: spawn_pause_skipped "
+                    f"({event.get('id')} registers spawned workstream {ws_id}; "
+                    f"{decision[1].get('id')} is decision="
+                    f"{decision_payload.get('decision')!r} operator_confirmed="
+                    f"{decision_payload.get('operator_confirmed')!r} - approval "
+                    f"must be both)"
+                )
+                continue
+            consumed.add(proposal_id)
+            continue
+
+        match = next((pid for pos, pid in approved
+                      if pos < idx and pid not in consumed), None)
+        if match is None:
+            failures.append(
+                f"{project_id}: spawn_pause_skipped "
+                f"({event.get('id')} registers spawned workstream "
+                f"{ws_id}; no unconsumed workstream.spawn_proposed + "
+                f"workstream.spawn_decided(approved, operator_confirmed: true) "
+                f"pair precedes it)"
+            )
+            continue
+        consumed.add(match)
+
+    return failures
+
+
+def check_registry_supersede_chain(project_id: str, project_events: list) -> list:
+    """Program Layer 1 check `registry_status_vs_supersede_chain`.
+
+    From schemas/projects/program/capability-gates.yaml: for every
+    `child_project_id`, exactly one workstream artifact - the one with no
+    `superseded_by` - is current, and its status must be reachable from its
+    direct predecessor's status by a legal transition.
+
+    Ambiguity resolved: the schema's own T-004 refreshes `last_rollup_citation`
+    by re-adding a workstream artifact without changing its status, so an
+    unchanged status (X -> X) is treated as legal. Reading the transition table
+    strictly would FAIL every roll-up cycle the schema itself prescribes.
+    """
+    artifacts, superseded, issues = collect_workstream_artifacts(project_events)
+    failures = [f"{project_id}: registry_status_vs_supersede_chain ({issue})"
+                for issue in issues]
+
+    for ws_id, entry in sorted(artifacts.items(), key=lambda kv: kv[1]["order"]):
+        for old_id in reverses_list(entry["fields"].get("reverses")):
+            predecessor = artifacts.get(old_id)
+            if predecessor is None:
+                failures.append(
+                    f"{project_id}: registry_status_vs_supersede_chain "
+                    f"({ws_id} reverses {old_id}, which has no workstream.add "
+                    f"event in this chain)"
+                )
+                continue
+            was = str(predecessor["fields"].get("status") or "").strip().lower()
+            now = str(entry["fields"].get("status") or "").strip().lower()
+            if not was or not now or was == now:
+                continue
+            if (was, now) not in LEGAL_WORKSTREAM_TRANSITIONS:
+                failures.append(
+                    f"{project_id}: registry_status_vs_supersede_chain "
+                    f"({ws_id} supersedes {old_id} with status {was} -> {now}; "
+                    f"not a legal workstream.status transition)"
+                )
+
+    by_child = defaultdict(list)
+    for ws_id, entry in artifacts.items():
+        child = entry["fields"].get("child_project_id")
+        if not child or ws_id in superseded:
+            continue
+        by_child[child].append(ws_id)
+
+    for child, ws_ids in sorted(by_child.items()):
+        if len(ws_ids) > 1:
+            failures.append(
+                f"{project_id}: registry_status_vs_supersede_chain "
+                f"(child_project_id {child!r} has {len(ws_ids)} current "
+                f"workstream artifacts {sorted(ws_ids)}; exactly one artifact "
+                f"with no superseded_by is current, and its status is the "
+                f"registry's answer)"
+            )
+
+    return failures
+
+
+def check_rollup_citations(workspace: Path, project_id: str,
+                            project_events: list) -> tuple:
+    """Program Layer 1 check `rollup_citation_stale_or_broken`.
+
+    The YAML declares two severities and this check honors both. At write time
+    the cited path must resolve and its recorded sha256 must match the file's
+    actual bytes - a hard FAIL, since the program agent had just read the file.
+    At each subsequent roll-up cycle the prior cycle's citation is re-checked
+    non-blocking: a path that no longer resolves is a WARNING (the sibling
+    instance moved), a differing hash is expected and informational (the sibling
+    moved on, which is what "staleness checkable" means), and a hash that still
+    matches means the workstream has written nothing since - noted as an
+    overdue_workstreams candidate when that workstream is itself
+    `lifecycle: ongoing`.
+
+    Ambiguity resolved: a verifier runs after the fact and cannot observe write
+    time directly. The write-time citation is taken to be the one on the latest
+    add of a current (non-superseded) artifact - the citation this chain is
+    asserting right now. Every earlier citation is a prior cycle's.
+
+    Returns (failures, warnings).
+    """
+    failures = []
+    warnings = []
+    artifacts, superseded, _issues = collect_workstream_artifacts(project_events)
+
+    for ws_id, entry in sorted(artifacts.items(), key=lambda kv: kv[1]["order"]):
+        adds = entry["adds"]
+        is_current = ws_id not in superseded
+        lifecycle = str(entry["fields"].get("lifecycle") or "").strip().lower()
+
+        for position, (event, fields) in enumerate(adds):
+            citation = fields.get("last_rollup_citation")
+            if not isinstance(citation, dict):
+                continue
+            path = citation.get("path")
+            recorded = citation.get("sha256")
+            if not path or not recorded:
+                continue
+            write_time = is_current and position == len(adds) - 1
+            cycle_id = citation.get("cycle_id") or "<no cycle_id>"
+            target = workspace / str(path)
+
+            if not target.is_file():
+                if write_time:
+                    failures.append(
+                        f"{project_id}: rollup_citation_stale_or_broken "
+                        f"({ws_id} at {event.get('id')} cites {path!r}, which "
+                        f"does not resolve from the workspace root)"
+                    )
+                else:
+                    warnings.append(
+                        f"{project_id}: rollup_citation_broken "
+                        f"({ws_id} cycle {cycle_id} cited {path!r}, which no "
+                        f"longer resolves; the sibling instance's projection "
+                        f"moved or its instance path changed - non-blocking)"
+                    )
+                continue
+
+            recorded_bare = normalize_recorded_hash(str(recorded)).strip().lower()
+            if len(recorded_bare) < 12:
+                if write_time:
+                    failures.append(
+                        f"{project_id}: rollup_citation_stale_or_broken "
+                        f"({ws_id} at {event.get('id')} cites {path!r} with "
+                        f"sha256 {recorded!r}; expected at least the 12-hex "
+                        f"short form)"
+                    )
+                continue
+
+            actual = sha256_hex(target.read_bytes())
+            matches = actual.startswith(recorded_bare)
+
+            if write_time and not matches:
+                failures.append(
+                    f"{project_id}: rollup_citation_stale_or_broken "
+                    f"({ws_id} at {event.get('id')} cites {path!r} at sha256 "
+                    f"{recorded_bare[:12]}; the file now hashes to "
+                    f"{actual[:12]})"
+                )
+            elif not write_time and matches and lifecycle == "ongoing":
+                warnings.append(
+                    f"{project_id}: rollup_citation_unchanged "
+                    f"({ws_id} cycle {cycle_id} cited {path!r} and it still "
+                    f"hashes to {actual[:12]}; the workstream has written no "
+                    f"new projection since - overdue_workstreams candidate)"
+                )
+
+    return failures, warnings
+
+
+def check_schema_declared_layer1(workspace: Path, events: list) -> tuple:
+    """Run the custom Layer 1 checks a project's schema declares and enforces.
+
+    The `program` schema declared three checks in capability-gates.yaml prose
+    and shipped none of them as code. They run here for any project whose active
+    schema declares them, keyed on the declaration rather than on the schema
+    name (CONTRIBUTING.md §4: core machinery, schema-configured trigger).
+
+    Returns (failures, warnings).
+    """
+    failures = []
+    warnings = []
+
+    by_project = defaultdict(list)
+    for event in events:
+        by_project[event.get("project")].append(event)
+
+    for project_id, project_events in by_project.items():
+        if not project_id or project_id == "_harness":
+            continue
+        schema = find_schema_for_project(workspace, project_id)
+        if not schema:
+            continue
+        schema_dir = find_schema_dir(workspace, schema)
+        if schema_dir is None:
+            continue
+        declared = parse_capability_gates_declared_checks(
+            schema_dir / "capability-gates.yaml")
+        if not declared:
+            continue
+
+        if "spawn_pause_skipped" in declared:
+            failures.extend(check_spawn_pause(project_id, project_events))
+        if "registry_status_vs_supersede_chain" in declared:
+            failures.extend(
+                check_registry_supersede_chain(project_id, project_events))
+        if "rollup_citation_stale_or_broken" in declared:
+            rollup_failures, rollup_warnings = check_rollup_citations(
+                workspace, project_id, project_events)
+            failures.extend(rollup_failures)
+            warnings.extend(rollup_warnings)
+
+    return failures, warnings
+
+
 def parse_verification_yaml_checked_claims(path: Path) -> list:
     """Minimal YAML reader for verification.yaml's `checked_claims.required_for`
     list. Mirrors the block-list convention already used by
@@ -1432,6 +1886,8 @@ def verify(workspace: Path, since: str | None) -> dict:
         "harness_version_failures": [],
         "harness_version_notes": [],
         "cycle_lifecycle_failures": [],
+        "schema_check_failures": [],
+        "schema_check_warnings": [],
         "scope_completeness_failures": [],
         "external_state_readback_failures": [],
         "external_state_readback_warnings": [],
@@ -1552,6 +2008,9 @@ def verify(workspace: Path, since: str | None) -> dict:
     result["harness_version_failures"] = hv_failures
     result["harness_version_notes"] = hv_notes
     result["cycle_lifecycle_failures"] = check_cycle_lifecycle(workspace, events)
+    schema_failures, schema_warnings = check_schema_declared_layer1(workspace, events)
+    result["schema_check_failures"] = schema_failures
+    result["schema_check_warnings"] = schema_warnings
     result["scope_completeness_failures"] = check_scope_completeness(workspace, events)
     esrb_failures, esrb_warnings = check_external_state_readback(workspace, events)
     result["external_state_readback_failures"] = esrb_failures
@@ -1572,6 +2031,7 @@ def verify(workspace: Path, since: str | None) -> dict:
         or result["lock_violations"]
         or result["harness_version_failures"]
         or result["cycle_lifecycle_failures"]
+        or result["schema_check_failures"]
         or result["scope_completeness_failures"]
         or result["external_state_readback_failures"]
         or result["bootstrap_probe_failures"]
@@ -1601,6 +2061,8 @@ def render(result: dict) -> str:
         f"  harness_version:       {len(result['harness_version_failures'])} {result['harness_version_failures']}",
         f"  harness_version_note:  {len(result['harness_version_notes'])} {result['harness_version_notes']}",
         f"  cycle_lifecycle:       {len(result['cycle_lifecycle_failures'])} {result['cycle_lifecycle_failures']}",
+        f"  schema_checks:         {len(result['schema_check_failures'])} {result['schema_check_failures']}",
+        f"  schema_check_warnings: {len(result['schema_check_warnings'])} {result['schema_check_warnings']}",
         f"  scope_completeness:    {len(result['scope_completeness_failures'])} {result['scope_completeness_failures']}",
         f"  ext_state_readback:    {len(result['external_state_readback_failures'])} {result['external_state_readback_failures']}",
         f"  ext_state_warnings:    {len(result['external_state_readback_warnings'])} {result['external_state_readback_warnings']}",

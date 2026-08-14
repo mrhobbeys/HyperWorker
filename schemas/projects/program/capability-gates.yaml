@@ -124,6 +124,18 @@ spawn_pause:
     be followed by a workstream.add for that proposal_id. If one appears anyway,
     FAIL.
 
+  # Implemented in tools/hw-verify.py as of harness 6.0.0 (previously this block
+  # was prose and nothing enforced it). Two readings the implementation had to
+  # settle, recorded here so a reimplementation matches:
+  #   - The workstream artifact has no proposal_id field, so "a matching
+  #     proposal_id" is checked exactly when the workstream.add carries one, and
+  #     otherwise satisfied by consuming the earliest approved-and-confirmed
+  #     proposal that precedes the registration and is not already spoken for.
+  #     One pause per spawned workstream is the property being enforced.
+  #   - Only the event that FIRST registers a workstream is gated. A later add
+  #     for the same WS-NNN (T-004's last_rollup_citation refresh) or an add
+  #     carrying reverses: (a status supersede of an already-approved
+  #     workstream) is not a new spawn and is not re-gated.
   resources_skip_allowed: false
   # Unlike course-master-plan-test's slug-premise-pause, a program spawn has no
   # "skip the pause" path — core/LOCK.md §Programs names promote-and-swap as a
@@ -150,6 +162,13 @@ registry_consistency:
     parked->retired, promoted->retired. More than one non-superseded workstream
     sharing a child_project_id, or a transition outside this set, is a FAIL.
 
+    Implemented in tools/hw-verify.py as of harness 6.0.0. One reading settled
+    there: an UNCHANGED status (active -> active) is legal. T-004 refreshes
+    last_rollup_citation by re-adding the workstream artifact without changing
+    its status, so reading the transition table strictly would FAIL every
+    roll-up cycle this schema itself prescribes. The table constrains status
+    CHANGES; a metadata write is not one.
+
 # Roll-up citation freshness Layer 1 check (cross-instance citations, see
 # rules-template.md §Cross-Instance Citation Format).
 rollup_citation:
@@ -175,3 +194,10 @@ rollup_citation:
         SESSION-HANDOFF.md / CYCLES.md write since the last roll-up; note it as a
         candidate for the overdue_workstreams list if the workstream is itself
         lifecycle: ongoing.
+
+    Implemented in tools/hw-verify.py as of harness 6.0.0. One reading settled
+    there: a verifier runs after the fact and cannot observe write time, so the
+    write-time citation is taken to be the one on the latest workstream.add of a
+    CURRENT (non-superseded) workstream artifact - the citation the chain is
+    asserting right now. Every earlier citation, including every citation on a
+    superseded artifact, is a prior cycle's and is checked non-blocking.
