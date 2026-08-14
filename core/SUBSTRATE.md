@@ -190,7 +190,7 @@ The harness defines a closed set. Schema extensions must add kinds via the proje
 | `anti-pattern.add` | `{artifact_id, fields...}` |
 | `operating-reality.add` | `{artifact_id, fields...}` |
 | `<kind>.supersede` | `{old_id, new_id, reason, supersede_kind, surviving_principles}` (emitted automatically when `<kind>.add` includes `reverses:`; one supersede event per reversed artifact when `reverses:` is a list). `supersede_kind` ∈ `{full, mechanism-only, scope-narrowing}`, default `full`. `surviving_principles` is a list of verbatim principles from the old artifact that remain load-bearing (`[]` for `full`) — so a fresh agent reading the chain can distinguish "this decision is dead, ignore it" from "its mechanism changed but its principle still binds." (v5.3; both fields optional on pre-v5.3 chains.) |
-| `<kind>.promote` | `{artifact_id, from: provisional, to: validated}` |
+| `decision.promote`, `finding.promote` | `{artifact_id, from: provisional, to: validated}` — these two only. Anti-patterns and operating-reality carry no `confidence` field, so there is nothing to promote; `anti-pattern.promote` and `operating-reality.promote` are not event kinds and are reported as unknown. |
 
 ### Task events
 
@@ -306,6 +306,7 @@ A projection is a regenerable file derived from events. Projections are **never 
 2. **Idempotent.** Regenerating the same projection from the same event prefix produces byte-for-byte identical output.
 3. **Hashed.** Every projection's current SHA-256 is recorded in `hashes.json` after each regeneration.
 4. **Never hand-edited.** Editing a projection directly is operator error. The harness will overwrite on next regeneration. Operator-authored content goes in the Mutable Surface (see `core/ATOMICITY.md`).
+5. **Absent optional fields are omitted, not rendered empty.** An OPTIONAL schema field that a payload does not carry produces **no line** in the rendered artifact -- not `field: null`, not `field:`, not a placeholder. This is what makes a harness upgrade safe: when a later version adds an optional field to a kind (v6.0.0 added `status` and `test_ref` to `finding.yaml`), every artifact written before it re-renders to the same bytes it already had, its `hashes.json` entry does not move, and no `[X-NNN#hash]` citation anywhere in the chain goes stale. A renderer that emitted a line for every schema field would restale every citation in the workspace on every harness upgrade, which is the same as saying the harness could never add an optional field again.
 
 ### Projection table
 
@@ -401,7 +402,7 @@ Append a typed-artifact event and regenerate its projection.
 **Steps.**
 1. Read `schemas/artifacts/<kind>.yaml` and the project's `artifact-extensions.yaml` (if present). Validate the input file's frontmatter against the merged schema. If validation fails, abort with a structured error; do not write.
 2. Determine `artifact_id`. If the input declares an `id`, use it (must be unique within kind). Otherwise generate the next ID for the kind: scan `events.jsonl` for `<kind>.add` events, find the highest numeric suffix, increment by one. Format: `<PREFIX>-<NNN>` where prefix is `DEC | F | AP | OR` for decision/finding/anti-pattern/operating-reality.
-3. **Citation validation (pre-append).** If the artifact body contains citations `[<KIND>-<ID>#<hash>]`, run Layer 1 citation checks (see `core/VERIFICATION.md` §Layer 1) against the current `hashes.json` *before* anything is written. Any broken or stale citation aborts with a structured error naming the citation and the artifact's current short-hash; nothing lands in the log. The agent corrects the citation and retries. (Changed in v5.2.1: earlier versions appended the event first and reversed it with a supersede-to-null, leaving a rejection pair in the chain for every mistyped citation. Citation checking is a read-only computation; there is no reason to dirty the log to perform it. The supersede-to-null path remains only for defects discovered *after* append — see `core/VERIFICATION.md` §Layer 1 On failure.)
+3. **Citation validation (pre-append).** If the artifact body contains citations `[<KIND>-<ID>#<hash>]`, run Layer 1 citation checks (see `core/VERIFICATION.md` §Layer 1) against the current `hashes.json` *before* anything is written. A **broken** citation -- one naming an artifact with no projection -- aborts with a structured error naming the citation and the artifact's current short-hash; nothing lands in the log. A **stale** citation (the artifact exists, its hash has moved) is reported with the current short-hash but does **not** abort: staleness is information, not corruption, and the supersede chain routinely explains it. This matches what `hw verify` blocks on -- see the PASS rule under §`hw verify`, where `broken_citations` is a blocking term and `stale_citations` is not. The agent corrects the citation and retries. (Changed in v5.2.1: earlier versions appended the event first and reversed it with a supersede-to-null, leaving a rejection pair in the chain for every mistyped citation. Citation checking is a read-only computation; there is no reason to dirty the log to perform it. The supersede-to-null path remains only for defects discovered *after* append — see `core/VERIFICATION.md` §Layer 1 On failure.)
 4. **Secret scan (pre-append). REFUSE on a hit.** Scan the whole payload for secret-shaped content: `key=value` credential assignments, PEM / OpenSSH private-key blocks, connection strings carrying credentials, bearer / vendor-token shapes, and unlabeled high-entropy strings. On a hit, **do not append.** Report which field tripped which rule — never the value — and instruct store-by-reference: put `[REDACTED-SECRET]` in the payload plus a pointer to where the secret actually lives (operator vault entry, password manager, `${ENV_VAR}`). The agent edits the draft and retries. Like citation validation, this is a read-only computation; there is no reason to dirty an append-only log to perform it. See §Secrets Gate.
 5. Read the last line of `events.jsonl`; let `prev_hash` be its `hash` (or `sha256:0000…0000` if the log is empty).
 6. Build the event JSON object: `{id, ts, kind, actor, project, payload, prev_hash}` where `payload` contains the artifact frontmatter and body, and `id` is `EV-<next>` — derived from the tail line already read in step 5, never from project-scoped state (§Deriving the Next Event ID).
@@ -433,7 +434,7 @@ Open an exploratory subtask under a parent.
 Collapse a branch back into the parent context, preserving sub-trajectory in events.
 
 **Steps.**
-1. Capture the branch's events: every event with `actor` matching `<branch-id>` since the matching `branch.open`. Wrap each as a `branch.event` payload of the parent.
+1. Capture the branch's events: every event with `actor` matching `<branch-id>` since the matching `branch.open`. Under `profile: single-executor` (§Execution Profile) an event with no `actor` is treated as `actor: executor` for this selection -- the profile's documented default is what the selection matches against, so a chain that omits the field folds and resumes exactly as one that writes `executor` on every line. Wrap each as a `branch.event` payload of the parent.
 2. Append `branch.fold` event with `{parent_task, branch_name, result_text}`.
 3. Render `projects/<id>/tasks/<task-id>/branches/<branch-name>/result.md` containing only the `result_text` and a pointer to the branch event range. The full sub-trajectory is in the log; the projection is the 1–3 sentence summary the parent reads.
 4. The parent context replaces its memory of the branch with the result projection on next read.
@@ -444,7 +445,7 @@ Mark a typed artifact `confidence: validated`.
 
 **Steps.**
 1. Read the current projection for `<artifact-id>`. Confirm `confidence: provisional`. If already validated, no-op.
-2. Append `<kind>.promote` event with `{artifact_id, from: provisional, to: validated}`.
+2. Append `decision.promote` or `finding.promote` with `{artifact_id, from: provisional, to: validated}`. These are the only two promote kinds (§Typed-artifact events); anti-patterns and operating-reality have no `confidence` to raise.
 3. Re-render the projection (the rendering protocol reads the latest event chain for the artifact and emits `confidence: validated`). Update its hash.
 
 ### `hw verify`
@@ -465,29 +466,76 @@ Replay the event log with hash-chaining and report integrity. `hw verify` is a p
    - Compute SHA-256 of its bytes; take the first 12 lowercase hex chars.
    - Compare with the recorded short-hash. Mismatch records `drift(<projection-path>)`.
    - Missing file (path in `hashes.json` but no file on disk) records `missing-projection(<path>)`.
-   - Conversely, scan `projects/*/decisions/`, `findings/`, `anti-patterns/`, `operating-reality/`, `<schema-kinds>/` for projection files not represented in `hashes.json`. Each records `untracked-projection(<path>)`.
+   - Conversely, scan each project for `*.md` files not represented in `hashes.json`. The scanned directories are a fixed list of eight, not an open set derived from the schema: `decisions/`, `findings/`, `anti-patterns/`, `operating-reality/`, `sources/`, `claims/`, `contradictions/`, `evidence/`. Each unrepresented file records `untracked-projection(<path>)`. A schema that projects its own artifact kind into a directory outside this list is not scanned -- adding one means adding it here and in the verifier's `ARTIFACT_DIRS`.
 5. **Verify citations.** For each citation `[KIND-NNN#hhhhhhhhhhhh]` appearing in any event payload (artifact body, completion-report content, decision rationale, etc.):
    - **Broken** if no projection file exists for `KIND-NNN`.
    - **Stale** if the projection exists but its current short-hash differs from the cited one. (A stale citation may indicate the cited artifact was superseded; verify against the supersede chain before flagging as a defect.)
    - **Valid** otherwise.
-6. **Emit result.** Structured report:
+6. **Emit result.** Structured report. Thirty-one rows, in this order (the reference implementation's `render()` is the pin; a reimplementation that emits fewer rows is reporting less than `hw verify` computes):
 
 ```
 hw verify <workspace>:
   events_scanned:        <N>
-  tamper:                <count> [<list of EV-IDs>]
-  chain_breaks:          <count> [<list of EV-IDs>]
-  projection_drift:      <count> [<list of paths>]
-  missing_projections:   <count> [<list of paths>]
-  untracked_projections: <count> [<list of paths>]
-  broken_citations:      <count> [<list of citations + event-IDs>]
-  stale_citations:       <count> [<list of citations + event-IDs>]
+
+  # Chain and projection integrity (steps 2-5 above)
+  tamper:                <count> [<EV-IDs>]
+  chain_breaks:          <count> [<EV-IDs>]
+  projection_drift:      <count> [<paths>]
+  missing_projections:   <count> [<paths>]
+  untracked_projections: <count> [<paths>]
+  broken_citations:      <count> [<citations + EV-IDs>]
+  stale_citations:       <count> [<citations + EV-IDs>]
+
+  # Event well-formedness (Layer 1 checks 1, 14)
+  unknown_event_kinds:   <count> [<EV-ID:kind>]
+  malformed_payloads:    <count> [<EV-ID:kind + what is missing or mistyped>]
+  duplicate_event_ids:   <count> [<EV-ID + both origins>]
+  non_monotonic_ids:     <count> [<EV-ID + the id it fails to exceed>]
+
+  # Lock and version (Layer 1 checks 15, 16)
+  lock_violations:       <count> [<lock_activate_without_release>]
+  harness_version:       <count> [<harness_version_too_new>]
+  harness_version_note:  <count> [<undeclared / unparseable / older>]
+
+  # Per-check failure lists (Layer 1 checks 8-13, 17-21)
+  cycle_lifecycle:       <count> [<cycle_* / wrap_with_open_cycle>]
+  schema_checks:         <count> [<schema-declared check failures>]
+  schema_check_warnings: <count> [<schema-declared check warnings>]
+  scope_completeness:    <count> [<scope_completeness_*>]
+  ext_state_readback:    <count> [<external_state_readback_missing>]
+  ext_state_warnings:    <count> [<external_state_readback_divergence>]
+  bootstrap_probe:       <count> [<bootstrap_probe_missing>]
+  checked_claims:        <count> [<checked_claims_malformed>]
+  checked_claims_req:    <count> [<checked_claims_missing / _predicate_failed>]
+  exclusion_discipline:  <count> [<excluded_without_test_ref / _unresolved / invalid_hypothesis_status>]
+  evidence_capture:      <count> [<evidence_id_malformed / duplicate_evidence_id / content-form failures>]
+  open_loops:            <count> [<loop_close_without_open / duplicate_loop_open / handoff_missing_open_loops / malformed_loop_id>]
+
+  # Notes and warnings -- reported, never blocking
+  open_loop_notes:       <count> [<handoff_open_loops_absent>]
+  profile_notes:         <count> [<profile_single_executor>]
+  possible_secrets:      <count> [<EV-ID + field + rule; never the value>]
+
   result:                PASS | FAIL
 ```
 
-`PASS` requires zero entries in tamper, chain_breaks, projection_drift, missing_projections, broken_citations. Stale citations are reported but do not block PASS; a stale citation is information, not corruption (the supersede chain may explain it).
+An `error:` row is appended after `result:` when the log itself cannot be read -- no `events.jsonl`, or an unparseable `hashes.json`. Every check row reads zero and the result is FAIL, because nothing was verified. An `events.jsonl` that exists and is *empty* is a different thing: it PASSes, since an empty chain has no defects.
 
-`untracked_projections` is reported as a warning, not a FAIL — operators may have added local files; the next `hw project` will reconcile.
+**The PASS rule.** `PASS` requires zero entries in **all twenty-one blocking terms**:
+
+- **Integrity (5):** `tamper`, `chain_breaks`, `projection_drift`, `missing_projections`, `broken_citations`
+- **Well-formedness (3):** `malformed_payloads`, `duplicate_event_ids`, `non_monotonic_event_ids`
+- **Lock and version (2):** `lock_violations`, `harness_version_failures`
+- **Layer 1 check lists (10):** `cycle_lifecycle_failures`, `schema_check_failures`, `scope_completeness_failures`, `external_state_readback_failures`, `bootstrap_probe_failures`, `checked_claims_malformed`, `checked_claims_required_failures`, `exclusion_failures`, `evidence_capture_failures`, `open_loop_failures`
+- **Conditional (1):** `secret_warnings`, blocking **only** under `--strict-secrets`
+
+Any non-empty blocking term makes the result FAIL and the process exit 1.
+
+**Reported but never blocking:** `stale_citations`, `untracked_projections`, `unknown_event_kinds`, `schema_check_warnings`, `external_state_readback_warnings`, `harness_version_notes`, `open_loop_notes`, `profile_notes`, and `secret_warnings` in the default mode.
+
+A stale citation is information, not corruption -- the supersede chain may explain it, so it is reported and read, not refused. `untracked_projections` may be operator-added local files; the next `hw project` reconciles them. `unknown_event_kinds` may be a legitimate schema extension, since the closed-set discipline for kinds lives at `hw add` time. Secrets are a warning by default because the log is append-only: a historical chain that leaked a credential must still verify, since refusing to verify it unleaks nothing, and a verifier that FAILs forever on immutable history is one operators stop running.
+
+The count is load-bearing. A verifier built to a five-term PASS rule would report `PASS` on a chain carrying duplicate event IDs -- exactly the field corruption Layer 1 check 14 exists to catch, where ten events under five names verified clean because every `prev_hash` was correct.
 
 **Incremental verification.**
 
@@ -651,7 +699,7 @@ A file is in exactly one category. If unsure, refer to the table in §File Layou
 
 - **Parallel actors never append directly.** A parallel actor (council member, delegated subagent, sibling session) writes its output to a **draft file** in its own directory. One serial **convergence writer** — the parent agent, or whoever holds the instance — reads the drafts and appends the resulting events in order.
 - **Parallelism across instances, not within one.** If two workstreams genuinely need to write concurrently, they belong in separate harness instances with separate `events.jsonl` files (see `core/LOCK.md` §Programs). The Lock is per-instance; so is the writer.
-- **Layer 1 detection.** Duplicate event IDs, or more than one event whose `prev` hash references the same parent, is a `chain_breaks` FAIL in `hw verify` — corruption from a violated writer rule is visible on the next verify, not at the next confusing read.
+- **Layer 1 detection.** Duplicate event IDs are a `duplicate_event_ids` FAIL in `hw verify` (Layer 1 check 14); more than one event whose `prev_hash` references the same parent is a `chain_breaks` FAIL. They are separate report rows because they are separate defects: a forked chain breaks the hash links, while an id collision leaves every `prev_hash` correct and is invisible to chain verification alone -- which is exactly how ten events under five names once verified clean. Corruption from a violated writer rule is visible on the next verify, not at the next confusing read.
 
 | Hypothesis | Claim | Falsifier |
 |---|---|---|
@@ -1240,9 +1288,17 @@ No verifier change beyond what §Checked Claims already covers: a re-stat record
 |---|---|
 | `actor` on every event | Optional. A missing `actor` reads as `executor`, and is not a malformed payload. |
 | Digest-bridge protocol steps | **N/A.** Skip them; the bridge exists to hand state between actors and there is only one. |
-| `#hash` on citation handles | Optional. `[F-012]` or a bare `F-012` is a legal handle. |
+| `#hash` on citation handles | Optional. `[F-012]` or a bare `F-012` is a legal handle -- **and is invisible to Layer 1 checks 2, 3 and the Ratchet.** See the cost below. |
 
-**What it does not drop: anything load-bearing.** The chain is still hash-linked. Artifact projections still carry their hashes, and `hashes.json` still tracks them — so a `single-executor` project can be verified, superseded, and re-cited with hashes at any time, and switching back to `multi-actor` costs nothing. What is dropped is the *citing* ceremony, not the integrity it was built on. Every other Layer 1 check runs unchanged.
+**What the bare handle costs -- state it plainly.** `hw verify` recognizes a citation by the `[KIND-NNN#hash]` shape. A bare `F-012` handle does not match, so the verifier never sees it, and three things silently do not happen to it:
+
+- **Check 2 (citation existence)** does not run. A bare handle naming an artifact that does not exist is never reported as `broken_citations`.
+- **Check 3 (citation freshness)** does not run. A bare handle can never go stale, because there is no recorded hash to compare against.
+- **The Ratchet** (`core/ATOMICITY.md` §Ratchet) cannot fire on it. A completed task whose `consumes:` list holds only bare handles is never moved back to `blocked` when a later task supersedes what it consumed -- the regression the Ratchet exists to catch drifts exactly as it would with no citation at all.
+
+**So: keep the `#hash` on any citation you rely on across sessions.** The recommended practice is bare handles for *conversational* references only -- "as F-012 noted", a pointer a human reads in the same session -- and full `[F-012#a3f9c1b2d4e5]` citations for anything a task consumes, an artifact depends on, or a future agent will resume from. The relaxation is real and it is worth having on a one-agent run; it is not free, and a run that spends it on load-bearing citations has traded a structural check for a saved twelve characters.
+
+**What it does not drop.** The chain is still hash-linked. Artifact projections still carry their hashes, and `hashes.json` still tracks them -- so a `single-executor` project can be verified, superseded, and re-cited with hashes at any time, and switching back to `multi-actor` costs nothing. Every Layer 1 check still *runs*; what changes is that checks 2 and 3 have nothing to inspect on the citations that dropped their hash.
 
 **Verifier.** The profile is read the way `lifecycle` is read (§Lifecycle events, `core/LOCK.md` §Ongoing Projects): schema first, then PROJECT.md, unknown → default. Under `single-executor`, `hw verify` reports a `profile_single_executor` note so an operator reading the report can see which rules are relaxed.
 

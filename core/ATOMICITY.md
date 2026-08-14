@@ -321,7 +321,7 @@ The state engine drives this; the agent does not need to remember to check. A re
 
 v4.1.1 maintained `SESSION-STATE.md` with per-step writes to support mid-task resume. v5.0 removes this. Resume is replay-based:
 
-1. Read `events.jsonl` for events with `actor` matching the resuming agent or task.
+1. Read `events.jsonl` for events with `actor` matching the resuming agent or task. Under `profile: single-executor` (`core/SUBSTRATE.md` §Execution Profile) an event carrying no `actor` is treated as `actor: executor` for this selection, so a chain that omits the field resumes exactly as one that writes `executor` on every line. The same default governs `hw fold`'s branch-event capture.
 2. Reconstruct context from the consumed-inputs projection (already up to date), the task instructions, and the most recent in-progress markers in events.
 3. If a task was mid-step when interrupted, the projected state shows status `in_progress`; re-run from the last completed step inferred from events.
 
