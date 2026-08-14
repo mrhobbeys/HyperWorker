@@ -137,6 +137,17 @@ A test for whether a primitive belongs in core: would more than one schema benef
 
 Every schema declares `harness_version` in `schema.yaml` to pin it to the substrate version it was designed against. The harness MUST refuse to run a schema whose `harness_version` exceeds the harness's own version. When the substrate bumps, schemas using new primitives bump their `harness_version` to match.
 
+**This refusal is implemented as of v6.0.0.** From v5.1.1 to v5.3 the requirement above was a sentence in this file and nothing else — no code anywhere read `harness_version` for comparison. That is how the repo reached a state where the harness identified as 5.2.1, the `program` schema declared 5.3.0, and nobody noticed the newest schema was unrunnable by the repo's own rule. The reference verifier now carries `HARNESS_VERSION` as a constant and, when verifying a workspace, compares it against the `harness_version` declared by the **active project's** schema:
+
+| Schema `harness_version` vs. harness | `hw verify` |
+|---|---|
+| Greater | **FAIL** `harness_version_too_new` — a refusal naming both versions. The schema may rely on primitives this harness does not implement. |
+| Equal | Clean. |
+| Less | PASS with a `harness_version_older` note. An older schema simply predates this substrate; it is not a defect. |
+| Absent or unparseable | PASS with a `harness_version_undeclared` / `harness_version_unparseable` note. A missing declaration is missing information, not evidence of incompatibility — declare one. |
+
+The gate follows the Lock: only the schema of the project currently holding the instance is checked (`core/LOCK.md`), because that is the only schema in force. Run it with `python tools/hw-verify.py --workspace <path>`; see `core/VERIFICATION.md` §Layer 1 check 16 and `tools/test_harness_version.py`.
+
 This project has a single operator. Breaking changes are allowed and expected. There are no backward-compat layers, no transition periods, no dual-form acceptance for new field shapes, and no exemption mechanisms for in-flight projects. When a substrate change requires a schema update, update the schema directly. When a schema change requires a project artifact update, update the project artifacts directly. (See §8 below for the full single-operator policy and the rare exceptions.)
 
 `schema_version` is documentation of intent rather than a compatibility contract: bump on any meaningful change, with a one-line CHANGELOG note explaining what changed and what consumers should adjust.

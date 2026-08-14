@@ -40,6 +40,11 @@ import urllib.request
 from collections import defaultdict
 from pathlib import Path, PurePosixPath, PureWindowsPath
 
+# The substrate version this verifier implements. A schema declaring a
+# harness_version above this is refused (CONTRIBUTING.md §5,
+# core/VERIFICATION.md §Layer 1 check 16).
+HARNESS_VERSION = "6.0.0"
+
 CITATION_RE = re.compile(r"\[([A-Z]+)-(\d{3,})#([0-9a-f]{12})\]")
 ARTIFACT_DIRS = ("decisions", "findings", "anti-patterns", "operating-reality",
                  "sources", "claims", "contradictions")
@@ -707,6 +712,121 @@ def active_project(events: list) -> str | None:
     return active
 
 
+def find_schema_dir(workspace: Path, schema: str) -> Path | None:
+    """Locate `schemas/projects/<schema>/`, in the workspace or beside it.
+
+    A harness instance may hold its own copy of the schema pack, or run out of a
+    checkout whose `schemas/` sits one level up from the workspace; the shipped
+    checks already probe both, and this centralizes that probe.
+    """
+    for root in (workspace, workspace.parent):
+        candidate = root / "schemas" / "projects" / schema
+        if candidate.is_dir():
+            return candidate
+    return None
+
+
+def parse_semver(version) -> tuple | None:
+    """Parse `X.Y.Z` (with optional trailing pre-release/build text) into a
+    comparable tuple. Missing minor/patch read as 0, so `6.0` == `6.0.0`. Returns
+    None if there is no leading numeric release to compare.
+    """
+    if not isinstance(version, str):
+        return None
+    m = re.match(r"^\s*v?(\d+)(?:\.(\d+))?(?:\.(\d+))?", version.strip())
+    if not m:
+        return None
+    return tuple(int(part) if part else 0 for part in m.groups())
+
+
+def compare_semver(left, right) -> int | None:
+    """-1 / 0 / 1 for left <=> right; None if either side is unparseable."""
+    a, b = parse_semver(left), parse_semver(right)
+    if a is None or b is None:
+        return None
+    return (a > b) - (a < b)
+
+
+def parse_schema_harness_version(path: Path) -> str | None:
+    """Read the top-level `harness_version:` a schema.yaml declares."""
+    if not path.exists():
+        return None
+    text = path.read_text(encoding="utf-8")
+    m = re.search(r"^harness_version:\s*(.+?)\s*$", text, re.MULTILINE)
+    if not m:
+        return None
+    value = re.sub(r"\s+#.*$", "", m.group(1)).strip().strip('"').strip("'")
+    return value or None
+
+
+def check_harness_version(workspace: Path, events: list) -> tuple:
+    """Layer 1 check 16: refuse a schema built against a newer substrate.
+
+    CONTRIBUTING.md §5 has stated since v5.1.1 that the harness MUST refuse to
+    run a schema whose `harness_version` exceeds the harness's own. No such check
+    existed anywhere — which is how the repo reached a state where the harness
+    identified as 5.2.1 while the `program` schema declared 5.3.0, and nothing
+    noticed that the newest schema was, by the repo's own rule, unrunnable.
+
+    Scoped to the active project's schema (core/LOCK.md: one project holds the
+    instance at a time, and its schema is the one in force). A schema older than
+    the harness is fine and reported as a note; an unparseable or undeclared
+    version is a note, not a refusal, since a missing declaration is missing
+    information rather than evidence of incompatibility.
+
+    Returns (failures, notes).
+    """
+    failures = []
+    notes = []
+
+    project_id = active_project(events)
+    if not project_id:
+        return failures, notes
+
+    schema = find_schema_for_project(workspace, project_id)
+    if not schema:
+        return failures, notes
+
+    schema_dir = find_schema_dir(workspace, schema)
+    if schema_dir is None:
+        return failures, notes
+
+    declared = parse_schema_harness_version(schema_dir / "schema.yaml")
+    if declared is None:
+        notes.append(
+            f"{project_id}: harness_version_undeclared "
+            f"(schema {schema!r} declares no harness_version; harness is "
+            f"{HARNESS_VERSION})"
+        )
+        return failures, notes
+
+    order = compare_semver(declared, HARNESS_VERSION)
+    if order is None:
+        notes.append(
+            f"{project_id}: harness_version_unparseable "
+            f"(schema {schema!r} declares harness_version {declared!r}; "
+            f"cannot compare against {HARNESS_VERSION})"
+        )
+    elif order > 0:
+        failures.append(
+            f"{project_id}: harness_version_too_new "
+            f"(schema {schema!r} declares harness_version {declared}; this "
+            f"harness is {HARNESS_VERSION}. Refusing to run a schema built "
+            f"against a newer substrate - it may rely on primitives this "
+            f"harness does not implement. Upgrade the harness, or pin the "
+            f"schema to {HARNESS_VERSION}. See CONTRIBUTING.md section 5.)"
+        )
+    elif order < 0:
+        notes.append(
+            f"{project_id}: harness_version_older "
+            f"(schema {schema!r} declares harness_version {declared}; harness is "
+            f"{HARNESS_VERSION} - older is fine, the schema simply predates this "
+            f"substrate)"
+        )
+
+    return failures, notes
+
+
 def parse_verification_yaml_checked_claims(path: Path) -> list:
     """Minimal YAML reader for verification.yaml's `checked_claims.required_for`
     list. Mirrors the block-list convention already used by
@@ -1174,6 +1294,8 @@ def verify(workspace: Path, since: str | None) -> dict:
         "duplicate_event_ids": [],
         "non_monotonic_event_ids": [],
         "lock_violations": [],
+        "harness_version_failures": [],
+        "harness_version_notes": [],
         "scope_completeness_failures": [],
         "external_state_readback_failures": [],
         "external_state_readback_warnings": [],
@@ -1290,6 +1412,9 @@ def verify(workspace: Path, since: str | None) -> dict:
     result["duplicate_event_ids"] = duplicates
     result["non_monotonic_event_ids"] = non_monotonic
     result["lock_violations"] = check_lock_enforcement(events)
+    hv_failures, hv_notes = check_harness_version(workspace, events)
+    result["harness_version_failures"] = hv_failures
+    result["harness_version_notes"] = hv_notes
     result["scope_completeness_failures"] = check_scope_completeness(workspace, events)
     esrb_failures, esrb_warnings = check_external_state_readback(workspace, events)
     result["external_state_readback_failures"] = esrb_failures
@@ -1308,6 +1433,7 @@ def verify(workspace: Path, since: str | None) -> dict:
         or result["duplicate_event_ids"]
         or result["non_monotonic_event_ids"]
         or result["lock_violations"]
+        or result["harness_version_failures"]
         or result["scope_completeness_failures"]
         or result["external_state_readback_failures"]
         or result["bootstrap_probe_failures"]
@@ -1334,6 +1460,8 @@ def render(result: dict) -> str:
         f"  duplicate_event_ids:   {len(result['duplicate_event_ids'])} {result['duplicate_event_ids']}",
         f"  non_monotonic_ids:     {len(result['non_monotonic_event_ids'])} {result['non_monotonic_event_ids']}",
         f"  lock_violations:       {len(result['lock_violations'])} {result['lock_violations']}",
+        f"  harness_version:       {len(result['harness_version_failures'])} {result['harness_version_failures']}",
+        f"  harness_version_note:  {len(result['harness_version_notes'])} {result['harness_version_notes']}",
         f"  scope_completeness:    {len(result['scope_completeness_failures'])} {result['scope_completeness_failures']}",
         f"  ext_state_readback:    {len(result['external_state_readback_failures'])} {result['external_state_readback_failures']}",
         f"  ext_state_warnings:    {len(result['external_state_readback_warnings'])} {result['external_state_readback_warnings']}",
