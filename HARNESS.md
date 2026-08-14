@@ -168,6 +168,7 @@ schemas/
 reference/
   VALIDATION.md
   FAILURE-MODES.md
+  comms-mail-pattern.md              # file-mailbox pattern for multi-machine engagements (v6.0.0) — reference, not core
   field-reports/                     # per-machine field-gather reports (genericized evidence)
 tools/
   hw-verify.py                       # reference implementation of `hw verify`
