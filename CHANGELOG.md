@@ -54,11 +54,13 @@ Six primitives, each from a documented failure of the same ten-week production d
 
 - **Friction log slimmed to one line (`core/SUBSTRATE.md` §Friction Log Event Kind, `HARNESS.md` §Friction Logs)** — the deployment produced **four** `friction.log` entries in 130 events. The mechanism existed and the operator wanted it; six required fields "felt heavier than the value," so the run's best lessons went uncaptured. `friction.log` now requires only `{note}` — one line — with `{category, severity, task_id}` optional. The protocol is documented as literally one step: append one event. No artifact file, no projection to hand-write; promotion to an anti-pattern or finding is a later, optional act. The pre-v6 rich form still verifies unchanged, so no chain migrates: the verifier accepts a payload carrying `note` **or** the full rich set, an either/or that moved out of the flat required-field table into `check_note_payloads`. 17-case test suite.
 
+- **`operator.correction` (`core/SUBSTRATE.md` §Operator Correction, H-S8; `templates/session-handoff-template.md`, `templates/executor-prompt.md`)** — the harness's invisible channel. The operator corrected and reminded agents constantly across ten weeks; none of it was captured, so the same reminder was re-given every session. Corrections cluster two ways — a claim broader than its verification, and environment knowledge only the operator holds — and each shape has a home. New one-line event kind: `{note}` required, `{context, should_have_lived}` optional, where `should_have_lived` names where the information belongs so the reminder is never needed again. The protocol's load-bearing half is the **promotion review at session wrap/handoff**: read this session's corrections and write each into its home (operating-reality, rules file, anti-pattern). That step is now a section of the handoff template and a step in the executor prompt. Layer 1 is well-formedness only — whether a correction was promoted well is a judgment the verifier cannot make, and a check that guessed would teach agents to write nominal values. Test cases folded into the one-line-events suite (27 cases).
+
 ### Pending in 6.0.0 — lands via subsequent commits
 
 Placeholders. These are in scope for the 6.0.0 release and are not yet written; each gets a real entry when its commit lands.
 
-- **Field-evidence features** — *landing.* Three of six landed (see §Landed — field evidence above). Still to come: `operator.correction`, open-loop tracking, and `read_only_pass`.
+- **Field-evidence features** — *landing.* Four of six landed (see §Landed — field evidence above). Still to come: open-loop tracking and `read_only_pass`.
 - **Diverse-agent docs** — *pending.* Documentation for running the harness across heterogeneous agent/model fleets. Entry to be written when the commit lands.
 
 ### Also shipping in 6.0.0

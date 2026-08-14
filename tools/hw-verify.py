@@ -109,6 +109,7 @@ KNOWN_EVENT_KINDS = {
     "toolchain.anchor",       # v5.2.1
     "cycle.open", "cycle.close",   # v5.3 lifecycle; missing from this set until v6.0.0
     "evidence.capture",            # v6.0.0 field-evidence primitives
+    "operator.correction",         # v6.0.0; the invisible channel, made visible
 }
 
 # Required payload fields per v5.1 event kind. None means no per-kind structural
@@ -1001,16 +1002,26 @@ EVIDENCE_ID_CITE_RE = re.compile(r"\bED-\d{3,}\b")
 HYPOTHESIS_STATUSES = ("open", "suspect", "excluded")
 
 
+# The v6.0.0 one-line kinds. Both exist because a heavier form went unused in
+# the field: friction.log got 4 entries in 130 events, and operator corrections
+# were never captured at all.
+ONE_LINE_KINDS = ("friction.log", "operator.correction")
+
+
 def check_note_payloads(events: list) -> list:
-    """One-line event kinds: `friction.log` (v6.0.0 slim form) and future kin.
+    """Well-formedness for the v6.0.0 one-line event kinds.
 
-    core/SUBSTRATE.md §Friction Log Event Kind. Field evidence: four friction
-    entries in 130 events across ten weeks. The mechanism existed and the
-    operator wanted it; six fields "felt heavier than the value" and the run's
-    best lessons went uncaptured. The payload is now one line.
+    `friction.log` (core/SUBSTRATE.md §Friction Log Event Kind): four entries in
+    130 events across ten weeks. The mechanism existed and the operator wanted
+    it; six fields "felt heavier than the value" and the run's best lessons went
+    uncaptured. Well-formed now means a non-empty `note`, OR the full pre-v6 rich
+    set -- both verify, so no chain has to migrate.
 
-    Well-formed means: a non-empty `note`, OR the full pre-v6 rich set. Both
-    verify -- v5.1-v5.3 chains keep passing and nobody has to migrate a log.
+    `operator.correction` (§Operator Correction): well-formedness only. `note`
+    present and non-empty; `context` and `should_have_lived` are optional and
+    unchecked. Whether a correction was promoted into its should_have_lived home
+    is a judgment the verifier cannot make, and a check that guessed would only
+    teach agents to write nominal values.
 
     Returns strings for result["malformed_payloads"]: a payload that is neither
     shape is the same class of defect as a missing required field.
@@ -1018,7 +1029,7 @@ def check_note_payloads(events: list) -> list:
     failures = []
     for event in events:
         kind = event.get("kind")
-        if kind != "friction.log":
+        if kind not in ONE_LINE_KINDS:
             continue
         payload = event.get("payload")
         if not isinstance(payload, dict):
@@ -1028,20 +1039,24 @@ def check_note_payloads(events: list) -> list:
         if isinstance(note, str) and note.strip():
             continue
 
-        missing_rich = [f for f in FRICTION_RICH_FIELDS if f not in payload]
-        if not missing_rich:
-            continue
+        missing_rich = None
+        if kind == "friction.log":
+            missing_rich = [f for f in FRICTION_RICH_FIELDS if f not in payload]
+            if not missing_rich:
+                continue
 
         if "note" in payload:
             failures.append(
-                f"{event.get('id')}:friction.log note is empty "
+                f"{event.get('id')}:{kind} note is empty "
                 f"(one line is the whole obligation)"
             )
-        else:
+        elif missing_rich is not None:
             failures.append(
-                f"{event.get('id')}:friction.log missing ['note'] "
+                f"{event.get('id')}:{kind} missing ['note'] "
                 f"(or the pre-v6 rich set, which is missing {missing_rich})"
             )
+        else:
+            failures.append(f"{event.get('id')}:{kind} missing ['note']")
     return failures
 
 

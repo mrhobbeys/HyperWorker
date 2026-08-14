@@ -44,6 +44,15 @@ The failure mode: the agent reads the task, skims the consumed artifacts, and pr
 
 When done, fill the completion report and emit `hw write <task-id> --status complete`. Layer 2 verification runs automatically; do not declare success.
 
+## When the operator corrects you (v6.0.0)
+
+The operator corrects and reminds you mid-work — "that host is behind the bastion", "you said it's fixed, you tested the happy path". Across a ten-week deployment none of that was ever captured, so the operator re-gave the same reminders every session.
+
+1. **Append one `operator.correction` event** when it happens: `{note}` required, in the operator's words where you can; `context` and `should_have_lived` optional. One line. Do not stop work to do this well.
+2. **At session wrap / handoff, promote each one.** Read this session's `operator.correction` events and write each into its `should_have_lived` home — an operating-reality field, a line in the rules file, an anti-pattern. Record the promotions in the handoff (`templates/session-handoff-template.md` §Operator corrections promoted this session).
+
+A correction captured and never promoted is a diary entry; the reminder comes back next session. See `core/SUBSTRATE.md` §Operator Correction.
+
 ## Execution mode (v5.2.0)
 
 `OR-001.delegation_policy.execution_mode` declares the operator's pause-batching preference. Default is `interactive`; existing schemas behave as in v5.1 unless the operator opts in.

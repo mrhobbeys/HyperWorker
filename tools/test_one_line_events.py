@@ -2,15 +2,23 @@
 """
 test_one_line_events.py — regression test for the v6.0.0 one-line event kinds in
 tools/hw-verify.py: the slimmed `friction.log` (core/SUBSTRATE.md §Friction Log
-Event Kind, HARNESS.md §Friction Logs).
+Event Kind, HARNESS.md §Friction Logs) and `operator.correction`
+(core/SUBSTRATE.md §Operator Correction).
 
-Field evidence: four `friction.log` entries in 130 events across ten weeks. The
+Field evidence, friction.log: four entries in 130 events across ten weeks. The
 mechanism existed and the operator wanted it; six required fields "felt heavier
 than the value" and the engagement's best lessons went uncaptured. The payload is
 now `{note}` required, `{category, severity, task_id}` optional -- and the pre-v6
 rich form still verifies, so no chain has to migrate.
 
-Covers: slim acceptance, rich back-compat, the neither-shape failure, and
+Field evidence, operator.correction: the operator corrected and reminded agents
+constantly, none of it was captured, and the same reminder was re-given every
+session. `{note}` required; `{context, should_have_lived}` optional. Layer 1 is
+well-formedness only -- whether a correction was promoted into its
+should_have_lived home is a judgment the verifier cannot make.
+
+Covers: slim acceptance for both kinds, friction rich back-compat, the
+neither-shape failure, the promotion step's presence in both templates, and
 end-to-end dispatch through verify() (the reports land in malformed_payloads,
 which is the same class of defect as a missing required field).
 
@@ -193,15 +201,83 @@ def _(tmp):
 
 
 # ---------------------------------------------------------------------------
+# operator.correction -- the invisible channel
+# ---------------------------------------------------------------------------
+
+@case("a bare note is a complete operator.correction payload")
+def _(tmp):
+    reset_ids()
+    events = [ev("operator.correction", {"note": "that host is behind the bastion"})]
+    return expect_clean(check_note_payloads(events))
+
+
+@case("note plus context and should_have_lived -> no failures")
+def _(tmp):
+    reset_ids()
+    events = [ev("operator.correction", {
+        "note": "you said it is fixed; you only tested the happy path",
+        "context": "T-004 completion report",
+        "should_have_lived": "anti-pattern"})]
+    return expect_clean(check_note_payloads(events))
+
+
+@case("should_have_lived is free text, not an enum")
+def _(tmp):
+    reset_ids()
+    events = [ev("operator.correction", {"note": "the VPN drops after 30 min",
+                                         "should_have_lived": "OR-001, the network field"})]
+    return expect_clean(check_note_payloads(events))
+
+
+@case("operator.correction with no note -> reported (well-formedness only)")
+def _(tmp):
+    reset_ids()
+    events = [ev("operator.correction", {"context": "mid-task"})]
+    return expect_failures(check_note_payloads(events), 1,
+                           ["operator.correction", "note", "EV-0001"])
+
+
+@case("operator.correction with an empty note -> reported")
+def _(tmp):
+    reset_ids()
+    return expect_failures(check_note_payloads([ev("operator.correction", {"note": ""})]),
+                           1, ["note is empty"])
+
+
+@case("operator.correction never falls back to the friction rich form")
+def _(tmp):
+    reset_ids()
+    events = [ev("operator.correction", {"type": "REGRESSION", "description": "x",
+                                         "surfaced_by": "operator", "severity": "blocking"})]
+    return expect_failures(check_note_payloads(events), 1,
+                           ["operator.correction", "note"])
+
+
+@case("both one-line kinds report independently in one chain")
+def _(tmp):
+    reset_ids()
+    events = [ev("friction.log", {"note": "fine"}),
+              ev("operator.correction", {}),
+              ev("friction.log", {})]
+    return expect_failures(check_note_payloads(events), 2,
+                           ["operator.correction", "friction.log", "EV-0002", "EV-0003"])
+
+
+# ---------------------------------------------------------------------------
 # Registration and end-to-end dispatch
 # ---------------------------------------------------------------------------
 
-@case("friction.log carries no flat required-field list any more")
+@case("both one-line kinds are registered and carry no flat required-field list")
 def _(tmp):
     checks = [
-        ("friction.log" in hw_verify.KNOWN_EVENT_KINDS, "kind known"),
+        ("friction.log" in hw_verify.KNOWN_EVENT_KINDS, "friction.log known"),
+        ("operator.correction" in hw_verify.KNOWN_EVENT_KINDS, "operator.correction known"),
         ("friction.log" not in hw_verify.REQUIRED_PAYLOAD_FIELDS,
          "no flat required list (the either/or lives in check_note_payloads)"),
+        ("operator.correction" not in hw_verify.REQUIRED_PAYLOAD_FIELDS,
+         "operator.correction validated by check_note_payloads"),
+        (hw_verify.ONE_LINE_KINDS == ("friction.log", "operator.correction"),
+         "one-line kind set"),
         (hw_verify.FRICTION_RICH_FIELDS == ("type", "description", "surfaced_by", "severity"),
          "rich field set preserved"),
     ]
@@ -242,6 +318,42 @@ def _(tmp):
     ]
     bad = [label for ok, label in checks if not ok]
     return (not bad, f"docs missing {bad}")
+
+
+@case("the correction-promotion step is in both templates")
+def _(tmp):
+    handoff = (HERE.parent / "templates" / "session-handoff-template.md").read_text(encoding="utf-8")
+    executor = (HERE.parent / "templates" / "executor-prompt.md").read_text(encoding="utf-8")
+    checks = [
+        ("operator.correction" in handoff, "handoff names the event kind"),
+        ("should_have_lived" in handoff, "handoff names should_have_lived"),
+        ("Promoted to" in handoff, "handoff records what each was promoted to"),
+        ("operator.correction" in executor, "executor prompt names the event kind"),
+        ("should_have_lived" in executor, "executor prompt names should_have_lived"),
+    ]
+    bad = [label for ok, label in checks if not ok]
+    return (not bad, f"templates missing {bad}")
+
+
+@case("end to end: verify() PASSes a chain of one-line corrections")
+def _(tmp):
+    reset_ids()
+    write_chain(tmp, [ev("operator.correction", {"note": "the box is behind the bastion",
+                                                 "should_have_lived": "operating-reality"}),
+                      ev("friction.log", {"note": "one line"})])
+    result = hw_verify.verify(tmp, None)
+    return (result["result"] == "PASS" and result["malformed_payloads"] == [],
+            f"expected PASS, got {result['result']} {result['malformed_payloads']}")
+
+
+@case("end to end: verify() FAILs an operator.correction with no note")
+def _(tmp):
+    reset_ids()
+    write_chain(tmp, [ev("operator.correction", {"context": "mid-task"})])
+    result = hw_verify.verify(tmp, None)
+    if result["result"] != "FAIL":
+        return (False, f"expected FAIL, got {result['result']}")
+    return expect_failures(result["malformed_payloads"], 1, ["operator.correction", "note"])
 
 
 def write_chain(tmp: Path, events: list):

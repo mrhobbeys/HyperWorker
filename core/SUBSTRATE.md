@@ -233,6 +233,12 @@ The harness defines a closed set. Schema extensions must add kinds via the proje
 | `friction.log` | `{note}` required; `{category, severity, task_id}` optional. One line, one event (v6.0.0). The pre-v6 rich form `{type, patch_id, description, surfaced_by, severity, suggested_target}` is still accepted. See §Friction Log Event Kind. |
 | `friction.log.prompt` | `{trigger, task_id, signal_summary}` — informational; the harness emits this when an auto-prompt heuristic fires. The agent reads the prompt event and decides whether to follow it with an actual `friction.log` entry. |
 
+### Operator events (v6.0.0)
+
+| Kind | Payload |
+|---|---|
+| `operator.correction` | `{note}` required; `{context, should_have_lived}` optional. One line, appended when the operator corrects or reminds mid-work. See §Operator Correction. |
+
 ### Session events
 
 | Kind | Payload |
@@ -1060,6 +1066,37 @@ Exactly one of `content` or `content_path` (+ `content_sha256`). Inline is the d
 | Hypothesis | Claim | Falsifier |
 |---|---|---|
 | H-S7 | Making raw output a substrate event, cheap enough to fire mid-work, keeps load-bearing evidence alive past the session that produced it — and gives exclusions something to cite. | Captures are fired for trivia and the important output still goes uncaptured, or the inline-content rule pushes agents to summarize at capture time, which is exactly the loss the primitive exists to prevent. |
+
+---
+
+## Operator Correction (v6.0.0)
+
+**Field evidence:** the operator corrected and reminded agents constantly across ten weeks. None of it was captured, so the same reminder was re-given every session.
+
+This is the harness's invisible channel. The operator says "that box is behind the VPN, you have to jump through the bastion first" or "you're claiming it works — you only checked that it compiled." The agent adjusts, the session ends, the correction dies with it, and the next session earns the same correction. The operator is doing the harness's job by hand, forever.
+
+Corrections cluster into two shapes, and both have a home:
+
+| Shape | Example | Where it belongs |
+|---|---|---|
+| **Claim broader than verification** | "You said it's fixed; you tested the happy path." | An anti-pattern, or a `claim:` predicate on the event that was over-claiming. |
+| **Environment knowledge only the operator holds** | "That host is behind the bastion." | Operating-reality (`OR-NNN`), or the project's rules file. |
+
+**Payload schema.** One line, like `friction.log` — for the same reason.
+
+| Field | Type | Meaning |
+|---|---|---|
+| `note` | string | **Required. The only required field.** The correction, in the operator's words where possible. |
+| `context` | string \| null | Optional. What was in flight when it was given. |
+| `should_have_lived` | string \| null | Optional but the valuable one: **where this information belongs so the reminder is never needed again.** Typical values: `operating-reality`, `rules`, `anti-pattern`, `decision`, `task-template`. |
+
+**Protocol.** Append one event when the correction happens. Then, **at session wrap / handoff**, review this session's `operator.correction` events and promote each one into its `should_have_lived` home — write the OR field, the rules line, the anti-pattern. That review step is in `templates/session-handoff-template.md` and `templates/executor-prompt.md`; it is the step that converts a correction into something structural, and it is the whole point of the kind. A correction captured and never promoted is a diary entry.
+
+**Layer 1: well-formedness only.** `note` present and non-empty; nothing else is enforced. The harness cannot judge whether a correction was promoted well, and a check that guessed would just teach agents to write nominal `should_have_lived` values.
+
+| Hypothesis | Claim | Falsifier |
+|---|---|---|
+| H-S8 | Capturing corrections as one-line events, plus a promotion review at handoff, ends the re-give-the-same-reminder loop. | Corrections get captured and never promoted (the log becomes a diary), or operators do not fire the event at all because correcting the agent already felt like the interruption. |
 
 ---
 

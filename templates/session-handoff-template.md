@@ -46,6 +46,17 @@ One concrete step. Do not write a list; pick the highest-leverage move.
 
 > Example: "Run `hw verify --since=EV-0142` to confirm chain integrity from this handoff baseline, then read OR-003 and the T-006 structure decision before proceeding to T-007 drafting."
 
+## Operator corrections promoted this session (v6.0.0)
+
+**Do this before writing the handoff event.** Read every `operator.correction` event appended since the last handoff. For each one, write the information into its `should_have_lived` home so the operator never has to give that reminder again — an operating-reality field, a line in `00-REFERENCE-rules.md`, an anti-pattern, a decision. Then record the promotion here.
+
+| Correction (one line) | Should have lived | Promoted to | Event |
+|---|---|---|---|
+| <the operator's words> | operating-reality | `[OR-NNN#hash]` | EV-NNNN |
+| <...> | rules | `00-REFERENCE-rules.md` §<section> | EV-NNNN |
+
+If a correction was **not** promoted, say so and why — an unpromoted correction is the next session's repeat reminder. `none` if the operator corrected nothing this session. See `core/SUBSTRATE.md` §Operator Correction.
+
 ## Friction notes
 
 If the closing agent encountered friction worth recording, note it here briefly with the friction-log entry it became (or that should be added). The friction log itself lives at workspace root or `projects/<id>/friction-log.md` per HARNESS.md §Friction Logs; this section is just a pointer.
