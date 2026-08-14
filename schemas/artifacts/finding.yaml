@@ -54,6 +54,27 @@ finding_fields:
     type: list[string]
     required: false
     default: []
+  # v6.0.0 — exclusion discipline. Optional; used when a finding is carried as a
+  # hypothesis under elimination. See core/SUBSTRATE.md §Exclusion Discipline.
+  - name: status
+    type: enum
+    values: [open, suspect, excluded]
+    default: open
+    required: false
+    description: >-
+      Hypothesis state. `open` = not investigated. `suspect` = argued for or
+      against, including by careful static reading; still live. `excluded` =
+      ruled out, and only ever on the strength of a dynamic test named in
+      test_ref. A static read can reach `suspect` and no further.
+  - name: test_ref
+    type: string|null
+    default: null
+    required: false
+    description: >-
+      How it was tested. An evidence.capture id (`ED-014`) or a checked-claim
+      predicate recorded in the same event's `claim:` block. Required when
+      status is `excluded`; Layer 1 check 19 FAILs `excluded_without_test_ref`
+      otherwise. Prose reasoning is not a test_ref.
 
 body:
   required_sections:
@@ -73,7 +94,18 @@ render_order:
   - title
   - evidence
   - applies_to
+  - status
+  - test_ref
   - implications
+
+exclusion_rule:
+  description: >-
+    A hypothesis may be marked `status: excluded` only with a test_ref citing a
+    dynamic test that exercised the actual code path. Static reads mark
+    `suspect`. See core/SUBSTRATE.md §Exclusion Discipline.
+  preconditions:
+    - "test_ref names an evidence.capture id present in the chain, OR the event carries a claim: block whose predicate was run."
+    - "The test exercised the code path the hypothesis is about, not an adjacent one."
 
 promotion_rule:
   description: "`hw promote F-<id>` writes a finding.promote event upgrading confidence to validated."

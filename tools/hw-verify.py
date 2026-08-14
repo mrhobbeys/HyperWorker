@@ -63,7 +63,8 @@ HARNESS_VERSION = "6.0.0"
 
 CITATION_RE = re.compile(r"\[([A-Z]+)-(\d{3,})#([0-9a-f]{12})\]")
 ARTIFACT_DIRS = ("decisions", "findings", "anti-patterns", "operating-reality",
-                 "sources", "claims", "contradictions")
+                 "sources", "claims", "contradictions",
+                 "evidence")   # v6.0.0 evidence.capture projections
 ZERO_HASH = "0" * 64
 ZERO_HASH_PREFIXED = "sha256:" + ZERO_HASH
 
@@ -107,6 +108,7 @@ KNOWN_EVENT_KINDS = {
     "operator_soul_anchor",   # v5.2.0; missing from this set until v5.2.1
     "toolchain.anchor",       # v5.2.1
     "cycle.open", "cycle.close",   # v5.3 lifecycle; missing from this set until v6.0.0
+    "evidence.capture",            # v6.0.0 field-evidence primitives
 }
 
 # Required payload fields per v5.1 event kind. None means no per-kind structural
@@ -140,6 +142,10 @@ REQUIRED_PAYLOAD_FIELDS = {
     # prose in a handoff, and the whole OVERDUE mechanism reads it.
     "cycle.open": ("project_id", "cycle_id", "opened_at", "cadence"),
     "cycle.close": ("project_id", "cycle_id", "closed_at", "summary", "next_due"),
+    # v6.0.0 field-evidence kinds. The content-form rules for
+    # evidence.capture live in check_evidence_capture (one of content /
+    # content_path, which a flat required-field list cannot express).
+    "evidence.capture": ("id", "producing_command", "captured_at", "summary"),
 }
 
 
@@ -974,6 +980,192 @@ def check_cycle_lifecycle(workspace: Path, events: list) -> list:
                         f"before wrapping an ongoing project)"
                     )
                     open_cycle = None
+
+    return failures
+
+
+# ---------------------------------------------------------------------------
+# v6.0.0 field-evidence checks (Layer 1 checks 19+). Each one comes from a
+# documented failure of a ten-week production deployment; see core/SUBSTRATE.md
+# for the section that states the protocol and the field evidence behind it.
+# ---------------------------------------------------------------------------
+
+EVIDENCE_ID_RE = re.compile(r"^ED-\d{3,}$")
+EVIDENCE_ID_CITE_RE = re.compile(r"\bED-\d{3,}\b")
+HYPOTHESIS_STATUSES = ("open", "suspect", "excluded")
+
+
+def check_evidence_capture(events: list) -> list:
+    """Layer 1 check 20: `evidence.capture` well-formedness and ED-id uniqueness.
+
+    core/SUBSTRATE.md §Evidence Capture. The payload carries the raw output a
+    conclusion rested on, either inline (`content`) or by path (`content_path` +
+    `content_sha256`) so a large log does not enter the hash chain. Exactly one
+    form: two authorities for the same capture is the state the primitive exists
+    to prevent.
+
+    ED ids are unique across the whole log, not per project, because `test_ref`
+    and finding evidence cite them bare (`ED-014`, no project qualifier).
+    """
+    failures = []
+    seen = {}  # ED id -> event id
+
+    for event in events:
+        if event.get("kind") != "evidence.capture":
+            continue
+        payload = event.get("payload") or {}
+        if not isinstance(payload, dict):
+            payload = {}
+        event_id = event.get("id")
+        evidence_id = payload.get("id")
+
+        if not isinstance(evidence_id, str) or not EVIDENCE_ID_RE.match(evidence_id):
+            failures.append(
+                f"{event_id}: evidence_id_malformed "
+                f"(id {evidence_id!r}; expected ED-NNN, zero-padded to at least 3 digits)"
+            )
+        elif evidence_id in seen:
+            failures.append(
+                f"{event_id}: duplicate_evidence_id "
+                f"({evidence_id} was already captured by {seen[evidence_id]}; "
+                f"ED ids are unique across the whole log because citations carry "
+                f"no project qualifier)"
+            )
+        else:
+            seen[evidence_id] = event_id
+
+        label = evidence_id if isinstance(evidence_id, str) else event_id
+        has_inline = isinstance(payload.get("content"), str)
+        has_path = isinstance(payload.get("content_path"), str) and payload["content_path"]
+
+        if has_inline and has_path:
+            failures.append(
+                f"{label}: evidence_capture_content_ambiguous "
+                f"({event_id} carries both inline content and content_path; "
+                f"a capture has exactly one authority)"
+            )
+        elif not has_inline and not has_path:
+            failures.append(
+                f"{label}: evidence_capture_no_content "
+                f"({event_id} carries neither content nor content_path; "
+                f"a capture with no output captures nothing)"
+            )
+        elif has_path and not payload.get("content_sha256"):
+            failures.append(
+                f"{label}: evidence_capture_path_without_hash "
+                f"({event_id} points at {payload['content_path']} with no "
+                f"content_sha256; the path form still has to pin what was captured)"
+            )
+
+    return failures
+
+
+def captured_evidence_ids(events: list) -> set:
+    """Every well-formed ED id an `evidence.capture` event put in the chain."""
+    ids = set()
+    for event in events:
+        if event.get("kind") != "evidence.capture":
+            continue
+        payload = event.get("payload") or {}
+        evidence_id = payload.get("id") if isinstance(payload, dict) else None
+        if isinstance(evidence_id, str) and EVIDENCE_ID_RE.match(evidence_id):
+            ids.add(evidence_id)
+    return ids
+
+
+def hypothesis_entries(events: list) -> list:
+    """(event, fields) pairs for every event carrying hypothesis state.
+
+    Scoped to `finding.add` (where core/SUBSTRATE.md §Exclusion Discipline puts
+    `status` / `test_ref`) plus any other `<kind>.add` that carries an explicit
+    `test_ref` — schema-declared hypothesis kinds opt in by using the field.
+    Deliberately NOT every payload with a `status` key: the program pack's
+    `workstream.add` uses `status` for something else entirely.
+    """
+    entries = []
+    for event in events:
+        kind = event.get("kind") or ""
+        if not kind.endswith(".add"):
+            continue
+        payload = event.get("payload")
+        if not isinstance(payload, dict):
+            continue
+        fields = artifact_fields(payload)
+        if kind != "finding.add" and "test_ref" not in fields:
+            continue
+        if "status" not in fields and "test_ref" not in fields:
+            continue
+        entries.append((event, fields))
+    return entries
+
+
+def check_exclusion_discipline(events: list) -> list:
+    """Layer 1 check 19: nothing is excluded without a dynamic test.
+
+    core/SUBSTRATE.md §Exclusion Discipline. From AP-008: the true root cause was
+    struck off the hypothesis list on the strength of a well-argued STATIC read,
+    and ~19 attempts were burned before anyone went back to it. The verifier
+    cannot see how a conclusion was reached, so it enforces the one thing it can
+    see -- whether anything was actually run.
+
+    A `test_ref` resolves if it names an `evidence.capture` id present in the
+    chain, or if the same event carries a well-formed `claim:` block (the
+    predicate was run at authoring time). Presence anywhere in the chain is
+    enough; requiring the capture to precede the exclusion would fail legitimate
+    convergence-writer ordering (core/SUBSTRATE.md §Single-Writer Rule).
+    """
+    failures = []
+    captured = captured_evidence_ids(events)
+
+    for event, fields in hypothesis_entries(events):
+        status = fields.get("status")
+        if status is None:
+            continue
+        label = fields.get("id") or fields.get("artifact_id") or event.get("id")
+
+        if not isinstance(status, str) or status not in HYPOTHESIS_STATUSES:
+            failures.append(
+                f"{label}: invalid_hypothesis_status "
+                f"({event.get('id')} declares status {status!r}; expected one of "
+                f"{'|'.join(HYPOTHESIS_STATUSES)})"
+            )
+            continue
+
+        if status != "excluded":
+            continue
+
+        test_ref = fields.get("test_ref")
+        if not isinstance(test_ref, str) or not test_ref.strip():
+            failures.append(
+                f"{label}: excluded_without_test_ref "
+                f"({event.get('id')} marks the hypothesis excluded with no "
+                f"test_ref; a static read marks it suspect, not excluded)"
+            )
+            continue
+
+        cited = EVIDENCE_ID_CITE_RE.findall(test_ref)
+        if cited:
+            missing = [c for c in cited if c not in captured]
+            if missing:
+                failures.append(
+                    f"{label}: excluded_test_ref_unresolved "
+                    f"({event.get('id')} cites {', '.join(missing)}; no "
+                    f"evidence.capture in the chain produced "
+                    f"{'those ids' if len(missing) > 1 else 'that id'})"
+                )
+            continue
+
+        payload = event.get("payload") or {}
+        claim = payload.get("claim") if isinstance(payload, dict) else None
+        if claim is not None and validate_claim_block(claim) is None:
+            continue
+
+        failures.append(
+            f"{label}: excluded_without_test_ref "
+            f"({event.get('id')} test_ref {test_ref!r} names neither an "
+            f"evidence.capture id (ED-NNN) nor a claim: predicate on this event; "
+            f"prose reasoning is not a test)"
+        )
 
     return failures
 
@@ -1910,6 +2102,8 @@ def verify(workspace: Path, since: str | None) -> dict:
         "bootstrap_probe_failures": [],
         "checked_claims_malformed": [],
         "checked_claims_required_failures": [],
+        "exclusion_failures": [],
+        "evidence_capture_failures": [],
         "result": "PASS",
     }
 
@@ -2034,6 +2228,8 @@ def verify(workspace: Path, since: str | None) -> dict:
     result["bootstrap_probe_failures"] = check_bootstrap_probe(events)
     result["checked_claims_malformed"] = check_claims_structural(events)
     result["checked_claims_required_failures"] = check_claims_required(workspace, events)
+    result["exclusion_failures"] = check_exclusion_discipline(events)
+    result["evidence_capture_failures"] = check_evidence_capture(events)
 
     blocking = (
         result["tamper"]
@@ -2053,6 +2249,8 @@ def verify(workspace: Path, since: str | None) -> dict:
         or result["bootstrap_probe_failures"]
         or result["checked_claims_malformed"]
         or result["checked_claims_required_failures"]
+        or result["exclusion_failures"]
+        or result["evidence_capture_failures"]
     )
     result["result"] = "FAIL" if blocking else "PASS"
     return result
@@ -2085,6 +2283,8 @@ def render(result: dict) -> str:
         f"  bootstrap_probe:       {len(result['bootstrap_probe_failures'])} {result['bootstrap_probe_failures']}",
         f"  checked_claims:        {len(result['checked_claims_malformed'])} {result['checked_claims_malformed']}",
         f"  checked_claims_req:    {len(result['checked_claims_required_failures'])} {result['checked_claims_required_failures']}",
+        f"  exclusion_discipline:  {len(result['exclusion_failures'])} {result['exclusion_failures']}",
+        f"  evidence_capture:      {len(result['evidence_capture_failures'])} {result['evidence_capture_failures']}",
         f"  result:                {result['result']}",
     ]
     if "error" in result:

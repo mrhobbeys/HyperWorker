@@ -84,6 +84,7 @@ templates/
     finding-template.md
     anti-pattern-template.md
     operating-reality-template.md
+    evidence-capture.md              # v6.0.0 projection of one evidence.capture event
   models/                            # per-model harness profiles
     default.yaml
     claude-opus-4-7.yaml
@@ -95,6 +96,7 @@ templates/
     README.md
   session-handoff-template.md        # canonical SESSION-HANDOFF.md projection format
   CYCLES.md                          # canonical CYCLES.md projection format (lifecycle: ongoing)
+  ELIMINATION.md                     # canonical ELIMINATION.md projection format (v6.0.0)
 schemas/
   artifacts/                         # default artifact schemas (decision, finding, anti-pattern, operating-reality)
   projects/                          # project schemas with bootstrap-ready scaffolds
@@ -156,6 +158,8 @@ projects/
     operating-reality/               # projections
     council/                         # projections (v5.1) — per-fire markdown + INDEX.md
     SESSION-HANDOFF.md               # projection (v5.1) of the latest session.handoff event
+    ELIMINATION.md                   # projection (v6.0.0) of hypothesis status/test_ref
+    evidence/                        # projections (v6.0.0) — one file per evidence.capture
     tasks/<task-id>/
       task.md                        # canonical instructions
       consumed-inputs.md             # projection (recitation)

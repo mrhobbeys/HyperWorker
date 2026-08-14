@@ -186,7 +186,7 @@ The harness defines a closed set. Schema extensions must add kinds via the proje
 | Kind | Payload |
 |---|---|
 | `decision.add` | `{artifact_id, fields...}` |
-| `finding.add` | `{artifact_id, fields..., claim?}` — `claim` is an optional §Checked Claims (v5.3) block; required per-schema via `verification.yaml` `checked_claims.required_for`. |
+| `finding.add` | `{artifact_id, fields..., claim?}` — `claim` is an optional §Checked Claims (v5.3) block; required per-schema via `verification.yaml` `checked_claims.required_for`. A finding used as a hypothesis may also carry `status` and `test_ref`; see §Exclusion Discipline (v6.0.0). |
 | `anti-pattern.add` | `{artifact_id, fields...}` |
 | `operating-reality.add` | `{artifact_id, fields...}` |
 | `<kind>.supersede` | `{old_id, new_id, reason, supersede_kind, surviving_principles}` (emitted automatically when `<kind>.add` includes `reverses:`; one supersede event per reversed artifact when `reverses:` is a list). `supersede_kind` ∈ `{full, mechanism-only, scope-narrowing}`, default `full`. `surviving_principles` is a list of verbatim principles from the old artifact that remain load-bearing (`[]` for `full`) — so a fresh agent reading the chain can distinguish "this decision is dead, ignore it" from "its mechanism changed but its principle still binds." (v5.3; both fields optional on pre-v5.3 chains.) |
@@ -239,6 +239,12 @@ The harness defines a closed set. Schema extensions must add kinds via the proje
 |---|---|
 | `session.handoff` | `{project_id, closing_actor, last_completed_task, next_pending_task, active_artifact_state, open_operator_questions[], recommended_first_action, context_compaction_summary}` — see §Session Handoff Event Kind. One event per closing-session boundary; not chained. |
 | `scope.complete` | `{scope_items: [{id, name, terminal_state, reason, claim?}]}` — see §Scope Completeness. Emitted before `session.handoff`; Layer 1 cross-checks against PROJECT.md §Scope. `scope_items[].claim` is optional; see §Checked Claims (v5.3). |
+
+### Evidence events (v6.0.0)
+
+| Kind | Payload |
+|---|---|
+| `evidence.capture` | `{id, producing_command, captured_at, content \| (content_path + content_sha256), summary}` — `id` is `ED-NNN`, unique across the log. The raw output of a load-bearing command, kept. See §Evidence Capture. |
 
 ### External-state events
 
@@ -306,6 +312,8 @@ A projection is a regenerable file derived from events. Projections are **never 
 | Council index | All council events for the project | `projects/<id>/council/INDEX.md` |
 | Session handoff | `session.handoff` (most recent only) | `projects/<id>/SESSION-HANDOFF.md` |
 | Cycle index (ongoing projects) | `cycle.open`, `cycle.close` | `projects/<id>/CYCLES.md` — one row per cycle: id, opened, closed, summary, next_due. Format and rendering protocol: `templates/CYCLES.md`. The `active_project.md` projection additionally carries `Next due:` for an ongoing active project. |
+| Evidence capture (v6.0.0) | `evidence.capture` | `projects/<id>/evidence/<ED-NNN>.md` — one file per capture. Format: `templates/artifact-templates/evidence-capture.md`. See §Evidence Capture. |
+| Elimination matrix (v6.0.0) | `finding.add` / `finding.supersede` events whose payload carries `status` | `projects/<id>/ELIMINATION.md` — frontier line plus one row per hypothesis: hypothesis, status, how-tested, result. Format and rendering protocol: `templates/ELIMINATION.md`. See §Exclusion Discipline. |
 
 ### Projection rendering
 
@@ -1008,6 +1016,71 @@ A bare event kind requires every event of that kind to carry a `claim:` block wi
 | Hypothesis | Claim | Falsifier |
 |---|---|---|
 | H-S4 | Recording a machine-checkable predicate alongside every world-state claim, and replaying it later, catches the class of failure where chain integrity holds but the asserted world-state was never true (or stopped being true). | Predicates rot faster than they're useful — paths move, commands drift, so replay failures are overwhelmingly false alarms operators learn to ignore — or agents satisfy the letter of the check by asserting trivial/tautological predicates (e.g. `file_exists` on a file they just touched, not the actual deliverable) while the substantive claim stays unchecked. |
+
+---
+
+## Evidence Capture (v6.0.0)
+
+**Field evidence:** across ten weeks, the raw outputs and error codes that decisions actually rested on survived only where a human hand-copied them into a side ledger. Everything else died with the session that produced it.
+
+An agent runs a command, reads 40 lines of output, concludes something, and writes the conclusion. The output is gone at the next compaction. Three sessions later the conclusion is load-bearing and unfalsifiable: nobody can see what it was based on, so nobody can tell that the command was run against the wrong host.
+
+`evidence.capture` keeps the bytes.
+
+**Payload schema.**
+
+| Field | Type | Meaning |
+|---|---|---|
+| `id` | string | `ED-NNN`, unique across the whole log (like `EV-` ids, not per project). |
+| `producing_command` | string | The exact command, request, or action that produced this output. |
+| `captured_at` | string | ISO 8601 UTC. |
+| `content` | string | The output itself, inline. **Sanitized** — no credentials, tokens, keys, or customer data. |
+| `content_path` | string | Alternative to `content` for large or binary output: a workspace-relative path. |
+| `content_sha256` | string | Required with `content_path`. Full hex of the file's bytes, so the capture still pins what was captured. |
+| `summary` | string | One line: what this output shows. |
+
+Exactly one of `content` or `content_path` (+ `content_sha256`). Inline is the default; the path form exists so a 4 MB log does not enter the hash chain. Sanitize before capture — the log is append-only, so a leaked secret cannot be deleted, only rotated.
+
+**Who cites it.** `test_ref` on an excluded hypothesis (§Exclusion Discipline), the `evidence` field of a finding, a completion report. `ED-014` is the citation form; it needs no hash, because the event log's own chain already fixes the content.
+
+**Projection.** `projects/<id>/evidence/ED-NNN.md`, one file per capture, from `templates/artifact-templates/evidence-capture.md`. Tracked in `hashes.json` like any projection.
+
+**Layer 1 (check 20).** Well-formedness and `ED`-id uniqueness: `evidence_id_malformed`, `duplicate_evidence_id`, `evidence_capture_no_content` (neither form present), `evidence_capture_content_ambiguous` (both forms — one authority per capture), `evidence_capture_path_without_hash`. See `core/VERIFICATION.md` §Layer 1 check 20.
+
+| Hypothesis | Claim | Falsifier |
+|---|---|---|
+| H-S7 | Making raw output a substrate event, cheap enough to fire mid-work, keeps load-bearing evidence alive past the session that produced it — and gives exclusions something to cite. | Captures are fired for trivia and the important output still goes uncaptured, or the inline-content rule pushes agents to summarize at capture time, which is exactly the loss the primitive exists to prevent. |
+
+---
+
+## Exclusion Discipline (v6.0.0)
+
+**Field evidence:** AP-008 — the true root cause was crossed off the hypothesis list on the strength of a well-argued static read, and ~19 further attempts were burned before anyone went back to it.
+
+Ruling a hypothesis out is the single most expensive thing an agent does, because everything after it is searched somewhere else. A static read — "I read the code path and it cannot be this" — is an argument, not a test. It was wrong once at a cost of nineteen attempts, and nothing in the substrate could tell the difference between it and a measurement.
+
+**The rule.** One line: *nothing is excluded without a dynamic test.*
+
+| Status | Means | Requires |
+|---|---|---|
+| `open` | Not investigated yet. | Nothing. Default. |
+| `suspect` | Argued for or against, including by careful static reading. Still live. | Nothing. This is where a static read lands. |
+| `excluded` | Ruled out. Stop searching here. | `test_ref` naming a **dynamic** test that exercised the actual code path. |
+
+`status` and `test_ref` are optional fields on a `finding.add` payload (`schemas/artifacts/finding.yaml`), used when a finding is being carried as a hypothesis. `test_ref` is one of:
+
+- an `evidence.capture` id — `ED-014` — the raw output of the command that exercised the path (§Evidence Capture); or
+- a checked-claim predicate: the same event carries a `claim:` block whose predicate was actually run (§Checked Claims).
+
+A prose justification is not a `test_ref`. If you did not run something, the hypothesis is `suspect`.
+
+**Layer 1 (check 19).** `excluded` with no `test_ref` FAILs `excluded_without_test_ref`. A `test_ref` naming an `ED-NNN` that is not in the chain FAILs `excluded_test_ref_unresolved` — a citation to a capture nobody made is the same failure wearing a test's clothes. A `status` outside the enum FAILs `invalid_hypothesis_status`. See `core/VERIFICATION.md` §Layer 1 check 19.
+
+**Projection.** `projects/<id>/ELIMINATION.md` (`templates/ELIMINATION.md`): a one-line frontier at the top, then the matrix. In the field this document was handed to every new agent *first*, and it was what stopped each fresh context from restarting the same generic checklist.
+
+| Hypothesis | Claim | Falsifier |
+|---|---|---|
+| H-S6 | Requiring a dynamic `test_ref` to exclude a hypothesis prevents the class of failure where a well-argued static read removes the true cause from the search space. | Agents satisfy the check with a nominal capture that did not exercise the path (a test in name only), or the requirement is heavy enough that they leave everything `suspect` and the matrix stops discriminating. |
 
 ---
 
