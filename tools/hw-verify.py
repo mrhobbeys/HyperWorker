@@ -27,6 +27,22 @@ and event kinds a schema's verification.yaml marks `checked_claims.required_for`
 must carry a passing one. `--claims` is a new, separate replay mode that
 re-evaluates recorded predicates against the current world and reports
 claim-level pass/fail/error/skipped, independent of chain integrity.
+
+v6.0.0: verifier hardening. Five checks that the docs promised and no code
+performed (core/VERIFICATION.md §Layer 1 checks 14-18):
+
+  14 ID integrity        duplicate or non-increasing event IDs (the field
+                         incident where EV-0116..EV-0120 exist twice with
+                         correct prev_hash links and `hw verify` said PASS)
+  15 Lock enforcement    project.activate while another project is active
+  16 harness_version     refuse a schema pinned above HARNESS_VERSION
+  17 Cycle lifecycle     the v5.3 cycle.open/cycle.close FAILs, unimplemented
+  18 Schema-declared     custom Layer 1 checks a schema's capability-gates.yaml
+                         declares (the program pack's three)
+
+Each ships with a test suite: tools/test_id_integrity.py,
+test_lock_enforcement.py, test_harness_version.py, test_cycle_lifecycle.py,
+test_program_checks.py.
 """
 
 import argparse
