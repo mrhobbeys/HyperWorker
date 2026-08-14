@@ -621,6 +621,92 @@ def check_id_integrity(events: list, line_numbers: list | None = None) -> tuple:
     return duplicates, non_monotonic
 
 
+# Kinds that release the Lock's single active slot. `project.archive` is what
+# `hw wrap` actually appends (core/SUBSTRATE.md §`hw wrap` step 3); `project.wrap`
+# is accepted as an alias so a chain written against the command name rather than
+# the event name is read as a release, not as a missing one.
+PROJECT_RELEASE_KINDS = ("project.park", "project.archive", "project.wrap")
+
+
+def lock_target(event: dict) -> str | None:
+    """Which project a Lock-affecting event acts on.
+
+    `payload.project_id` is authoritative (core/SUBSTRATE.md §Project events);
+    the event's `project` field is the fallback for chains that omit it. Returns
+    None for `_harness`-scoped meta events that name no project — those are
+    harness-level bookkeeping (toolchain anchors, friction, soul anchors) and
+    never move the Lock.
+    """
+    payload = event.get("payload") or {}
+    target = payload.get("project_id") or event.get("project")
+    if not target or target == "_harness":
+        return None
+    return target
+
+
+def check_lock_enforcement(events: list) -> list:
+    """Layer 1 check 15: the Lock's switch protocol is enforced, not promised.
+
+    core/LOCK.md §The Switch Protocol: switching projects is two events, never
+    one — `project.park` or `project.archive` on the current project, then
+    `project.activate` on the new one. A field deployment appended
+    `project.activate` with no preceding release and nothing refused it: the
+    refusal existed only as prose in LOCK.md, so two projects were structurally
+    active at once and the projection that "refuses to point at two paths" was
+    simply written twice.
+
+    Bootstrap (the first activate in a chain) is legal. Re-activating the project
+    that is already active is legal — that is `hw bootstrap --resume` on a project
+    that was never released, not a second concurrent project. After reporting a
+    violation the offending activate is taken as the new active project, so one
+    missing park is one failure rather than a failure on every activate after it.
+    """
+    failures = []
+    active = None
+    active_since = None
+
+    for event in events:
+        kind = event.get("kind")
+        if kind == "project.activate":
+            target = lock_target(event)
+            if target is None:
+                continue
+            if active is not None and active != target:
+                failures.append(
+                    f"{target}: lock_activate_without_release "
+                    f"({event.get('id')} activates {target!r} while {active!r} is "
+                    f"still active (activated at {active_since}); no "
+                    f"project.park / project.archive for {active!r} in between - "
+                    f"see core/LOCK.md, The Switch Protocol)"
+                )
+            active, active_since = target, event.get("id")
+        elif kind in PROJECT_RELEASE_KINDS:
+            target = lock_target(event)
+            if target is not None and target == active:
+                active, active_since = None, None
+
+    return failures
+
+
+def active_project(events: list) -> str | None:
+    """The project holding the Lock at the end of the chain, or None.
+
+    Same walk as check_lock_enforcement, without the reporting: last activated,
+    not since parked or archived (core/LOCK.md §Substrate).
+    """
+    active = None
+    for event in events:
+        kind = event.get("kind")
+        target = lock_target(event)
+        if target is None:
+            continue
+        if kind == "project.activate":
+            active = target
+        elif kind in PROJECT_RELEASE_KINDS and target == active:
+            active = None
+    return active
+
+
 def parse_verification_yaml_checked_claims(path: Path) -> list:
     """Minimal YAML reader for verification.yaml's `checked_claims.required_for`
     list. Mirrors the block-list convention already used by
@@ -1087,6 +1173,7 @@ def verify(workspace: Path, since: str | None) -> dict:
         "malformed_payloads": [],
         "duplicate_event_ids": [],
         "non_monotonic_event_ids": [],
+        "lock_violations": [],
         "scope_completeness_failures": [],
         "external_state_readback_failures": [],
         "external_state_readback_warnings": [],
@@ -1202,6 +1289,7 @@ def verify(workspace: Path, since: str | None) -> dict:
     duplicates, non_monotonic = check_id_integrity(events, line_numbers)
     result["duplicate_event_ids"] = duplicates
     result["non_monotonic_event_ids"] = non_monotonic
+    result["lock_violations"] = check_lock_enforcement(events)
     result["scope_completeness_failures"] = check_scope_completeness(workspace, events)
     esrb_failures, esrb_warnings = check_external_state_readback(workspace, events)
     result["external_state_readback_failures"] = esrb_failures
@@ -1219,6 +1307,7 @@ def verify(workspace: Path, since: str | None) -> dict:
         or result["malformed_payloads"]
         or result["duplicate_event_ids"]
         or result["non_monotonic_event_ids"]
+        or result["lock_violations"]
         or result["scope_completeness_failures"]
         or result["external_state_readback_failures"]
         or result["bootstrap_probe_failures"]
@@ -1244,6 +1333,7 @@ def render(result: dict) -> str:
         f"  malformed_payloads:    {len(result['malformed_payloads'])} {result['malformed_payloads']}",
         f"  duplicate_event_ids:   {len(result['duplicate_event_ids'])} {result['duplicate_event_ids']}",
         f"  non_monotonic_ids:     {len(result['non_monotonic_event_ids'])} {result['non_monotonic_event_ids']}",
+        f"  lock_violations:       {len(result['lock_violations'])} {result['lock_violations']}",
         f"  scope_completeness:    {len(result['scope_completeness_failures'])} {result['scope_completeness_failures']}",
         f"  ext_state_readback:    {len(result['external_state_readback_failures'])} {result['external_state_readback_failures']}",
         f"  ext_state_warnings:    {len(result['external_state_readback_warnings'])} {result['external_state_readback_warnings']}",

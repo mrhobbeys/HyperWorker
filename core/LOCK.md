@@ -91,6 +91,8 @@ When the operator says "switch to project X," emit both. If `project.activate` a
 
 This is a structural check, not a verbal request. The agent cannot accidentally activate two projects, because the projection regeneration protocol refuses to write `active_project.md` pointing at two paths.
 
+**Enforced as of v6.0.0.** The paragraph above was true only of the projection; the event log accepted the second `project.activate` without complaint, and a field deployment appended exactly that — no park, no archive, no refusal, because the refusal lived in this file rather than in the verifier. `hw verify` now FAILs `lock_activate_without_release` on any `project.activate` for a different project while one is still active (`core/VERIFICATION.md` §Layer 1 check 15). Bootstrap (the first activate) and re-activating the project already holding the Lock (`hw bootstrap --resume`) are legal; `_harness`-scoped meta events never move the Lock.
+
 ---
 
 ## Distraction Intake
