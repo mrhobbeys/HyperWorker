@@ -2,6 +2,8 @@
 
 > **Projection of the most recent `session.handoff` event.** Lives at `projects/<project-id>/SESSION-HANDOFF.md`. Overwritten on each handoff — only the latest is kept on disk; older handoffs are reconstructable from the event log.
 >
+> **Recovery order (v6.0.0).** Run `hw verify`, then read `projects/<id>/LEDGER.md` **first** — the generated newest-first digest of what was done, decided, found, opened and closed — then this file, then raw artifacts as needed. See `HARNESS.md` §Recovery Order. This template is step 3, not step 1.
+>
 > Authoritative state lives in `events.jsonl` and projections. This file is a navigation aid for picking up cold. Nothing here is load-bearing; nothing here contradicts the substrate. The failure mode this template prevents: the closing agent embeds a decision in the handoff prose ("we agreed to skip Phase 3"), the resuming agent reads the prose, and the decision affects the project without ever existing as a Decision artifact. Anything load-bearing belongs in events; this file points at events.
 
 ---

@@ -327,6 +327,7 @@ A projection is a regenerable file derived from events. Projections are **never 
 | Cycle index (ongoing projects) | `cycle.open`, `cycle.close` | `projects/<id>/CYCLES.md` — one row per cycle: id, opened, closed, summary, next_due. Format and rendering protocol: `templates/CYCLES.md`. The `active_project.md` projection additionally carries `Next due:` for an ongoing active project. |
 | Open loops (v6.0.0) | `loop.open`, `loop.close` | `projects/<id>/OPEN-LOOPS.md` — open loops newest first, with a staleness column. Format and rendering protocol: `templates/OPEN-LOOPS.md`. See §Open Loops. |
 | Evidence capture (v6.0.0) | `evidence.capture` | `projects/<id>/evidence/<ED-NNN>.md` — one file per capture. Format: `templates/artifact-templates/evidence-capture.md`. See §Evidence Capture. |
+| Narrative ledger (v6.0.0) | Every state-changing event for the project | `projects/<id>/LEDGER.md` — newest-first narrative digest, one block per day or session-handoff boundary. Format and rendering protocol: `templates/LEDGER.md`. See §Narrative Ledger. |
 | Elimination matrix (v6.0.0) | `finding.add` / `finding.supersede` events whose payload carries `status` | `projects/<id>/ELIMINATION.md` — frontier line plus one row per hypothesis: hypothesis, status, how-tested, result. Format and rendering protocol: `templates/ELIMINATION.md`. See §Exclusion Discipline. |
 
 ### Projection rendering
@@ -863,7 +864,7 @@ Long projects span sessions. v5.0/v5.0.1 used informal `SESSION-HANDOFF.md` pros
 
 **Projection.** `projects/<id>/SESSION-HANDOFF.md` is overwritten on each `session.handoff` event. Handoffs are per-session; a new event entirely replaces the prior projection. The projection format follows `templates/session-handoff-template.md`. The hash sidecar tracks the file as usual.
 
-**Resume behavior.** A task template MAY declare `requires_handoff_acknowledge: true` in its frontmatter. When set, the executor MUST, before its first state-changing event:
+**Resume behavior.** The handoff is read *second*: after `hw verify`, a resuming agent reads `LEDGER.md` first (§Narrative Ledger, `HARNESS.md` §Recovery Order), then this projection. A task template MAY declare `requires_handoff_acknowledge: true` in its frontmatter. When set, the executor MUST, before its first state-changing event:
 
 1. Read `projects/<id>/SESSION-HANDOFF.md` if present.
 2. For each entry in `open_operator_questions`, either resolve it (record the resolution in the task's working log and proceed) or surface it to the operator (record a `task.status → blocked` with `reason: handoff_open_question <question>`).
@@ -1198,6 +1199,26 @@ A prose justification is not a `test_ref`. If you did not run something, the hyp
 | Hypothesis | Claim | Falsifier |
 |---|---|---|
 | H-S6 | Requiring a dynamic `test_ref` to exclude a hypothesis prevents the class of failure where a well-argued static read removes the true cause from the search space. | Agents satisfy the check with a nominal capture that did not exercise the path (a test in name only), or the requirement is heavy enough that they leave everything `suspect` and the matrix stops discriminating. |
+
+---
+
+## Narrative Ledger (v6.0.0)
+
+**Field evidence:** across a ten-week deployment, the hand-curated newest-first human ledger beat the machine-perfect event log for rebuilding working context after every compaction. The executor's exit interview ranked the event log **last** of the artifacts it used to pick up cold. But the hand-kept version had exactly the defects hand-keeping produces: blocks filed out of sequence, superseded sections edited in place. The verdict from the field was not "the log is wrong" — it was **stop fighting it and generate it**.
+
+The event log is a perfect record of *what happened* and a poor answer to *where are we*. Replaying 130 events to rebuild context costs the same as doing the work again. A newest-first digest answers the question in one screen.
+
+**Projection.** `projects/<id>/LEDGER.md`, from `templates/LEDGER.md`. One block per day, closed early by a `session.handoff`; blocks newest first, lines within a block in append order. Each block carries only what a resuming agent needs: task completions (with claim PASS/FAIL where one was recorded), decisions by id and title, finding one-liners, loops opened and closed, operator corrections, friction notes.
+
+**Superseded items render struck through and tagged `[superseded by <id>]` — never deleted.** Dropping what turned out wrong is the hand-kept ledger's failure mode, not a fix for it; the supersede chain is the thing a resuming agent most needs to see.
+
+**Nothing is summarized by judgment.** Every line is a field copied out of a payload, so the render is byte-deterministic from an event prefix like any other projection, and two agents produce the same file. An agent that rewords is writing a handoff, not a ledger.
+
+**Recovery order.** After `hw verify`: **LEDGER.md first**, then `SESSION-HANDOFF.md`, then raw artifacts as needed. Recorded in `HARNESS.md` §Recovery Order and `templates/session-handoff-template.md`.
+
+| Hypothesis | Claim | Falsifier |
+|---|---|---|
+| H-S11 | A generated newest-first ledger gives a compacted agent the context recovery the hand-kept version gave, without the ordering and supersede drift hand-keeping introduced. | Agents keep a private ledger anyway because the generated one reads as event noise — or the generated form is faithful and unreadable, and operators go back to writing prose by hand. |
 
 ---
 

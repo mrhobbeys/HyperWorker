@@ -98,6 +98,7 @@ templates/
   CYCLES.md                          # canonical CYCLES.md projection format (lifecycle: ongoing)
   ELIMINATION.md                     # canonical ELIMINATION.md projection format (v6.0.0)
   OPEN-LOOPS.md                      # canonical OPEN-LOOPS.md projection format (v6.0.0)
+  LEDGER.md                          # canonical LEDGER.md projection format (v6.0.0)
 schemas/
   artifacts/                         # default artifact schemas (decision, finding, anti-pattern, operating-reality)
   projects/                          # project schemas with bootstrap-ready scaffolds
@@ -158,6 +159,7 @@ projects/
     anti-patterns/                   # projections
     operating-reality/               # projections
     council/                         # projections (v5.1) — per-fire markdown + INDEX.md
+    LEDGER.md                        # projection (v6.0.0) — newest-first narrative digest; read first
     SESSION-HANDOFF.md               # projection (v5.1) of the latest session.handoff event
     ELIMINATION.md                   # projection (v6.0.0) of hypothesis status/test_ref
     OPEN-LOOPS.md                    # projection (v6.0.0) of loop.open / loop.close
@@ -290,6 +292,20 @@ Before delegating any task, confirm:
 - `hw verify` returns `OK` (or, on a fresh project, an empty-log `OK`).
 
 If any check fails, STOP. Report what is missing. The operator resolves before execution begins.
+
+---
+
+## Recovery Order
+
+Picking up cold — a new session, or the same session after a compaction — read in this order and stop as soon as you can act:
+
+1. **`hw verify`.** If the chain is broken, nothing below it is trustworthy. Fix that first.
+2. **`projects/<id>/LEDGER.md`.** The generated newest-first digest: what was done, decided, found, opened and closed, in reverse order. One screen usually answers "where are we."
+3. **`projects/<id>/SESSION-HANDOFF.md`.** The closing agent's transfer: open operator questions, open loops, the recommended first action.
+4. **Raw artifacts** — decisions, findings, `OPEN-LOOPS.md`, `ELIMINATION.md`, the task file — as the work actually needs them.
+5. **`events.jsonl`** last, and only when something above disagrees with something else. It is the authority, not the reading path: it answers *what happened*, and replaying it to answer *where are we* costs about what doing the work again costs.
+
+The order is field-derived. Across a ten-week deployment, a hand-kept newest-first ledger beat the event log for context recovery every time; the exit interview ranked the log last. v6.0.0 generates the ledger rather than asking an operator to maintain one (`core/SUBSTRATE.md` §Narrative Ledger).
 
 ---
 
