@@ -94,6 +94,7 @@ templates/
     _ranking.yaml                    # operator ranking override (v5.1, optional)
     README.md
   session-handoff-template.md        # canonical SESSION-HANDOFF.md projection format
+  CYCLES.md                          # canonical CYCLES.md projection format (lifecycle: ongoing)
 schemas/
   artifacts/                         # default artifact schemas (decision, finding, anti-pattern, operating-reality)
   projects/                          # project schemas with bootstrap-ready scaffolds

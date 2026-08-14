@@ -305,7 +305,7 @@ A projection is a regenerable file derived from events. Projections are **never 
 | Council report (per fire) | `council.invoke`, `council.report`, `council.converged` / `council.escalated` (grouped by `fire_id`) | `projects/<id>/council/<fire_id>-<trigger>.md` |
 | Council index | All council events for the project | `projects/<id>/council/INDEX.md` |
 | Session handoff | `session.handoff` (most recent only) | `projects/<id>/SESSION-HANDOFF.md` |
-| Cycle index (ongoing projects) | `cycle.open`, `cycle.close` | `projects/<id>/CYCLES.md` — one row per cycle: id, opened, closed, summary, next_due. The `active_project.md` projection additionally carries `Next due:` for an ongoing active project. |
+| Cycle index (ongoing projects) | `cycle.open`, `cycle.close` | `projects/<id>/CYCLES.md` — one row per cycle: id, opened, closed, summary, next_due. Format and rendering protocol: `templates/CYCLES.md`. The `active_project.md` projection additionally carries `Next due:` for an ongoing active project. |
 
 ### Projection rendering
 

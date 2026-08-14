@@ -90,6 +90,7 @@ KNOWN_EVENT_KINDS = {
     "bootstrap.inventory_diff", "bootstrap.scope_locked", "bootstrap.probe_skipped",
     "operator_soul_anchor",   # v5.2.0; missing from this set until v5.2.1
     "toolchain.anchor",       # v5.2.1
+    "cycle.open", "cycle.close",   # v5.3 lifecycle; missing from this set until v6.0.0
 }
 
 # Required payload fields per v5.1 event kind. None means no per-kind structural
@@ -118,6 +119,11 @@ REQUIRED_PAYLOAD_FIELDS = {
     "council.escalated": (),
     "operator_soul_anchor": ("soul_path", "soul_hash", "fired_at"),
     "toolchain.anchor": ("tools", "source", "fired_at"),
+    # v5.3 lifecycle events (core/SUBSTRATE.md §Lifecycle events). `next_due` is
+    # required on close: "when is the next sweep due" is substrate state, not
+    # prose in a handoff, and the whole OVERDUE mechanism reads it.
+    "cycle.open": ("project_id", "cycle_id", "opened_at", "cadence"),
+    "cycle.close": ("project_id", "cycle_id", "closed_at", "summary", "next_due"),
 }
 
 
@@ -827,6 +833,135 @@ def check_harness_version(workspace: Path, events: list) -> tuple:
     return failures, notes
 
 
+def find_project_lifecycle(workspace: Path, project_id: str) -> str | None:
+    """Read a project's declared lifecycle from PROJECT.md.
+
+    `lifecycle` is Mutable Surface, not event-sourced (core/SUBSTRATE.md
+    §Boundary Rule), so PROJECT.md is where it lives. Prefer a `## Lifecycle`
+    section's first content line; fall back to an inline `lifecycle: <value>`
+    declaration anywhere in the file. `terminal` is the documented default
+    (core/LOCK.md §Ongoing Projects), so a PROJECT.md that declares nothing reads
+    as terminal.
+
+    Returns "ongoing", "terminal", or None when the answer is genuinely unknown:
+    no PROJECT.md at all, or a scaffolded one whose `{{ lifecycle }}` placeholder
+    was never substituted. Unknown means the terminal-lifecycle check stands down
+    rather than guessing.
+    """
+    project_md = workspace / "projects" / project_id / "PROJECT.md"
+    if not project_md.exists():
+        return None
+    text = project_md.read_text(encoding="utf-8")
+
+    lines = text.splitlines()
+    for idx, line in enumerate(lines):
+        if line.strip().lower() not in ("## lifecycle", "# lifecycle"):
+            continue
+        for body in lines[idx + 1:]:
+            stripped = body.strip()
+            if not stripped:
+                continue
+            if stripped.startswith("#"):
+                break
+            if "{{" in stripped:
+                return None
+            lowered = stripped.lower()
+            if "ongoing" in lowered:
+                return "ongoing"
+            if "terminal" in lowered:
+                return "terminal"
+            break
+        break
+
+    m = re.search(r"lifecycle:\s*[\"'`]?(ongoing|terminal)\b", text, re.IGNORECASE)
+    if m:
+        return m.group(1).lower()
+    return "terminal"
+
+
+def check_cycle_lifecycle(workspace: Path, events: list) -> list:
+    """Layer 1 check 17: the v5.3 cycle lifecycle, specified but never implemented.
+
+    core/SUBSTRATE.md §Lifecycle events and §`hw cycle`, plus core/LOCK.md
+    §Ongoing Projects, declare four failures that no code enforced:
+
+      - `cycle.close` with no matching open        -> cycle_close_without_open
+      - a second `cycle.open` with no close between -> cycle_open_without_close
+      - either kind on a `lifecycle: terminal` project -> cycle_on_terminal_lifecycle
+      - `project.archive` (hw wrap) with a cycle open  -> wrap_with_open_cycle
+
+    "Matching" is by `cycle_id` when both events carry one: closing C-002 while
+    C-003 is the open cycle is a close without a matching open, not a close of
+    whatever happens to be open. A close is treated as closing the open cycle
+    either way, so one mispaired close is one failure rather than a cascade.
+    """
+    failures = []
+    by_project = defaultdict(list)
+    for event in events:
+        by_project[event.get("project")].append(event)
+
+    for project_id, project_events in by_project.items():
+        if not project_id or project_id == "_harness":
+            continue
+
+        kinds = {ev.get("kind") for ev in project_events}
+        has_cycles = bool(kinds & {"cycle.open", "cycle.close"})
+        lifecycle = find_project_lifecycle(workspace, project_id) if has_cycles else None
+
+        open_cycle = None  # (cycle_id, event_id)
+        for event in project_events:
+            kind = event.get("kind")
+            payload = event.get("payload") or {}
+            cycle_id = payload.get("cycle_id")
+
+            if kind in ("cycle.open", "cycle.close") and lifecycle == "terminal":
+                failures.append(
+                    f"{project_id}: cycle_on_terminal_lifecycle "
+                    f"({event.get('id')} {kind} on a project whose PROJECT.md "
+                    f"declares lifecycle: terminal; cycles are valid only on "
+                    f"lifecycle: ongoing - see core/LOCK.md, Ongoing Projects)"
+                )
+
+            if kind == "cycle.open":
+                if open_cycle is not None:
+                    failures.append(
+                        f"{project_id}: cycle_open_without_close "
+                        f"({event.get('id')} opens {cycle_id or '<no cycle_id>'} "
+                        f"while {open_cycle[0] or '<no cycle_id>'} (opened at "
+                        f"{open_cycle[1]}) is still open; close the current cycle "
+                        f"with hw cycle close first)"
+                    )
+                open_cycle = (cycle_id, event.get("id"))
+
+            elif kind == "cycle.close":
+                if open_cycle is None:
+                    failures.append(
+                        f"{project_id}: cycle_close_without_open "
+                        f"({event.get('id')} closes "
+                        f"{cycle_id or '<no cycle_id>'}; no cycle is open)"
+                    )
+                elif cycle_id and open_cycle[0] and cycle_id != open_cycle[0]:
+                    failures.append(
+                        f"{project_id}: cycle_close_without_open "
+                        f"({event.get('id')} closes {cycle_id}; the open cycle is "
+                        f"{open_cycle[0]}, opened at {open_cycle[1]})"
+                    )
+                open_cycle = None
+
+            elif kind in ("project.archive", "project.wrap"):
+                if open_cycle is not None:
+                    failures.append(
+                        f"{project_id}: wrap_with_open_cycle "
+                        f"({event.get('id')} {kind} while "
+                        f"{open_cycle[0] or '<no cycle_id>'} (opened at "
+                        f"{open_cycle[1]}) is still open; run hw cycle close "
+                        f"before wrapping an ongoing project)"
+                    )
+                    open_cycle = None
+
+    return failures
+
+
 def parse_verification_yaml_checked_claims(path: Path) -> list:
     """Minimal YAML reader for verification.yaml's `checked_claims.required_for`
     list. Mirrors the block-list convention already used by
@@ -1296,6 +1431,7 @@ def verify(workspace: Path, since: str | None) -> dict:
         "lock_violations": [],
         "harness_version_failures": [],
         "harness_version_notes": [],
+        "cycle_lifecycle_failures": [],
         "scope_completeness_failures": [],
         "external_state_readback_failures": [],
         "external_state_readback_warnings": [],
@@ -1415,6 +1551,7 @@ def verify(workspace: Path, since: str | None) -> dict:
     hv_failures, hv_notes = check_harness_version(workspace, events)
     result["harness_version_failures"] = hv_failures
     result["harness_version_notes"] = hv_notes
+    result["cycle_lifecycle_failures"] = check_cycle_lifecycle(workspace, events)
     result["scope_completeness_failures"] = check_scope_completeness(workspace, events)
     esrb_failures, esrb_warnings = check_external_state_readback(workspace, events)
     result["external_state_readback_failures"] = esrb_failures
@@ -1434,6 +1571,7 @@ def verify(workspace: Path, since: str | None) -> dict:
         or result["non_monotonic_event_ids"]
         or result["lock_violations"]
         or result["harness_version_failures"]
+        or result["cycle_lifecycle_failures"]
         or result["scope_completeness_failures"]
         or result["external_state_readback_failures"]
         or result["bootstrap_probe_failures"]
@@ -1462,6 +1600,7 @@ def render(result: dict) -> str:
         f"  lock_violations:       {len(result['lock_violations'])} {result['lock_violations']}",
         f"  harness_version:       {len(result['harness_version_failures'])} {result['harness_version_failures']}",
         f"  harness_version_note:  {len(result['harness_version_notes'])} {result['harness_version_notes']}",
+        f"  cycle_lifecycle:       {len(result['cycle_lifecycle_failures'])} {result['cycle_lifecycle_failures']}",
         f"  scope_completeness:    {len(result['scope_completeness_failures'])} {result['scope_completeness_failures']}",
         f"  ext_state_readback:    {len(result['external_state_readback_failures'])} {result['external_state_readback_failures']}",
         f"  ext_state_warnings:    {len(result['external_state_readback_warnings'])} {result['external_state_readback_warnings']}",
