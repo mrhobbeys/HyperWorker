@@ -229,6 +229,8 @@ A task declares what tools it requires:
 required_tools: [file_write, web_browse]
 ```
 
+These capability slugs are also the slugs a shared tools catalog declares as `capabilities_provided` — before building a tool to satisfy one, check the catalog, and verify anything you fetch by hash and check predicate (`core/TOOLS.md`; the harness is fully functional with no catalog reachable).
+
 **Delegation gate.** When the parent agent intends to delegate this task to a subagent, the harness composes the subagent's tool schema as `agent.provides ∩ task.required_tools`.
 
 - If `task.required_tools ⊆ agent.provides`, the subagent receives exactly the required tools. Delegate.

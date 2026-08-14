@@ -116,6 +116,7 @@ core/
   TYPED-ARTIFACTS.md                 # decisions / findings / anti-patterns / operating-reality + consumption protocol
   VERIFICATION.md                    # pyramid + risk classification + council
   PRECEDENCE.md                      # tiered rules + SCAN markers
+  TOOLS.md                           # tools-catalog contract (v6.0.0) — check before building; verify hash, then check predicate; never a dependency
 templates/
   executor-prompt.md                 # under 30 lines; substrate carries the rest
   task-template.md
