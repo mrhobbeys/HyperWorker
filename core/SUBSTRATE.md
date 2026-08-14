@@ -399,12 +399,13 @@ Append a typed-artifact event and regenerate its projection.
 1. Read `schemas/artifacts/<kind>.yaml` and the project's `artifact-extensions.yaml` (if present). Validate the input file's frontmatter against the merged schema. If validation fails, abort with a structured error; do not write.
 2. Determine `artifact_id`. If the input declares an `id`, use it (must be unique within kind). Otherwise generate the next ID for the kind: scan `events.jsonl` for `<kind>.add` events, find the highest numeric suffix, increment by one. Format: `<PREFIX>-<NNN>` where prefix is `DEC | F | AP | OR` for decision/finding/anti-pattern/operating-reality.
 3. **Citation validation (pre-append).** If the artifact body contains citations `[<KIND>-<ID>#<hash>]`, run Layer 1 citation checks (see `core/VERIFICATION.md` §Layer 1) against the current `hashes.json` *before* anything is written. Any broken or stale citation aborts with a structured error naming the citation and the artifact's current short-hash; nothing lands in the log. The agent corrects the citation and retries. (Changed in v5.2.1: earlier versions appended the event first and reversed it with a supersede-to-null, leaving a rejection pair in the chain for every mistyped citation. Citation checking is a read-only computation; there is no reason to dirty the log to perform it. The supersede-to-null path remains only for defects discovered *after* append — see `core/VERIFICATION.md` §Layer 1 On failure.)
-4. Read the last line of `events.jsonl`; let `prev_hash` be its `hash` (or `sha256:0000…0000` if the log is empty).
-5. Build the event JSON object: `{id, ts, kind, actor, project, payload, prev_hash}` where `payload` contains the artifact frontmatter and body, and `id` is `EV-<next>` — derived from the tail line already read in step 4, never from project-scoped state (§Deriving the Next Event ID).
-6. Compute `hash` per the Hash computation rule above. Append the full event line (with `hash`) to `events.jsonl`.
-7. **Regenerate the artifact projection.** Render `projects/<project>/<kind>s/<artifact-id>.md` using the rendering protocol in `core/TYPED-ARTIFACTS.md`. The projection MUST be byte-identical to what a re-render from events would produce.
-8. Compute the projection's SHA-256, take the first 12 hex chars, and update `hashes.json` for that path.
-9. Report: artifact ID, short hash, and the citation form (`[KIND-ID#hash]`) that downstream tasks should use.
+4. **Secret scan (pre-append). REFUSE on a hit.** Scan the whole payload for secret-shaped content: `key=value` credential assignments, PEM / OpenSSH private-key blocks, connection strings carrying credentials, bearer / vendor-token shapes, and unlabeled high-entropy strings. On a hit, **do not append.** Report which field tripped which rule — never the value — and instruct store-by-reference: put `[REDACTED-SECRET]` in the payload plus a pointer to where the secret actually lives (operator vault entry, password manager, `${ENV_VAR}`). The agent edits the draft and retries. Like citation validation, this is a read-only computation; there is no reason to dirty an append-only log to perform it. See §Secrets Gate.
+5. Read the last line of `events.jsonl`; let `prev_hash` be its `hash` (or `sha256:0000…0000` if the log is empty).
+6. Build the event JSON object: `{id, ts, kind, actor, project, payload, prev_hash}` where `payload` contains the artifact frontmatter and body, and `id` is `EV-<next>` — derived from the tail line already read in step 5, never from project-scoped state (§Deriving the Next Event ID).
+7. Compute `hash` per the Hash computation rule above. Append the full event line (with `hash`) to `events.jsonl`.
+8. **Regenerate the artifact projection.** Render `projects/<project>/<kind>s/<artifact-id>.md` using the rendering protocol in `core/TYPED-ARTIFACTS.md`. The projection MUST be byte-identical to what a re-render from events would produce.
+9. Compute the projection's SHA-256, take the first 12 hex chars, and update `hashes.json` for that path.
+10. Report: artifact ID, short hash, and the citation form (`[KIND-ID#hash]`) that downstream tasks should use.
 
 ### `hw write <task-id> --status <state>`
 
@@ -1197,6 +1198,37 @@ A prose justification is not a `test_ref`. If you did not run something, the hyp
 | Hypothesis | Claim | Falsifier |
 |---|---|---|
 | H-S6 | Requiring a dynamic `test_ref` to exclude a hypothesis prevents the class of failure where a well-argued static read removes the true cause from the search space. | Agents satisfy the check with a nominal capture that did not exercise the path (a test in name only), or the requirement is heavy enough that they leave everything `suspect` and the matrix stops discriminating. |
+
+---
+
+## Secrets Gate (v6.0.0)
+
+**Field evidence:** a sync digest copied a DSRM password and a local-admin password verbatim into a mailbox. The log is append-only, so a temporary credential is now **permanent**; the only remediation was rotating it in the real world. The fix attempted at the time was a redaction **blocklist** file — which was itself a cleartext file aggregating live credentials, one forgotten entry from the next leak.
+
+**The principle.** A secret must never enter the substrate, because the substrate cannot forget. Two rules follow:
+
+1. **Refuse at `hw add`.** Before appending, scan the payload for secret-shaped content. On a hit, the append does not happen (§`hw add` step 4). Store by reference instead: `[REDACTED-SECRET]` in the payload, plus a pointer to where the secret actually lives — operator vault entry, password manager, `${ENV_VAR}`. The pointer is the useful part; the value never was.
+2. **Exports and digests copy allowlisted fields only.** Name what may leave; never maintain a blocklist of live secrets. A blocklist is a file whose whole content is credentials, and it fails silently the first time someone forgets an entry.
+
+**What the scanner looks for** (reference implementation: `scan_for_secrets` in `tools/hw-verify.py`):
+
+| Rule | Shape |
+|---|---|
+| `assignment` | `password=`, `api_key:`, `client_secret=`, `token=` … with a real value |
+| `private_key` | PEM / OpenSSH private-key blocks |
+| `connection_string` | `scheme://user:pass@host`, `Server=…;Password=…` |
+| `bearer_token` | `Bearer …`, `Authorization:`, AWS / GitHub / Slack / JWT key shapes |
+| `high_entropy` | an unlabeled token ≥ 20 chars over 4.0 bits/char of Shannon entropy |
+
+**False positives are the failure mode that kills a scanner**, so the guards are explicit: `[REDACTED-SECRET]` and other pointer values (`<vault entry>`, `${VAR}`, `null`) never trip it, and the hashes the harness itself requires never trip it — citations, `sha256:` prefixes, and 12–64 hex chars in `hash` / `prev_hash` / `sha256` / `content_sha256` / `soul_hash` / `test_ref`. Pure hex tops out at 4.0 bits/char by construction, so no digest can reach the entropy threshold.
+
+**Reports never echo the value.** A hit names the event, the field, and the rule. A verifier that printed what it found would copy the credential into the report, the scrollback, and whatever records the run.
+
+**Layer 1 check 22 is a WARNING, not a FAIL** (`possible_secret_in_event`). Historical chains contain leaked secrets and must still verify — refusing to verify a chain unleaks nothing, and a verifier that FAILs forever on immutable history is one operators stop running. `hw verify --strict-secrets` promotes it to FAIL for new-chain hygiene. The enforcement that actually prevents the leak is the refusal at `hw add`, before the event exists.
+
+| Hypothesis | Claim | Falsifier |
+|---|---|---|
+| H-S10 | Refusing the append and storing by reference keeps credentials out of an append-only log, where the only remediation is real-world rotation. | The scanner's false-positive rate is high enough that agents route around the gate (splitting values, base64-ing them) — or real secrets keep landing because they arrive in shapes no pattern matches and no entropy threshold catches. |
 
 ---
 

@@ -57,6 +57,18 @@ documented failure of the same ten-week production deployment
                            that omits a loop open at that point (a fully gated
                            action sat unconsumed for five weeks)
 
+v6.0.0 protocol features, same deployment (core/VERIFICATION.md §Layer 1
+check 22 and core/SUBSTRATE.md §Secrets Gate):
+
+  22 Secrets gate         payload content that looks like a credential
+                          (a sync digest copied a DSRM password verbatim into
+                          an append-only log; only real-world rotation
+                          remediates). A WARNING by default -- history must
+                          keep verifying -- and a FAIL under --strict-secrets.
+                          scan_for_secrets() is the reference scanner `hw add`
+                          runs BEFORE appending, where the refusal is free.
+                          Suite: tools/test_secrets_gate.py.
+
 Relaxed, not tightened: friction.log now needs only a one-line `note` (four
 entries in 130 events -- the six-field form went unused), with the pre-v6 rich
 form still accepted; operator.correction is well-formedness only. Both live in
@@ -67,6 +79,7 @@ test_open_loops.py, test_one_line_events.py.
 import argparse
 import hashlib
 import json
+import math
 import re
 import subprocess
 import sys
@@ -1358,6 +1371,264 @@ def check_exclusion_discipline(events: list) -> list:
     return failures
 
 
+# ---------------------------------------------------------------------------
+# Secrets gate (Layer 1 check 22, H-S10). core/SUBSTRATE.md §Secrets Gate.
+#
+# Field evidence: a sync digest copied a DSRM password and a local-admin password
+# verbatim into a mailbox. The log is append-only, so the credential is now
+# PERMANENT -- the only remediation was rotating it in the real world. The fix
+# attempted at the time was a redaction BLOCKLIST file, which was itself a
+# cleartext file aggregating live credentials: one forgotten entry from the next
+# leak.
+#
+# The scanner is deliberately a WARNING by default. Historical chains contain
+# leaked secrets and must keep verifying -- refusing to verify a chain does not
+# unleak anything, and a verifier that FAILs forever on immutable history is a
+# verifier operators stop running. `--strict-secrets` promotes it to FAIL for
+# new-chain hygiene, where the refusal is still cheap: the event has not landed.
+# ---------------------------------------------------------------------------
+
+REDACTION_MARKER = "[REDACTED-SECRET]"
+
+# Entropy backstop for UNLABELED blobs. Labeled secrets are the pattern rules'
+# job; this catches the pasted token nobody named. Tuned against false
+# positives, since a noisy warning is one operators learn to scroll past.
+SECRET_ENTROPY_BITS = 4.0
+SECRET_TOKEN_MIN_LEN = 20
+
+# Values that name a secret without being one. `[REDACTED-SECRET]` is the
+# protocol's own store-by-reference marker and must never trip the gate that
+# asks for it.
+SECRET_PLACEHOLDER_RE = re.compile(
+    r"""^(?:
+        \[REDACTED[^\]]*\] | <[^>]*> | \{\{.*\}\} | \$\{?[A-Za-z_][A-Za-z0-9_]*\}? |
+        %[A-Za-z_][A-Za-z0-9_]*% | \*+ | x{3,} | \.{3,} | -+ |
+        null | none | nil | "" | '' | changeme | redacted | omitted |
+        vault:.* | keyring:.* | ref:.* | see\b.*
+    )$""",
+    re.IGNORECASE | re.VERBOSE,
+)
+
+SECRET_ASSIGNMENT_RE = re.compile(
+    r"""(?ix)
+    \b(
+        dsrm[_\- ]?password | password | passwd | pwd | passphrase |
+        client[_\-]?secret | secret[_\-]?key | secret |
+        api[_\-]?key | apikey | access[_\-]?key | private[_\-]?key |
+        auth[_\-]?token | access[_\-]?token | refresh[_\-]?token | token |
+        credential | creds
+    )
+    \s*[:=]\s*
+    (?:"([^"]*)"|'([^']*)'|(<[^>]*>)|([^\s;,"']+))
+    """
+)
+
+SECRET_PEM_RE = re.compile(
+    r"-----BEGIN (?:[A-Z0-9 ]+ )?PRIVATE KEY(?: BLOCK)?-----"
+    r"|-----BEGIN OPENSSH PRIVATE KEY-----"
+    r"|PuTTY-User-Key-File-\d"
+)
+
+# scheme://user:password@host, plus the ADO.NET / ODBC keyword form.
+SECRET_CONNSTR_RE = re.compile(
+    r"\b[a-z][a-z0-9+.\-]*://[^\s:/@]+:[^\s:/@]+@[^\s/]+"
+    r"|\b(?:server|data source|host|initial catalog|database)\s*=[^;]{1,120};"
+    r"[^\n]{0,200}?\b(?:password|pwd)\s*=",
+    re.IGNORECASE,
+)
+
+SECRET_BEARER_RE = re.compile(
+    r"\bbearer\s+[A-Za-z0-9._\-+/=]{12,}"
+    r"|\bauthorization\s*[:=]\s*[A-Za-z0-9._\-+/= ]{12,}"
+    r"|\bAKIA[0-9A-Z]{16}\b"
+    r"|\bgh[pousr]_[A-Za-z0-9]{16,}"
+    r"|\bxox[abprs]-[A-Za-z0-9-]{10,}"
+    r"|\bsk-[A-Za-z0-9]{20,}"
+    r"|\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{4,}",
+    re.IGNORECASE,
+)
+
+# Masked before the entropy pass: these are hashes the harness itself requires.
+# Every one of them is high-entropy by construction, and every one of them is
+# supposed to be there.
+SECRET_HASH_MASK_RES = (
+    re.compile(r"\[[A-Z]+-\d{3,}#[0-9a-f]{12}\]"),                 # citations
+    re.compile(r"(?i)\bsha256:[0-9a-f]{12,64}\b"),                 # prefixed hashes
+    re.compile(
+        r"""(?ix)\b(?:prev_hash|content_sha256|soul_hash|sha256|hash|
+            test_ref|checksum|digest|fingerprint|thumbprint|commit)
+            \s*[:=]\s*"?[0-9a-f]{12,64}"?"""
+    ),
+)
+
+# `/` is deliberately NOT in the token alphabet: it splits paths
+# (`projects/<id>/tasks/T-001/consumed-inputs.md`) into segments too short to
+# score, which is the single biggest source of entropy false positives in a
+# harness whose payloads are mostly paths and ids.
+SECRET_TOKEN_RE = re.compile(r"[A-Za-z0-9+=_-]{%d,}" % SECRET_TOKEN_MIN_LEN)
+HEX_ONLY_RE = re.compile(r"^[0-9a-fA-F]+$")
+
+
+def shannon_entropy(text: str) -> float:
+    """Bits per character. Pure hex tops out at 4.0, which is why the threshold
+    sits there: no hash the harness requires can reach it."""
+    if not text:
+        return 0.0
+    counts = defaultdict(int)
+    for ch in text:
+        counts[ch] += 1
+    total = len(text)
+    bits = 0.0
+    for count in counts.values():
+        p = count / total
+        bits -= p * math.log2(p)
+    return bits
+
+
+def _has_rule(hits: list, rule: str) -> bool:
+    return any(hit.startswith(rule) for hit in hits)
+
+
+def _is_placeholder(value: str) -> bool:
+    value = (value or "").strip().strip(",;")
+    if not value:
+        return True
+    return bool(SECRET_PLACEHOLDER_RE.match(value))
+
+
+def scan_for_secrets(text) -> list:
+    """Return one line per secret-shaped hit in `text`; empty list means clean.
+
+    Five detectors, in order of how sure they are:
+
+      1. assignment        password= / api_key: / token= with a real value
+      2. private_key       PEM and OpenSSH private-key blocks
+      3. connection_string scheme://user:pass@host, and Server=...;Password=
+      4. bearer_token      Bearer/Authorization headers and vendor key shapes
+      5. high_entropy      an unlabeled blob nobody named
+
+    **The returned lines never contain the secret.** A verifier that echoed what
+    it found would copy the credential into the report, the terminal scrollback,
+    and whatever event records the run -- which is the original failure with more
+    steps. Hits name the rule, the key, and a length; never the value.
+
+    False-positive guards, in the order they matter:
+
+      - `[REDACTED-SECRET]` and other placeholders (`<vault-ref>`, `${VAR}`,
+        `null`, `see the vault`) are values that name a secret without being one.
+      - Harness hashes are masked before the entropy pass: citations, `sha256:`
+        prefixes, and 12-64 hex chars assigned to `hash` / `prev_hash` /
+        `sha256` / `content_sha256` / `soul_hash` / `test_ref`.
+      - Pure-hex tokens are skipped outright at any length, and the entropy
+        threshold is 4.0 bits/char -- the ceiling for a 16-symbol alphabet, so
+        no hex string can reach it even in principle.
+      - An entropy candidate must mix letters with digits or base64 padding.
+        `SessionHandoffTemplateProjection` scores 4.04 and is not a secret.
+    """
+    if not isinstance(text, str) or not text.strip():
+        return []
+
+    hits = []
+    # Everything a named rule already reported is blanked out before the
+    # entropy pass, so one secret produces one hit rather than two. The entropy
+    # rule's job is the blob nobody labeled.
+    masked = text
+
+    def blank(match):
+        nonlocal masked
+        start, end = match.span()
+        masked = masked[:start] + " " * (end - start) + masked[end:]
+
+    for match in SECRET_ASSIGNMENT_RE.finditer(text):
+        key = match.group(1)
+        value = next((g for g in match.groups()[1:] if g is not None), "")
+        if _is_placeholder(value):
+            continue
+        blank(match)
+        hits.append(
+            f"assignment ({key.lower()}= with a {len(value.strip())}-char value; "
+            f"store by reference and write {REDACTION_MARKER})"
+        )
+
+    for match in SECRET_PEM_RE.finditer(text):
+        blank(match)
+        if not _has_rule(hits, "private_key"):
+            hits.append("private_key (a PEM / OpenSSH private-key block)")
+
+    for match in SECRET_CONNSTR_RE.finditer(text):
+        blank(match)
+        if not _has_rule(hits, "connection_string"):
+            hits.append(
+                "connection_string (credentials embedded in a connection string)")
+
+    for match in SECRET_BEARER_RE.finditer(text):
+        blank(match)
+        if not _has_rule(hits, "bearer_token"):
+            hits.append(
+                "bearer_token (a bearer/authorization header or vendor key shape)")
+
+    for pattern in SECRET_HASH_MASK_RES:
+        masked = pattern.sub(" ", masked)
+
+    for token in SECRET_TOKEN_RE.findall(masked):
+        if HEX_ONLY_RE.match(token):
+            continue
+        has_alpha = any(c.isalpha() for c in token)
+        has_digit = any(c.isdigit() for c in token)
+        has_b64 = any(c in "+=" for c in token)
+        if not (has_alpha and (has_digit or has_b64)):
+            continue
+        entropy = shannon_entropy(token)
+        if entropy < SECRET_ENTROPY_BITS:
+            continue
+        hits.append(
+            f"high_entropy ({len(token)} chars at {entropy:.2f} bits/char; "
+            f"unlabeled high-entropy token)"
+        )
+
+    return hits
+
+
+def _walk_payload_strings(obj, path="") -> list:
+    """(json-ish path, string) for every string anywhere in a payload."""
+    out = []
+    if isinstance(obj, str):
+        out.append((path or "payload", obj))
+    elif isinstance(obj, dict):
+        for key, value in obj.items():
+            out.extend(_walk_payload_strings(value, f"{path}.{key}" if path else str(key)))
+    elif isinstance(obj, list):
+        for idx, item in enumerate(obj):
+            out.extend(_walk_payload_strings(item, f"{path}[{idx}]"))
+    return out
+
+
+def check_secrets(events: list) -> list:
+    """Layer 1 check 22: `possible_secret_in_event`.
+
+    core/SUBSTRATE.md §Secrets Gate. Scans every string in every payload. A hit
+    is a WARNING by default and a FAIL under `--strict-secrets`; see the module
+    header on why history must keep verifying.
+
+    The real enforcement point is `hw add`, which runs the same scan BEFORE the
+    append and refuses. This check is the after-the-fact half: it tells an
+    operator which events to rotate against, on a chain where deletion is not
+    available.
+    """
+    warnings = []
+    for event in events:
+        payload = event.get("payload")
+        if payload is None:
+            continue
+        for field_path, text in _walk_payload_strings(payload):
+            for hit in scan_for_secrets(text):
+                warnings.append(
+                    f"{event.get('id')}:{event.get('kind')} possible_secret_in_event "
+                    f"(payload.{field_path}: {hit})"
+                )
+    return warnings
+
+
 # Legal `workstream.status` transitions, from the program schema's
 # artifact-extensions.yaml. A status that does not change (X -> X) is also legal:
 # the schema's own T-004 refreshes `last_rollup_citation` by re-adding the
@@ -2261,7 +2532,7 @@ def load_events(events_path: Path) -> list:
     return load_events_with_lines(events_path)[0]
 
 
-def verify(workspace: Path, since: str | None) -> dict:
+def verify(workspace: Path, since: str | None, strict_secrets: bool = False) -> dict:
     events_path = workspace / ".hyperworker" / "events.jsonl"
     hashes_path = workspace / ".hyperworker" / "hashes.json"
 
@@ -2294,6 +2565,8 @@ def verify(workspace: Path, since: str | None) -> dict:
         "evidence_capture_failures": [],
         "open_loop_failures": [],
         "open_loop_notes": [],
+        "secret_warnings": [],
+        "strict_secrets": strict_secrets,
         "result": "PASS",
     }
 
@@ -2424,6 +2697,7 @@ def verify(workspace: Path, since: str | None) -> dict:
     loop_failures, loop_notes = check_open_loops(events)
     result["open_loop_failures"] = loop_failures
     result["open_loop_notes"] = loop_notes
+    result["secret_warnings"] = check_secrets(events)
 
     blocking = (
         result["tamper"]
@@ -2446,6 +2720,10 @@ def verify(workspace: Path, since: str | None) -> dict:
         or result["exclusion_failures"]
         or result["evidence_capture_failures"]
         or result["open_loop_failures"]
+        # Check 22 is a WARNING by default: a historical chain that leaked a
+        # credential must still verify, because refusing to verify it unleaks
+        # nothing. --strict-secrets promotes it for new-chain hygiene.
+        or (strict_secrets and result["secret_warnings"])
     )
     result["result"] = "FAIL" if blocking else "PASS"
     return result
@@ -2482,6 +2760,9 @@ def render(result: dict) -> str:
         f"  evidence_capture:      {len(result['evidence_capture_failures'])} {result['evidence_capture_failures']}",
         f"  open_loops:            {len(result['open_loop_failures'])} {result['open_loop_failures']}",
         f"  open_loop_notes:       {len(result['open_loop_notes'])} {result['open_loop_notes']}",
+        f"  possible_secrets:      {len(result['secret_warnings'])}"
+        f"{' (FAIL: --strict-secrets)' if result.get('strict_secrets') and result['secret_warnings'] else ''}"
+        f" {result['secret_warnings']}",
         f"  result:                {result['result']}",
     ]
     if "error" in result:
@@ -2495,6 +2776,11 @@ def main() -> int:
                         help="Workspace root containing .hyperworker/")
     parser.add_argument("--since", default=None,
                         help="Skip the chain re-walk for events before this EV-NNNN ID")
+    parser.add_argument("--strict-secrets", action="store_true",
+                        help="Promote Layer 1 check 22 (possible_secret_in_event) from "
+                             "WARNING to FAIL. Off by default so historical chains that "
+                             "already carry a leaked credential keep verifying; on for "
+                             "new-chain hygiene (core/SUBSTRATE.md §Secrets Gate).")
     parser.add_argument("--claims", action="store_true",
                         help="Also replay recorded claim: predicates against the current "
                              "world (v5.3, core/VERIFICATION.md §Claim Replay). Reported "
@@ -2511,7 +2797,7 @@ def main() -> int:
         print(f"Workspace path is not a directory: {workspace}", file=sys.stderr)
         return 2
 
-    result = verify(workspace, args.since)
+    result = verify(workspace, args.since, strict_secrets=args.strict_secrets)
     print(render(result))
     exit_code = 0 if result["result"] == "PASS" else 1
 
