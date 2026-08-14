@@ -50,7 +50,16 @@ The following requests recur. They are out of scope on purpose.
 
 **An auto-tuning harness.** A feedback loop that mutates the harness based on past runs is the opposite of substrate-over-rules. Mutation undermines the structural contract.
 
-**A meta-orchestration layer.** If an operator needs many parallel projects, run many harness instances. We do not build a harness-of-harnesses. *(v5.3 clarification, from field evidence: operators who need many instances also need the coordination between them, and three deployments built that layer ad hoc when we refused to name it. The answer stays inside the position — a program is itself a locked project, run from its own instance, bootstrapped from the `program` schema; see `core/LOCK.md` §Programs. No orchestration primitive enters the substrate. If coordination ever needs code — leases, serialized writes, schedulers — that code is a sibling Hyper project, not harness core.)*
+**A runtime that nests inside another runtime.** No harness instance supervises another. There is no shared lock, no cross-instance event bus, no scheduler, no parent process with children — and there will not be.
+
+That is not a refusal to coordinate. Operators running many parallel workstreams need the coordination between them too, and three deployments built that layer ad hoc while we were busy not naming it. So we named it, and the name stayed inside the position. Two sentences carry the whole answer:
+
+- **Concurrency lives between instances.** Every workstream gets its own instance, its own `events.jsonl`, its own single writer. Nothing runs two writers inside one log; that is the failure the Single-Writer Rule is named after.
+- **Coordination is a locked project like any other.** The thing that coordinates the workstreams is a HyperWorker project — its own instance, its own Lock, bootstrapped from the `program` schema. Its subject matter happens to be the program: a workstream registry, routing and promote/retire decisions, roll-up findings, all ordinary typed artifacts. It cites its siblings by path plus content hash and reads their projections; it writes to none of them.
+
+Nothing entered the substrate to make that work. No orchestration primitive, no supervision event kind, no sixth mechanism — a program is a schema plus a discipline about who writes where. See `core/LOCK.md` §Programs, which is the same position stated from the other end.
+
+If coordination ever outgrows files — leases, serialized concurrent writes, schedulers, dashboards — that is tooling, and tooling ships as a sibling Hyper project, never as harness core.
 
 **Built-in vendor integrations as load-bearing features.** The harness is files. Per-model profiles document differences declaratively; they do not call vendor APIs.
 

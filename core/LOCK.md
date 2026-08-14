@@ -162,7 +162,9 @@ The shape:
 4. **Cross-instance references are paths plus hashes.** A program artifact cites a subproject artifact by relative path and content hash — the same staleness signal as any citation, computable without any shared runtime.
 5. **Roll-up is a cycle task.** The program project is typically itself `lifecycle: ongoing`: each program cycle reads subproject `SESSION-HANDOFF.md` / `CYCLES.md` projections (read-only — never another instance's `events.jsonl` as a writer) and records a roll-up finding.
 
-What this deliberately is not: a shared lock, a cross-instance event bus, a scheduler, or a harness-of-harnesses runtime. If program-scale coordination outgrows files — leases, serialized concurrent writes, dashboards — that is tooling, and tooling ships as a sibling project in the Hyper ecosystem, not as substrate.
+What this deliberately is not: a shared lock, a cross-instance event bus, a scheduler, or a runtime that nests inside another runtime. If program-scale coordination outgrows files — leases, serialized concurrent writes, dashboards — that is tooling, and tooling ships as a sibling project in the Hyper ecosystem, not as substrate.
+
+This is the same position `VISION.md` §What HyperWorker Will Not Become states from the other end. Read either one and land in the same place: the harness never nests runtimes; concurrency lives between instances; coordination is a locked project like any other.
 
 ---
 
