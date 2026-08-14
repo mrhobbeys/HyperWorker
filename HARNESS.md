@@ -97,6 +97,7 @@ templates/
   session-handoff-template.md        # canonical SESSION-HANDOFF.md projection format
   CYCLES.md                          # canonical CYCLES.md projection format (lifecycle: ongoing)
   ELIMINATION.md                     # canonical ELIMINATION.md projection format (v6.0.0)
+  OPEN-LOOPS.md                      # canonical OPEN-LOOPS.md projection format (v6.0.0)
 schemas/
   artifacts/                         # default artifact schemas (decision, finding, anti-pattern, operating-reality)
   projects/                          # project schemas with bootstrap-ready scaffolds
@@ -159,6 +160,7 @@ projects/
     council/                         # projections (v5.1) — per-fire markdown + INDEX.md
     SESSION-HANDOFF.md               # projection (v5.1) of the latest session.handoff event
     ELIMINATION.md                   # projection (v6.0.0) of hypothesis status/test_ref
+    OPEN-LOOPS.md                    # projection (v6.0.0) of loop.open / loop.close
     evidence/                        # projections (v6.0.0) — one file per evidence.capture
     tasks/<task-id>/
       task.md                        # canonical instructions

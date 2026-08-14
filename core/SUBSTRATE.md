@@ -233,6 +233,13 @@ The harness defines a closed set. Schema extensions must add kinds via the proje
 | `friction.log` | `{note}` required; `{category, severity, task_id}` optional. One line, one event (v6.0.0). The pre-v6 rich form `{type, patch_id, description, surfaced_by, severity, suggested_target}` is still accepted. See §Friction Log Event Kind. |
 | `friction.log.prompt` | `{trigger, task_id, signal_summary}` — informational; the harness emits this when an auto-prompt heuristic fires. The agent reads the prompt event and decides whether to follow it with an actual `friction.log` entry. |
 
+### Open-loop events (v6.0.0)
+
+| Kind | Payload |
+|---|---|
+| `loop.open` | `{loop_id, description, blocking_on, opened_at, stale_after_days}` — `loop_id` is `L-NNN`, unique per project. `blocking_on` ∈ `{operator-word, external, other-agent, scheduled}`. `stale_after_days` defaults to `7`. See §Open Loops. |
+| `loop.close` | `{loop_id, closed_at, resolution}` — closes the matching open. |
+
 ### Operator events (v6.0.0)
 
 | Kind | Payload |
@@ -243,7 +250,7 @@ The harness defines a closed set. Schema extensions must add kinds via the proje
 
 | Kind | Payload |
 |---|---|
-| `session.handoff` | `{project_id, closing_actor, last_completed_task, next_pending_task, active_artifact_state, open_operator_questions[], recommended_first_action, context_compaction_summary}` — see §Session Handoff Event Kind. One event per closing-session boundary; not chained. |
+| `session.handoff` | `{project_id, closing_actor, last_completed_task, next_pending_task, active_artifact_state, open_operator_questions[], open_loops[], recommended_first_action, context_compaction_summary}` — see §Session Handoff Event Kind. `open_loops` is required from v6.0.0 (may be `[]`); absent on pre-v6 chains is a note, not a FAIL. One event per closing-session boundary; not chained. |
 | `scope.complete` | `{scope_items: [{id, name, terminal_state, reason, claim?}]}` — see §Scope Completeness. Emitted before `session.handoff`; Layer 1 cross-checks against PROJECT.md §Scope. `scope_items[].claim` is optional; see §Checked Claims (v5.3). |
 
 ### Evidence events (v6.0.0)
@@ -318,6 +325,7 @@ A projection is a regenerable file derived from events. Projections are **never 
 | Council index | All council events for the project | `projects/<id>/council/INDEX.md` |
 | Session handoff | `session.handoff` (most recent only) | `projects/<id>/SESSION-HANDOFF.md` |
 | Cycle index (ongoing projects) | `cycle.open`, `cycle.close` | `projects/<id>/CYCLES.md` — one row per cycle: id, opened, closed, summary, next_due. Format and rendering protocol: `templates/CYCLES.md`. The `active_project.md` projection additionally carries `Next due:` for an ongoing active project. |
+| Open loops (v6.0.0) | `loop.open`, `loop.close` | `projects/<id>/OPEN-LOOPS.md` — open loops newest first, with a staleness column. Format and rendering protocol: `templates/OPEN-LOOPS.md`. See §Open Loops. |
 | Evidence capture (v6.0.0) | `evidence.capture` | `projects/<id>/evidence/<ED-NNN>.md` — one file per capture. Format: `templates/artifact-templates/evidence-capture.md`. See §Evidence Capture. |
 | Elimination matrix (v6.0.0) | `finding.add` / `finding.supersede` events whose payload carries `status` | `projects/<id>/ELIMINATION.md` — frontier line plus one row per hypothesis: hypothesis, status, how-tested, result. Format and rendering protocol: `templates/ELIMINATION.md`. See §Exclusion Discipline. |
 
@@ -547,6 +555,20 @@ Report the next pending task with all dependencies met.
 Report the current project state.
 
 **Steps.** Read `active_project.md`, `TASK-STATE.yaml`, recent events. Summarize: active project, pending tasks count, blocked tasks, in-progress tasks, recent council outcomes, pending operator review. On an ongoing project, additionally read the last `cycle.close`: if `next_due` < today and no `cycle.open` follows it, lead the status report with **OVERDUE: next cycle was due <date>** — this is the structural replacement for "the operator remembers the weekly sweep."
+
+**Overdue open loops lead the report (v6.0.0).** Before anything else — above the project summary, above the task counts — compute the open loops (`loop.open` with no matching `loop.close`, §Open Loops) and print every one whose `opened_at + stale_after_days` is before today:
+
+```
+OVERDUE OPEN LOOPS
+  L-003  waiting on operator-word  opened 2026-06-28  (37 days, stale after 7)
+         rejoin the standby server; every technical gate is cleared
+  L-007  waiting on external       opened 2026-08-01  (13 days, stale after 7)
+         vendor confirmation on the export format
+
+<then the normal status report>
+```
+
+No overdue loops prints nothing — the block appears only when something is actually late. This is the structural replacement for the field incident where a fully-gated action sat five weeks because the only thing tracking it was a sentence in a message.
 
 ### `hw log <text>`
 
@@ -818,6 +840,7 @@ Long projects span sessions. v5.0/v5.0.1 used informal `SESSION-HANDOFF.md` pros
 | `next_pending_task` | string \| null | `T-NNN` `hw next-step` would select if run now. |
 | `active_artifact_state` | object | `{decisions_count, findings_count, anti_patterns_count, contradictions_open}`. `contradictions_open` is reported only for synthesis-schema projects; other schemas may emit `0` or omit. |
 | `open_operator_questions` | list[string] | Questions the closing agent did not resolve. The resuming agent MUST acknowledge each before its first state-changing event in the session. |
+| `open_loops` | list[string] | **Required (v6.0.0).** Every `L-NNN` open at this point in the chain; `[]` when none. Omitting a loop that is open is a Layer 1 FAIL (`handoff_missing_open_loops`); the field being absent entirely reads as a pre-v6 handoff and is a note. See §Open Loops. |
 | `recommended_first_action` | string | One concrete action the closing agent recommends the resuming agent take first. |
 | `context_compaction_summary` | string \| null | If the closing agent's context filled and compacted, a brief summary of what was compacted. `null` if no compaction occurred. |
 
@@ -1066,6 +1089,36 @@ Exactly one of `content` or `content_path` (+ `content_sha256`). Inline is the d
 | Hypothesis | Claim | Falsifier |
 |---|---|---|
 | H-S7 | Making raw output a substrate event, cheap enough to fire mid-work, keeps load-bearing evidence alive past the session that produced it — and gives exclusions something to cite. | Captures are fired for trivia and the important output still goes uncaptured, or the inline-content rule pushes agents to summarize at capture time, which is exactly the loss the primitive exists to prevent. |
+
+---
+
+## Open Loops (v6.0.0)
+
+**Field evidence:** a gated action sat unconsumed for **five weeks**. A message cleared every technical gate for a server rejoin and ended "the only remaining gate is the operator's word." Nothing tracked it. The divergence between the believed state and the actual state surfaced five weeks later, through an unrelated symptom, in production.
+
+Nothing was wrong with the work. The gate was real, the message was clear, and the handoff was honest. The failure was that "waiting on X" was a sentence in a document rather than a row in a table anything could count.
+
+**Payload schema.**
+
+| Field | Type | Meaning |
+|---|---|---|
+| `loop_id` | string | `L-NNN`, unique per project. Loops are not reopened — a recurrence is a new `L` id. |
+| `description` | string | One line: what is waiting, and what happens when it lands. |
+| `blocking_on` | enum | `operator-word` \| `external` \| `other-agent` \| `scheduled`. What kind of thing has to happen. |
+| `opened_at` | string | ISO 8601 UTC. The staleness clock starts here. |
+| `stale_after_days` | int | Default `7`. Past this, the loop is overdue and `hw status` leads with it. |
+
+`loop.close` carries `{loop_id, closed_at, resolution}`. `resolution` is one line: what actually happened, including "no longer needed."
+
+**`hw status` leads with overdue loops.** For every open loop where `opened_at + stale_after_days` is before today, `hw status` prints an **OVERDUE OPEN LOOPS** block first — above the project summary, above pending tasks (see §`hw status`). This is the structural replacement for the operator remembering that something was waiting on them.
+
+**Handoffs carry the list.** `session.handoff.open_loops` is the set of `L-NNN` open at that moment, `[]` if none. A handoff that omits a loop that is open FAILs Layer 1 — the exact defect from the field, where a closing message described the state in prose and the next session inherited nothing countable.
+
+**Layer 1 (check 21).** `loop_close_without_open` (a close with no matching open, or a second close of the same loop), `duplicate_loop_open` (a `loop_id` opened twice in one project), `handoff_missing_open_loops` (a `session.handoff` whose `open_loops` omits a loop open at that point). An absent `open_loops` field is a **note**, not a FAIL — pre-v6 chains keep verifying. See `core/VERIFICATION.md` §Layer 1 check 21.
+
+| Hypothesis | Claim | Falsifier |
+|---|---|---|
+| H-S9 | A gated action tracked as a countable loop, surfaced by staleness at every `hw status` and carried on every handoff, cannot sit unconsumed for weeks. | Loops are opened and never closed even after resolution, so the overdue list fills with noise operators learn to scroll past — or the things that actually stall are never opened as loops in the first place, because opening one requires noticing. |
 
 ---
 

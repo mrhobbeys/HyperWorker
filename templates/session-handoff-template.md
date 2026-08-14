@@ -33,6 +33,16 @@ The closing agent should list the artifacts the resuming agent will most need to
 
 Do not list every artifact — only the ones whose absence from the resuming agent's context window would cause re-discovery. The full set is in `projects/<id>/decisions/`, `findings/`, etc.
 
+## Open loops (v6.0.0)
+
+Every `L-NNN` open at this handoff, from `projects/<id>/OPEN-LOOPS.md`. The `session.handoff` event's `open_loops` field carries the same list; omitting a loop that is open is a Layer 1 FAIL (`handoff_missing_open_loops`). `[]` / `none` is a valid and good answer.
+
+| Loop | Waiting on | Opened | Age | Description |
+|---|---|---|---|---|
+| L-NNN | operator-word \| external \| other-agent \| scheduled | YYYY-MM-DD | <n>d (OVERDUE if past `stale_after_days`) | <one line> |
+
+A gated action once sat five weeks because it lived in a sentence instead of a list. See `core/SUBSTRATE.md` §Open Loops.
+
 ## Open operator questions
 
 Questions the closing agent did not resolve and that the resuming agent should address before continuing — or surface to the operator if the resuming agent is also unable:

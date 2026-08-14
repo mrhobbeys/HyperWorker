@@ -110,6 +110,7 @@ KNOWN_EVENT_KINDS = {
     "cycle.open", "cycle.close",   # v5.3 lifecycle; missing from this set until v6.0.0
     "evidence.capture",            # v6.0.0 field-evidence primitives
     "operator.correction",         # v6.0.0; the invisible channel, made visible
+    "loop.open", "loop.close",     # v6.0.0 open-loop tracking
 }
 
 # Required payload fields per v5.1 event kind. None means no per-kind structural
@@ -153,6 +154,11 @@ REQUIRED_PAYLOAD_FIELDS = {
     # evidence.capture live in check_evidence_capture (one of content /
     # content_path, which a flat required-field list cannot express).
     "evidence.capture": ("id", "producing_command", "captured_at", "summary"),
+    "loop.open": ("loop_id", "description", "blocking_on", "opened_at"),
+    "loop.close": ("loop_id", "closed_at", "resolution"),
+    # session.handoff.open_loops is required from v6.0.0 but deliberately
+    # NOT listed here: a missing field on a pre-v6 chain is a note from
+    # check_open_loops, not a blocking malformed-payload FAIL.
 }
 
 
@@ -1006,6 +1012,104 @@ HYPOTHESIS_STATUSES = ("open", "suspect", "excluded")
 # the field: friction.log got 4 entries in 130 events, and operator corrections
 # were never captured at all.
 ONE_LINE_KINDS = ("friction.log", "operator.correction")
+
+
+def check_open_loops(events: list) -> tuple:
+    """Layer 1 check 21: gated actions stay countable.
+
+    core/SUBSTRATE.md §Open Loops. Field evidence: a message cleared every
+    technical gate for a server rejoin and said the only remaining gate was the
+    operator's word. Nothing tracked it. The divergence between believed and
+    actual state surfaced FIVE WEEKS later, through an unrelated symptom, in
+    production. Nothing was wrong with the work -- "waiting on X" was a sentence
+    in a document rather than a row anything could count.
+
+      - `loop.close` with no matching open      -> loop_close_without_open
+      - a `loop_id` opened twice in one project -> duplicate_loop_open
+      - a handoff omitting a loop open then     -> handoff_missing_open_loops
+
+    Loops are never reopened: a recurrence is a new L id, so a second open of the
+    same `loop_id` is a duplicate whether or not the first was closed.
+
+    Staleness is deliberately NOT checked here. It is date-dependent -- a chain
+    that verifies today would fail tomorrow with no event appended -- so it lives
+    in `hw status`, which leads with OVERDUE OPEN LOOPS.
+
+    Returns (failures, notes). A `session.handoff` with no `open_loops` field at
+    all is a note: the field is required from v6.0.0, and pre-v6 chains keep
+    verifying.
+    """
+    failures = []
+    notes = []
+    by_project = defaultdict(list)
+    for event in events:
+        by_project[event.get("project")].append(event)
+
+    for project_id, project_events in by_project.items():
+        if not project_id or project_id == "_harness":
+            continue
+
+        opened = {}   # loop_id -> event id of the open
+        open_now = set()
+
+        for event in project_events:
+            kind = event.get("kind")
+            payload = event.get("payload") or {}
+            if not isinstance(payload, dict):
+                payload = {}
+            loop_id = payload.get("loop_id")
+
+            if kind == "loop.open":
+                if loop_id in opened:
+                    failures.append(
+                        f"{project_id}: duplicate_loop_open "
+                        f"({event.get('id')} opens {loop_id}, already opened by "
+                        f"{opened[loop_id]}; loops are not reopened - a "
+                        f"recurrence is a new L id)"
+                    )
+                else:
+                    opened[loop_id] = event.get("id")
+                open_now.add(loop_id)
+
+            elif kind == "loop.close":
+                if loop_id not in open_now:
+                    detail = ("no loop is open under that id"
+                              if loop_id not in opened
+                              else f"{loop_id} was already closed")
+                    failures.append(
+                        f"{project_id}: loop_close_without_open "
+                        f"({event.get('id')} closes "
+                        f"{loop_id or '<no loop_id>'}; {detail})"
+                    )
+                else:
+                    open_now.discard(loop_id)
+
+            elif kind == "session.handoff":
+                declared = payload.get("open_loops")
+                if declared is None:
+                    notes.append(
+                        f"{project_id}: handoff_open_loops_absent "
+                        f"({event.get('id')} predates the v6.0.0 open_loops "
+                        f"field; open now: "
+                        f"{sorted(open_now) if open_now else 'none'})"
+                    )
+                    continue
+                if not isinstance(declared, list):
+                    failures.append(
+                        f"{project_id}: handoff_missing_open_loops "
+                        f"({event.get('id')} open_loops is {type(declared).__name__}, "
+                        f"expected a list of L ids (use [] for none))"
+                    )
+                    continue
+                missing = sorted(loop for loop in open_now if loop not in declared)
+                if missing:
+                    failures.append(
+                        f"{project_id}: handoff_missing_open_loops "
+                        f"({event.get('id')} omits {', '.join(missing)}; a loop the "
+                        f"next session cannot count is a loop nobody is holding)"
+                    )
+
+    return failures, notes
 
 
 def check_note_payloads(events: list) -> list:
@@ -2169,6 +2273,8 @@ def verify(workspace: Path, since: str | None) -> dict:
         "checked_claims_required_failures": [],
         "exclusion_failures": [],
         "evidence_capture_failures": [],
+        "open_loop_failures": [],
+        "open_loop_notes": [],
         "result": "PASS",
     }
 
@@ -2296,6 +2402,9 @@ def verify(workspace: Path, since: str | None) -> dict:
     result["exclusion_failures"] = check_exclusion_discipline(events)
     result["evidence_capture_failures"] = check_evidence_capture(events)
     result["malformed_payloads"].extend(check_note_payloads(events))
+    loop_failures, loop_notes = check_open_loops(events)
+    result["open_loop_failures"] = loop_failures
+    result["open_loop_notes"] = loop_notes
 
     blocking = (
         result["tamper"]
@@ -2317,6 +2426,7 @@ def verify(workspace: Path, since: str | None) -> dict:
         or result["checked_claims_required_failures"]
         or result["exclusion_failures"]
         or result["evidence_capture_failures"]
+        or result["open_loop_failures"]
     )
     result["result"] = "FAIL" if blocking else "PASS"
     return result
@@ -2351,6 +2461,8 @@ def render(result: dict) -> str:
         f"  checked_claims_req:    {len(result['checked_claims_required_failures'])} {result['checked_claims_required_failures']}",
         f"  exclusion_discipline:  {len(result['exclusion_failures'])} {result['exclusion_failures']}",
         f"  evidence_capture:      {len(result['evidence_capture_failures'])} {result['evidence_capture_failures']}",
+        f"  open_loops:            {len(result['open_loop_failures'])} {result['open_loop_failures']}",
+        f"  open_loop_notes:       {len(result['open_loop_notes'])} {result['open_loop_notes']}",
         f"  result:                {result['result']}",
     ]
     if "error" in result:
