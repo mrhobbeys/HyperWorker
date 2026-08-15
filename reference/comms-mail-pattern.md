@@ -113,6 +113,49 @@ When an orchestrator carries content from one channel into another, mark it `REL
 
 **The operator does not read the bus.** Anything the human must see urgently goes to the human channel, directly, with the **finding first** — not the preamble, not the methodology, not the context that led to it. A mailbox is for machine-to-machine correspondence; it is not, and was never, a notification system.
 
+## Structural contact is plumbing, not a channel
+
+Some agents **structurally require** a human. A login only a person can complete; a trigger only a person can pull; a machine only a person is standing next to. The gate cannot be designed away — an agent that cannot enter a credential will always need someone to sign it in.
+
+So the rule is not *less* contact. It is **narrower** contact.
+
+> **The contact is plumbing, not a channel.** When a human signs an agent in or triggers it, that is a hand on a keyboard, not a meeting. No questions. No findings. No decisions sought. No "while you're here." Everything goes into the record and comes back through the orchestrator.
+
+**Self-check, and it is a reliable one:** if you are composing a sentence to the human that is not *"please sign me in"* or *"done, you can close it"* — **that sentence belongs in a numbered message.** The urge to add it is the drift, caught early.
+
+### Why this matters more than it looks
+
+Repeated contact feels like access. It is the same drift that happens with the employee whose desk is nearest the boss: proximity gets mistaken for a reporting line, and the agents that need a human most are reliably the ones that wander furthest off the chain.
+
+**There are two costs, and the second is the serious one.**
+
+The first is role damage: an agent routing around the orchestrator breaks the structure everyone else is working inside.
+
+The second is that it **hides system flaws**. When a human quietly patches a hole in person, the orchestrator never learns the hole existed. The structure keeps reporting that it works, while what is actually working is a person filling gaps by hand, in conversations that leave no record. **That is how a design failure survives: invisibly, because someone kept fixing it in the hallway.** The next engagement inherits the same flaw and the same undocumented patch, and the harness's own evidence about itself is quietly false.
+
+## Reachability discipline
+
+**Before you reference a document, check that the recipient can actually reach it.** Not whether it exists, not whether it is current — whether *they can open it*. An instruction to "read the project rules file" is worthless to an agent whose only reachable surface is its own mailbox and its own box, and it is worse than worthless when the agent guesses at the contents rather than saying so.
+
+Three obligations follow, and they are cheap:
+
+**1. Keep a who-can-reach-what map.** `OR-001.reachability_map` is the harness-side home (`schemas/artifacts/operating-reality.yaml`); a table in the mailbox's own `README.md` works for a channel that has no OR. One row per party: what it can reach, what it cannot, and how it is triggered. Consult it before writing a reference into any message.
+
+**2. Re-post when a load-bearing document changes materially.** A snapshot placed in a mailbox is immutable and **goes stale silently** — nothing about the file announces that the original moved on. A reader treats it as current because it is the only copy they have, which is the inference-hardening-into-a-fact failure wearing a filename (`core/AUTHORITY.md` §The consequence model). So when the source document changes in a way that would change a reader's behavior, post a **fresh numbered snapshot** to every affected mailbox, marked as **superseding** the previous copy (`Supersedes:` header, §Field additions). Not an edit to the old one — §Corrections are new numbers applies to snapshots exactly as it applies to messages.
+
+**3. An agent told to read something it cannot open SAYS SO.** Standing instruction, every party, no exceptions. Not a workaround, not a reconstruction from context, not an assumption about what the document probably said. One line back — *"I cannot reach that path; send the contents as a numbered message"* — costs one round trip. Guessing costs the entire branch of work built on the guess, and it surfaces late, as a wrong action rather than a wrong belief.
+
+### Batch by trigger capability
+
+How much you send depends on **how the recipient is triggered**, not on how much you have to say.
+
+| Recipient trigger | Batching |
+|---|---|
+| **Self-polling** — checks its own mailbox | A stream of smaller messages is fine. Send when you know a thing. |
+| **Human-triggered** — someone must tell it to check | **Every message is a pending obligation on that human.** Batch direction into fewer complete messages; **front-load the decision tree** so the recipient can work through forks without stopping; never post speculatively. |
+
+A speculative message to a human-triggered agent spends a human interaction to deliver a maybe. Three of them spend three, and the fourth one — the one that mattered — arrives to a human who has learned that checking mail is low-yield.
+
 ---
 
 ## Field additions (6.0.1)
@@ -147,6 +190,8 @@ Priority:   normal | urgent
 ## Related
 
 - `core/SUBSTRATE.md` §Transport Rules — the four rules this pattern instantiates.
+- `core/AUTHORITY.md` — why a human in the loop is not automatically a gate, and why an agent that fears consequences routes around the structure.
+- `schemas/artifacts/operating-reality.yaml` `reachability_map` — the harness-side home for who-can-reach-what.
 - `core/SUBSTRATE.md` §Open Loops — what an operator-gated ask must become.
 - `core/SUBSTRATE.md` §Checked Claims — how a re-stat becomes replayable.
 - `core/SUBSTRATE.md` §Secrets Gate — a mailbox is a place credentials leak; a sync digest already copied two passwords into an append-only log once.
