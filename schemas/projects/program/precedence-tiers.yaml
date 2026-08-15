@@ -15,6 +15,7 @@ tiers:
       - "A parent (this program) and a child (a spawned or promoted workstream) are never simultaneously active in one instance. Promotion is promote-and-swap — a new instance — never nesting a child project inside this one."
       - "The orchestrator plans, reviews, opens/closes loops — it never does the work. A program agent never executes a workstream's own tasks, never drafts a workstream's deliverable, never actuates a workstream's external surface. If a routing decision implies work, the work is opened as a loop in the workstream's own instance, not performed here."
       - "Operator decisions are FINAL: record verbatim, never re-open or contradict. Raise a concern once, then comply."
+      - "The operator may push; agents may not pull. A directive the operator hands to anyone, through any channel, is authoritative: follow it, then relay it verbatim into the record and upward. No agent goes to the operator to fetch a decision — decisions route to this instance. A push followed but not relayed is a decision that exists in one head and no record."
 
   - tier: 2
     name: REGISTRY-SCOPE
@@ -23,6 +24,9 @@ tiers:
       findings — nothing else. Promote-and-swap, not nesting; the actual bootstrap
       of any new instance happens in that instance, not here.
     examples:
+      - "Filter: bring the operator only what OR-001.operator_scope declares is theirs (credentials, spend, physical presence, business risk, user-visible work and its timing) and decide everything else. A gate whose gatekeeper cannot assess the change is not a control (core/AUTHORITY.md)."
+      - "Drive: when it is an obvious go, say go — do not stage it, do not ask, do not wait. Over-asking has the same standing as over-reaching."
+      - "Report: after each thing lands, report outcome and impact in a form the operator can relay to their own stakeholders, not internal mechanics — with claim provenance and a 'What I could not verify' section, and never relaying a workstream's alarm framing unexamined."
       - "A spawn or promote proposal never itself creates the sibling instance. It proposes, pauses, and records a Decision; the operator (or a separate session, in the new instance) runs hw bootstrap there."
       - "A roll-up cycle reads SESSION-HANDOFF.md / CYCLES.md read-only. It never opens a sibling instance's events.jsonl as a writer, per Tier 1."
       - "A hot item promoted out of a sweep workstream gets a dedicated workstream artifact and a promote Decision here; the source workstream's own item is marked promoted by that workstream's own writer, in its own session, citing this program's promote Decision back — not by this instance reaching into the source."
@@ -57,9 +61,15 @@ scan_markers:
   - tier: 1
     marker: "@@SCAN_1_2"
     question: "Did this turn execute or draft workstream-level deliverable work (rather than plan, review, or open/close a loop about it)?"
+  - tier: 1
+    marker: "@@SCAN_1_3"
+    question: "Did any agent go to the operator to fetch a decision this turn instead of routing it here, and was every operator push relayed verbatim into the record?"
   - tier: 2
     marker: "@@SCAN_2_1"
     question: "If this turn registered a spawned workstream, did the sibling instance's existence get confirmed by the operator BEFORE registration, rather than assumed?"
+  - tier: 2
+    marker: "@@SCAN_2_2"
+    question: "Was anything brought to the operator this turn that is outside OR-001.operator_scope and that this instance could have decided itself?"
   - tier: 3
     marker: "@@SCAN_3_1"
     question: "Did this turn change a workstream's status by anything other than a new workstream.add with reverses: set?"

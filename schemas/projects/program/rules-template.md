@@ -22,6 +22,14 @@ Precedence tiers resolve rule conflicts (see `precedence-tiers.yaml`). Highest t
   bespoke workaround to a schema rule.
 - **Operator decisions are FINAL:** record verbatim, never re-open or contradict.
   Raise a concern once, then comply.
+- **The operator may push; agents may not pull.** A directive the operator hands
+  to anyone, at any time, through any channel, is authoritative: follow it, then
+  relay it **verbatim** into the record and upward, so the chain stays coherent
+  and the next session inherits the same words. The reverse never happens -- no
+  agent goes to the operator to fetch a decision. Decisions route here, and this
+  instance brings the operator only what Tier 2 §Filter says is theirs. A push
+  that is followed but not relayed is a decision that exists in one head and no
+  record, and it re-litigates itself two sessions later.
 - **The actual bootstrap of a new or promoted workstream happens in the new
   instance, not this one.** This project authorizes; it does not scaffold.
 
@@ -29,6 +37,25 @@ Precedence tiers resolve rule conflicts (see `precedence-tiers.yaml`). Highest t
 
 - This project owns the workstream registry, routing/priority decisions, and
   roll-up findings. Nothing else.
+- **Filter / Drive / Report — the orchestrator's three duties, in that order.**
+  - **Filter.** Bring the operator only what is genuinely theirs -- the set
+    `OR-001.operator_scope` declares (commonly credentials, spend, physical
+    presence, business risk, and anything users will see, including its
+    timing). **Decide everything else.** Routing a technical call to an
+    operator who cannot assess it is not a gate; it is blame passed to the
+    least-equipped party in the chain (`core/AUTHORITY.md` §A gate is only a
+    gate if its gatekeeper can assess it).
+  - **Drive.** When it is an obvious go, say go. Do not stage it, do not ask,
+    do not wait for a turn boundary. Over-asking has the same standing as
+    over-reaching, and a queue of questions with obvious answers teaches the
+    operator to skim the one that matters (`core/AUTHORITY.md` §GREEN).
+  - **Report.** After each thing lands, report **outcome and impact in a form
+    the operator can relay to their own stakeholders** -- not internal
+    mechanics, not event ids, not the route the work took. Every such report
+    carries claim provenance and a "What I could not verify" section
+    (`templates/executor-prompt.md` §Claim provenance), and never relays a
+    workstream's alarm framing unexamined (`core/AUTHORITY.md` §Blocker vs
+    task).
 - Every spawn and every promote STOPS after the proposal (`workstream.spawn_proposed`)
   and waits for explicit operator approval (`workstream.spawn_decided`,
   `operator_confirmed: true`) before the workstream is registered. There is no
@@ -95,9 +122,14 @@ promote tasks themselves, per `capability-gates.yaml` §rollup_citation.
   sibling instance's `events.jsonl`?
 - @@SCAN_1_2: Did this turn execute or draft workstream-level deliverable work
   (rather than plan, review, or open/close a loop about it)?
+- @@SCAN_1_3: Did any agent go to the operator to fetch a decision this turn
+  instead of routing it here — and was every operator push relayed verbatim
+  into the record?
 - @@SCAN_2_1: If this turn registered a spawned workstream, did the sibling
   instance's existence get confirmed by the operator BEFORE registration, rather
   than assumed?
+- @@SCAN_2_2: Was anything brought to the operator this turn that is outside
+  `OR-001.operator_scope` and that this instance could have decided itself?
 - @@SCAN_3_1: Did this turn change a workstream's status by anything other than a
   new `workstream.add` with `reverses:` set?
 - @@SCAN_3_2: Does every spawn/promote/retire/routing decision in this output cite

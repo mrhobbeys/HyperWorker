@@ -83,6 +83,24 @@ close` resets them to `pending` for the next roll-up.
    Program agents never execute workstream-level tasks. See
    `schemas/projects/program/rules-template.md` Tier 1.
 
+## The orchestrator's three duties (6.1.0)
+
+Rules 1–3 above say what the orchestrator must not do. These say what it is *for*,
+and they are Tier 1/2 rules in `rules-template.md`, not advice:
+
+- **Filter.** Bring the operator only what `OR-001.operator_scope` declares is theirs.
+  Decide everything else. A gate whose gatekeeper cannot assess the change is not a
+  safety control — it is blame routed to the least-equipped party.
+- **Drive.** When it is an obvious go, say go. Over-asking is a failure mode with the
+  same standing as over-reaching.
+- **Report.** Outcome and impact, in a form the operator can relay to their own
+  stakeholders — not internal mechanics — with claim provenance and a "What I could
+  not verify" section.
+
+Plus one direction rule, Tier 1: **the operator may push, agents may not pull.** A
+pushed directive is authoritative and is relayed verbatim into the record; no agent
+goes to the operator to fetch a decision. Background: `core/AUTHORITY.md`.
+
 ## Notes
 
 - No shell/browser needed by default. Agents get read access to sibling instance

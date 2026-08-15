@@ -10,8 +10,11 @@
 #   hw bootstrap --schema program --name <program-id>
 
 schema_id: program
-schema_version: 1.0
-harness_version: "6.0.0"
+schema_version: 1.1
+# 6.1.0: the Tier 1/2 rules this pack now carries (operator-push-relay,
+# Filter/Drive/Report, operator_scope as the filter set) are defined in
+# core/AUTHORITY.md, which ships in 6.1.0. The pin moves with the dependency.
+harness_version: "6.1.0"
 description: |
   Orchestrate N concurrent workstream harness instances under one operator goal
   without any orchestration primitive entering the substrate. Every workstream is a
