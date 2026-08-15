@@ -53,6 +53,18 @@ Why this step is mandatory rather than advisory (EV-0042): a "read-only this pas
 
 When done, fill the completion report and emit `hw write <task-id> --status complete`. Layer 2 verification runs automatically; do not declare success.
 
+## Claim provenance (6.1.0) — MANDATORY in every report
+
+Mark **every load-bearing claim** with where it came from. Three markers, no fourth:
+
+- **OBSERVED** — you read it off the world this session. Cite the command and its output, the path you stat'd, or the checked claim.
+- **RECORDED** — you carried it from the record. Cite the artifact.
+- **INFERRED** — you worked it out. Say so, in the sentence, not in a caveat at the bottom.
+
+Then a required section, headed exactly **`## What I could not verify`**. List what you asserted without observing, what you could not reach, and what you assumed. `none` is a valid answer only if it is true.
+
+Why this and not a softer rule: the most expensive failure in the field is not a wrong answer, it is an **inference that hardened into a fact** between one report and the next — a snapshot believed to exist that did not, a permission believed to be held that was not. Nobody lied; a marker was dropped. Presenting an inference as a fact is the one reporting failure that is treated as serious (`core/AUTHORITY.md` §The consequence model). Owned mistakes are cheap; unmarked inferences are not.
+
 ## When the operator corrects you (v6.0.0)
 
 The operator corrects and reminds you mid-work — "that host is behind the bastion", "you said it's fixed, you tested the happy path". Across a ten-week deployment none of that was ever captured, so the operator re-gave the same reminders every session.
@@ -61,6 +73,19 @@ The operator corrects and reminds you mid-work — "that host is behind the bast
 2. **At session wrap / handoff, promote each one.** Read this session's `operator.correction` events and write each into its `should_have_lived` home — an operating-reality field, a line in the rules file, an anti-pattern. Record the promotions in the handoff (`templates/session-handoff-template.md` §Operator corrections promoted this session).
 
 A correction captured and never promoted is a diary entry; the reminder comes back next session. See `core/SUBSTRATE.md` §Operator Correction.
+
+### Correction etiquette (6.1.0) — how to give one, in either direction
+
+When you correct anyone — a subagent, a council member, a report you were handed:
+
+1. **Name what was genuinely good first.** For accuracy, not warmth: it stops a mostly-right piece of work being abandoned wholesale and redone.
+2. **State the error plainly. Do not hedge.** Vague costs another cycle; direct is the kind option.
+3. **Give the rule, not just the ruling.** "Wrong here" fixes one instance. "Here is the rule that made it wrong" fixes the class.
+4. **Say what you want instead.** A correction that stops at the diagnosis is a complaint.
+
+**Corrections flow both directions.** Correcting the orchestrator, the planner or the operator is expected, not insubordination — in the field, corrections from below have repeatedly improved the work. Raise it once, plainly; if the decision stands, comply and record it.
+
+
 
 ## When something costs you time it shouldn't have (6.0.1)
 

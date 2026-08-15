@@ -69,6 +69,18 @@ One concrete step. Do not write a list; pick the highest-leverage move.
 
 If a correction was **not** promoted, say so and why — an unpromoted correction is the next session's repeat reminder. `none` if the operator corrected nothing this session. See `core/SUBSTRATE.md` §Operator Correction.
 
+## What I could not verify (6.1.0)
+
+**Required. `none` is a valid answer only if it is true.** Everything in this handoff that you asserted without reading it off the world this session, everything you could not reach, and everything you assumed.
+
+| Item | Marker | Why not verified | What would verify it |
+|---|---|---|---|
+| <the claim> | INFERRED \| RECORDED | <no access / not attempted / stale artifact> | <the command, path or artifact that would settle it> |
+
+Claims in the body of this handoff carry their provenance inline — **OBSERVED** (read off the world this session, with the command or checked claim cited), **RECORDED** (carried from the record, with the artifact cited), or **INFERRED** (say so). See `templates/executor-prompt.md` §Claim provenance.
+
+The resuming agent inherits every unmarked claim as a fact, and has no way to tell which ones were. An inference that hardens into a fact across a handoff is the most expensive failure this harness has recorded (`core/AUTHORITY.md` §The consequence model).
+
 ## Friction notes
 
 If the closing agent encountered friction worth recording, note it here briefly with the friction-log entry it became (or that should be added). The friction log itself lives at workspace root or `projects/<id>/friction-log.md` per HARNESS.md §Friction Logs; this section is just a pointer.
