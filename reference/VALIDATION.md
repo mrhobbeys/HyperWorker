@@ -10,7 +10,7 @@ Pick a domain you know well that is *not* one of the shipped default schemas (se
 
 ### Step 1: Structural Verification
 
-1. `HARNESS.md`, `core/SUBSTRATE.md`, `core/{LOCK,ATOMICITY,TYPED-ARTIFACTS,VERIFICATION,PRECEDENCE}.md` readable.
+1. `HARNESS.md`, `core/SUBSTRATE.md`, `core/{LOCK,ATOMICITY,TYPED-ARTIFACTS,VERIFICATION,PRECEDENCE,AUTHORITY,TOOLS}.md` readable.
 2. `templates/`, `schemas/artifacts/`, `schemas/projects/`, `templates/models/` exist with documented contents.
 3. `hw verify` on a fresh `.hyperworker/` returns `PASS` (an empty log still PASSes; a missing `events.jsonl` is a FAIL).
 

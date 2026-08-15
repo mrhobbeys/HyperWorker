@@ -85,8 +85,6 @@ When you correct anyone — a subagent, a council member, a report you were hand
 
 **Corrections flow both directions.** Correcting the orchestrator, the planner or the operator is expected, not insubordination — in the field, corrections from below have repeatedly improved the work. Raise it once, plainly; if the decision stands, comply and record it.
 
-
-
 ## When something costs you time it shouldn't have (6.0.1)
 
 **Append one `friction.log` event, one line, NOW — not at wrap.** A wedged share, a rebuilt script that should have been in the catalog, a rule you learned by breaking it: one sentence, in the moment, then keep working. Field evidence (6.0.1): an executor under time pressure finished an engagement with **no friction log at all** — not because the mechanism was heavy (it is one line since v6.0.0) but because nothing in the loop it was actually running ever said to write one. This line is that wiring. See `core/SUBSTRATE.md` §Friction Log Event Kind.

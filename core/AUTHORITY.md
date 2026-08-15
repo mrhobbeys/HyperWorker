@@ -36,6 +36,8 @@ Everything else is a **task with a cost**. Naming the cost is useful; calling it
 
 ## The three classes
 
+These classes presuppose a declared `fatal_outcomes` list; with none declared, there is nothing to gate on, so the classes do not apply -- fall back on asking.
+
 ### GREEN -- cannot end in a fatal outcome
 
 **Do it. Do not ask. Report after.**
@@ -51,7 +53,7 @@ All reading. All measurement. Additive and reversible change that is not on the 
 An amber protocol is declared per engagement in `OR-001.authority.amber_protocols` and typically composes some of:
 
 - **Additive first.** Add the new path, prove it works, then remove the old one -- never the reverse order.
-- **A proven dead-man revert.** A scheduled, unattended rollback that does not depend on the agent still being able to run, and that has been **proven on a dry run** before the real change. An untested revert is a belief, not a net (§Deception, below).
+- **A proven dead-man revert.** A scheduled, unattended rollback that does not depend on the agent still being able to run, and that has been **proven on a dry run** before the real change. An untested revert is a belief, not a net (§The consequence model, below).
 - **One change at a time.** So the revert has one thing to undo and the diagnosis has one variable.
 - **Read-back after.** Set it, save it, read it back (`core/ATOMICITY.md` §One Actor Per Action).
 
@@ -143,7 +145,7 @@ Optional `operating-reality` fields, all absent by default (`schemas/artifacts/o
 | `fatal_outcomes` | The states with no way back. Two or three. |
 | `authority.green_examples` | Representative work the agent does without asking. |
 | `authority.amber_protocols` | Each protocol, and what makes it the authorization. |
-| `authority.red_items` | Currently red, with the reason: `fatal-risk` or `operator-scope`. |
+| `authority.red_items` | Currently red, with the reason: `fatal-risk`, `recoverability-unknown`, or `operator-scope`. |
 | `authority.earned_downgrades` | What moved, to where, and the citation that proved it. |
 | `operator_scope` | What is genuinely the operator's, independent of danger. |
 

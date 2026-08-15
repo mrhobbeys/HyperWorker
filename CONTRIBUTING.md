@@ -1,6 +1,6 @@
 # Contributing to HyperWorker v6.1.0
 
-v6.0.0 is a structural test of a hypothesis. The bar for changes is high. This document explains what we want, what we don't, and how contributions are evaluated.
+v6.1.0 is a structural test of a hypothesis. The bar for changes is high. This document explains what we want, what we don't, and how contributions are evaluated.
 
 ## What we want
 
@@ -8,7 +8,7 @@ v6.0.0 is a structural test of a hypothesis. The bar for changes is high. This d
 
 - **Per-model profile additions.** A new profile for a model not yet in `templates/models/`. Cite observed behaviors with evidence — postmortems, framework docs, sample-size-disclosed observations. Do not declare a model "worse" than another.
 
-- **Sharper failure-mode documentation.** `reference/FAILURE-MODES.md` should grow as v6.0.0 is observed in real use. Document failures that fall *outside* any hypothesis in the spec — these indicate missing primitives.
+- **Sharper failure-mode documentation.** `reference/FAILURE-MODES.md` should grow as v6.1.0 is observed in real use. Document failures that fall *outside* any hypothesis in the spec — these indicate missing primitives.
 
 - **Structural check refinements.** Better citation-validation logic, tighter recitation overlap heuristics, deterministic compression improvements. Each refinement must produce an effect verifiable without asking the agent if it complied.
 
@@ -24,7 +24,7 @@ v6.0.0 is a structural test of a hypothesis. The bar for changes is high. This d
 
 - **CLI implementations of `hw`.** `hw` is an agent protocol, deliberately. A binary CLI is a downstream tool, not core. We won't merge a Python or Node implementation that becomes the new dependency for using the harness.
 
-- **Migration tooling from v4.1.1.** v6.0.0 is a clean break. Helping operators move artifacts from one harness to another is welcome as a separate downstream project; it is not part of v6.0.0.
+- **Migration tooling from v4.1.1.** v6.1.0 is a clean break. Helping operators move artifacts from one harness to another is welcome as a separate downstream project; it is not part of v6.1.0.
 
 ## The bar
 
@@ -78,7 +78,7 @@ If you copy an existing schema as a starting point, expect to rewrite every file
 Step-by-step walkthrough.
 
 1. **Pick the closest existing schema** (`marketing-campaign`, `report-synthesis`, `software-feature-ship`, `client-onboarding`, `event-planning`, or `compliance-audit`) and copy its directory to `schemas/projects/<new-name>/`.
-2. **Rewrite `schema.yaml`.** Set `schema_id`, `schema_version: 1.0`, `harness_version: "6.0.0"`. Write `description` (2–3 sentences). Replace `bootstrap_questions` with questions appropriate to the domain (operating-reality fields plus any domain-specific scope declarations). Update `default_tasks.templates` to reference the new task templates.
+2. **Rewrite `schema.yaml`.** Set `schema_id`, `schema_version: 1.0`, `harness_version` pinned to the harness version you are authoring against -- see the title of `HARNESS.md` or `HARNESS_VERSION` in `tools/hw-verify.py`; don't hardcode a version number here. Write `description` (2-3 sentences). Replace `bootstrap_questions` with questions appropriate to the domain (operating-reality fields plus any domain-specific scope declarations). Update `default_tasks.templates` to reference the new task templates.
 3. **Rewrite `precedence-tiers.yaml`.** Identify Tier 1 (immutable source-fidelity / NON-NEGOTIABLE), Tier 2 (operator-asserted scope), Tier 3 (project-derived facts), Tier 4 (style / voice). Place `@@SCAN_n_m` markers at decision-boundaries. The compressed rules file (regenerated at bootstrap) carries these markers; the executor answers each via `task.scan` events.
 4. **Rewrite `artifact-extensions.yaml`.** Declare any new artifact kinds the schema needs beyond the OR base set (decision, finding, anti-pattern, operating-reality). For each new kind, declare canonical fields + types. Use `field_overrides` to mark base OR fields optional or to widen their types.
 5. **Rewrite `capability-gates.yaml`.** Declare the v5.1.1 mandatory `scope_completeness:` block (every schema accepts `[complete, deferred, excluded-after-discovery, escalated]` by default; tighten only if the schema's delivery shape genuinely forbids some terminal states). Declare `external_state_readback:` if the schema's tasks mutate external state. Declare any schema-specific capability gates (e.g., per-task-kind required tools).

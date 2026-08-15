@@ -42,6 +42,8 @@ Five mechanisms enforce the four things that were breaking:
 
 Underneath all five, every action — every artifact written, every task completed — is appended to a single chained log. The state you see is computed from that log. There is no parallel state file the agent can drift away from. If you want to know exactly what happened and in what order, it's all there, verifiable.
 
+Sitting above the five, **authority** governs what an agent may do without asking -- gated on outcome, not action size. It is a protocol layer, not a sixth mechanism. Model: [core/AUTHORITY.md](core/AUTHORITY.md).
+
 ## What v6.0.0 adds
 
 Every item below came out of a real deployment failure, not a design session. Most are small on purpose — a mechanism heavier than its value doesn't get used.
