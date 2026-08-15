@@ -77,6 +77,15 @@ operating_reality_fields:
         type: list[string]
         required: false
         default: []
+  # v6.1.0 — the states this engagement has no way back from. OPTIONAL: absent
+  # means the harness has no declared list, and every authority judgement falls
+  # back on asking. Two or three entries is healthy; ten is a list of fears.
+  # Test a candidate by asking whether any sequence of actions restores the
+  # prior state -- if one exists, it is a task with a cost, not a fatal outcome.
+  # See core/AUTHORITY.md §Fatal outcomes are declared, not inferred.
+  - name: fatal_outcomes
+    type: list[string]
+    required: false
   - name: authority
     type: object
     required: true
@@ -87,9 +96,101 @@ operating_reality_fields:
       - name: requires_approval
         type: list[string]
         required: true
+      # v6.1.0 — the outcome-gated refinement of can_decide / requires_approval.
+      # All four are OPTIONAL; an OR-001 carrying only the two fields above
+      # validates unchanged and renders byte-identically. Gate on outcome, not
+      # on action size (core/AUTHORITY.md §The three classes).
+      - name: green_examples
+        type: list[string]
+        required: false
+      - name: amber_protocols
+        type: list[object]
+        required: false
+        item_fields:
+          - name: action_class
+            type: string
+            required: true
+          - name: protocol
+            type: list[string]
+            required: true
+            # The declared steps. Following them IS the authorization; there is
+            # no per-action ask inside amber.
+          - name: recovery_proven_by
+            type: string|null
+            required: true
+            # Citation or evidence id for the dry run that proved the net. Null
+            # means the protocol does not authorize anything yet.
+      - name: red_items
+        type: list[object]
+        required: false
+        item_fields:
+          - name: item
+            type: string
+            required: true
+          - name: reason
+            type: enum
+            values: [fatal-risk, recoverability-unknown, operator-scope]
+            required: true
+      # Log-by-citation. Red shrinks as recoverability is verified, and an
+      # earned downgrade is inherited by the next session rather than re-earned.
+      - name: earned_downgrades
+        type: list[object]
+        required: false
+        item_fields:
+          - name: item
+            type: string
+            required: true
+          - name: from
+            type: enum
+            values: [red, amber]
+            required: true
+          - name: to
+            type: enum
+            values: [amber, green]
+            required: true
+          - name: proven_by
+            type: string
+            required: true
+            # Citation: [KIND-NNN#hash], an evidence.capture id, or a claim id.
+          - name: at
+            type: iso8601-date
+            required: true
+  # v6.1.0 — what is genuinely the operator's, independent of technical danger.
+  # OPTIONAL. Distinct from authority.requires_approval, which mixes both
+  # reasons: an item here is the operator's because they own something the agent
+  # does not, not because the action could go wrong.
+  - name: operator_scope
+    type: list[string]
+    required: false
   - name: operator_profile
     type: string
     required: true
+  # v6.1.0 — who can actually reach what. OPTIONAL. Check this before
+  # referencing a document at a party that may not be able to open it; a
+  # mailbox snapshot goes stale silently, so a materially changed doc is
+  # re-posted as a fresh numbered snapshot marked superseding. See
+  # reference/comms-mail-pattern.md §Reachability discipline.
+  - name: reachability_map
+    type: list[object]
+    required: false
+    item_fields:
+      - name: party
+        type: string
+        required: true
+      - name: can_reach
+        type: list[string]
+        required: true
+      - name: cannot_reach
+        type: list[string]
+        required: false
+        default: []
+      - name: trigger
+        type: enum
+        values: [self-polling, human-triggered, unknown]
+        required: false
+        # Batching follows this: messages to a self-polling party may stream;
+        # every message to a human-triggered party is a pending obligation on
+        # the human, so batch and front-load decision trees.
   # v5.1 — both delegation_policy and model_selection_policy are optional. Omitted
   # fields inherit harness defaults; set them to capture operator preferences once
   # at bootstrap so they propagate across sessions. Backwards-compatible: a v5.0.1
@@ -161,7 +262,18 @@ render_order:
   - budget
   - timeline
   - team
+  - fatal_outcomes
   - authority
+  - operator_scope
   - operator_profile
+  - reachability_map
   - delegation_policy
   - model_selection_policy
+
+# Back-compat (v6.1.0). Every field added in 6.1.0 is OPTIONAL, and absent
+# optional fields are omitted from render rather than emitted empty
+# (core/SUBSTRATE.md §Projection rules, rule 5). An OR-001 written under 6.0.x
+# therefore re-renders to the same bytes, its hashes.json entry does not move,
+# and no [OR-NNN#hash] citation goes stale. The three new top-level entries are
+# interleaved into render_order at their semantic positions; because they render
+# nothing when absent, the relative order of the existing fields is unchanged.

@@ -14,10 +14,41 @@ team:
   operator: "<name>"
   role: "<solo | lead | contributor>"
   others: []
+# fatal_outcomes, the authority sub-block below it, operator_scope and
+# reachability_map are optional v6.1.0 fields. Omit the whole set on work where
+# authority is not live; declare them where it is, so agents stop asking about
+# things they are already allowed to do. See core/AUTHORITY.md.
+fatal_outcomes:                                   # states with no way back. Two or three, not ten.
+  - "<state the engagement cannot recover from>"
 authority:
   can_decide: ["<scope>", "<scope>"]
   requires_approval: ["<scope>", "<scope>"]
+  green_examples:                                 # cannot end in a fatal outcome: do it, report after
+    - "<representative work the agent does without asking>"
+  amber_protocols:                                # the protocol IS the authorization; no per-action ask
+    - action_class: "<class of change>"
+      protocol:
+        - "<e.g. additive first, old path removed only after the new one is proven>"
+        - "<e.g. scheduled dead-man revert that does not depend on the agent running>"
+        - "<e.g. one change at a time, read back after>"
+      recovery_proven_by: "<citation / evidence id for the dry run>"   # null = does not authorize yet
+  red_items:
+    - item: "<action>"
+      reason: <fatal-risk | recoverability-unknown | operator-scope>
+  earned_downgrades:                              # red shrinks; each move cites what proved it
+    - item: "<action>"
+      from: <red | amber>
+      to: <amber | green>
+      proven_by: "<[KIND-NNN#hash] | evidence id | claim id>"
+      at: <YYYY-MM-DD>
+operator_scope:                                   # theirs because they own it, not because it is dangerous
+  - "<e.g. credentials, spend, physical presence, business risk, user-visible timing>"
 operator_profile: "<short label, e.g., solo-operator-modest-budget>"
+reachability_map:                                 # check before referencing a doc at a party
+  - party: "<agent / person / role>"
+    can_reach: ["<path or resource>"]
+    cannot_reach: ["<path or resource>"]
+    trigger: <self-polling | human-triggered | unknown>
 # soul_anchor_path is an optional v5.2.0 field pointing at the operator's filled-in
 # soul.md (operator-identity anchor). null inherits soul.md at workspace root if
 # one exists; otherwise the harness fires no operator_soul_anchor event. See
