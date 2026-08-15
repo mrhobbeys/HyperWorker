@@ -13,6 +13,7 @@ This mechanism subsumes v4.1.1's Dependency mechanism. Dependencies are now decl
 | H-A1 | A task that fits one session, has a hermetic working set, and declares its tool requirements eliminates drift caused by oversize work or missing tools. | Drift observed in a task that passed all three predicates. |
 | H-A2 | Branch/fold preserves the sub-trajectory in events while keeping the parent context clean. | Parent context grew unboundedly during a branch. |
 | H-A3 | Schema-level capability gates prevent the v4.1.1 subagent tool-mismatch failure. | Subagent attempted a tool call for a tool it was not granted. |
+| H-A4 | Requiring one actor to carry an action from set through read-back keeps the audit trail attributable, at no throughput cost. | An action performed end-to-end by one actor still could not be reconstructed afterward, or the rule blocks work that only a split could have done. |
 
 ---
 
@@ -91,6 +92,28 @@ Anything outside that list is **not** mounted. The failure mode hermeticism prev
 If another artifact is needed, STOP and emit a `task.status` to `blocked` with a `reason: missing_consumes <artifact>`. The planner adds the artifact to `consumes:` and unblocks. One pause, one explicit edge added to the graph, full recitation visibility.
 
 This is the v5.0 form of "Do NOT Touch": positive scope by enumeration of `consumes:`, not negative scope by enumeration of forbidden files.
+
+---
+
+## One Actor Per Action (6.1.0)
+
+Hermeticism bounds what a task *reads*. This bounds who *performs* it.
+
+**One actor per action. Set it, save it, read it back, report the before and after.** Those four steps are one indivisible unit of ownership. They are not four steps that can be distributed.
+
+**Never split set-value / save / verify across parties.** One party filling in a value and a second one clicking save is the canonical form, and it destroys the audit trail: afterwards neither party can state what was changed, because neither one saw both halves. The record shows an action with no owner. Reconstructing it costs a full diagnostic cycle, and the reconstruction is itself an inference.
+
+The failure survives across every shape the split takes:
+
+- An agent stages a change and asks a human to apply it. The human cannot report what the value was before.
+- An agent applies a change and asks another party to confirm it took. The confirmation is now a claim about someone else's action.
+- A subagent performs the mutation and the parent reports it. The parent is reporting an inference (`core/AUTHORITY.md` §The consequence model).
+
+The report carries **both** states -- what it was, what it is now -- because "changed successfully" is not a fact anyone can check later. Where the value is externally observable, the read-back is a checked claim (`core/SUBSTRATE.md` §Checked Claims), which makes it replayable instead of asserted.
+
+**This is atomicity of ownership, and it is the same primitive as the rest of this mechanism.** A task is atomic because it fits one session, mounts one working set, and declares one tool requirement. An action is atomic because it has one actor from set to read-back. A split action is an oversize task in miniature: the part that drifts is the part nobody was holding.
+
+Where an action genuinely cannot be performed by one actor -- a login only a human can complete, a physical step -- the boundary is the *whole* action, not a seam inside it. The human performs the complete action and reports both states, or the agent does; the handoff never lands mid-action. See `reference/comms-mail-pattern.md` §Structural contact is plumbing, not a channel for how that contact stays narrow.
 
 ---
 
