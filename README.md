@@ -210,7 +210,7 @@ There is no migration path. v4.1.1 remains on its own branch as the prior theory
 
 ```
 HARNESS.md             — universal entry point (read this first)
-core/                  — the five mechanisms, the substrate, the tools contract
+core/                  — the five mechanisms, the substrate, the tools contract, the authority model
 templates/             — executor prompt, task/project/artifact/projection skeletons, model profiles
 schemas/               — twenty bootstrap-ready project schemas + artifact schemas
 reference/             — validation, failure modes, field reports, the file-mailbox pattern

@@ -22,6 +22,8 @@ Each one is a failure that already happened, in production, at cost.
 4. **Never put a secret in an event.** The log is append-only, so a credential written into it is permanent; the only remediation is rotating it in the real world. Store by reference: `[REDACTED-SECRET]` plus a pointer to where the value lives. `hw add` refuses the append on a hit. See `core/SUBSTRATE.md` §Secrets Gate.
 5. **Never claim posted, delivered, or done without re-reading it at the destination.** Not the copy's return code, not the absence of an error, not the source file still being there — the destination path, read back. "Posted" and "received" are different facts. See `core/SUBSTRATE.md` §Transport Rules.
 
+Nothing outside those five is forbidden by default, and asking as if it were is its own failure — `core/AUTHORITY.md` draws the line by declared fatal outcome rather than by how large the action looks.
+
 ## Recovery Order — how you start, every time
 
 Whether you are bootstrapping, resuming a project, or picking up after context was compacted, read in this order and **stop as soon as you can act**:
@@ -111,8 +113,10 @@ The full set of `hw` operations and their protocols is documented in `core/SUBST
 HARNESS.md                           # this file
 core/
   SUBSTRATE.md                       # event log + projections + hashes + hw protocols
+  AUTHORITY.md                       # authority model (6.1.0) — outcome-gated classes, gate assessability,
+                                     #   consequence model, blocker-vs-task; protocol, not a sixth mechanism
   LOCK.md
-  ATOMICITY.md                       # includes branch/fold + capability gates
+  ATOMICITY.md                       # includes branch/fold + capability gates + one actor per action
   TYPED-ARTIFACTS.md                 # decisions / findings / anti-patterns / operating-reality + consumption protocol
   VERIFICATION.md                    # pyramid + risk classification + council
   PRECEDENCE.md                      # tiered rules + SCAN markers
