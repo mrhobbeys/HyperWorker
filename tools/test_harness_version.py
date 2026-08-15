@@ -46,9 +46,13 @@ parse_schema_harness_version = hw_verify.parse_schema_harness_version
 HARNESS_VERSION = hw_verify.HARNESS_VERSION
 
 # One patch level above whatever the harness currently declares. Derived rather
-# than written down: this case exists to prove the gate refuses on a patch-level
-# difference, and a hardcoded literal silently becomes an "equal" case the first
-# time the harness itself ships that patch (it did, at 6.0.1).
+# than written down: the cases below exist to prove the gate refuses a schema the
+# harness is too old for, and a hardcoded literal silently becomes an "equal" case
+# the first time the harness itself ships that version. It happened twice: a
+# literal 6.0.1 at the patch-gate case, and a literal 6.1.0 at the parked-project
+# case, each of which stopped testing anything the release that shipped it.
+# Every "newer than the harness" fixture in this file is either derived from
+# HARNESS_VERSION or far enough above it to stay above it.
 _MAJOR, _MINOR, _PATCH = parse_semver(HARNESS_VERSION)
 NEXT_PATCH_VERSION = f"{_MAJOR}.{_MINOR}.{_PATCH + 1}"
 
@@ -171,7 +175,7 @@ def _(tmp):
 def _(tmp):
     reset_ids()
     write_project_md(tmp)
-    write_schema_yaml(tmp, "6.1.0")
+    write_schema_yaml(tmp, NEXT_PATCH_VERSION)
     events = [
         ev("project.activate"),
         ev("project.park", PROJECT, {"reason": "pause"}),

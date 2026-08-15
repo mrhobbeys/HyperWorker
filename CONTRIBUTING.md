@@ -1,4 +1,4 @@
-# Contributing to HyperWorker v6.0.0
+# Contributing to HyperWorker v6.1.0
 
 v6.0.0 is a structural test of a hypothesis. The bar for changes is high. This document explains what we want, what we don't, and how contributions are evaluated.
 

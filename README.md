@@ -1,5 +1,5 @@
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
-![Version: 6.0.1](https://img.shields.io/badge/Version-6.0.1-blue.svg)
+![Version: 6.1.0](https://img.shields.io/badge/Version-6.1.0-blue.svg)
 
 # HyperWorker
 
@@ -204,7 +204,7 @@ Concretely:
 
 This is a theory, not a finding. Each primitive in v5.0 has an explicit hypothesis and an explicit falsifier (see `core/*.md` §Hypothesis sections). v5.1 will retire whatever fails its falsifier in real use. Read [VISION.md](VISION.md) for the full posture.
 
-There is no migration path. v4.1.1 remains on its own branch as the prior theory. Operators with running v4.1.1 projects complete them on v4.1.1; new projects start on 6.0.0.
+There is no migration path. v4.1.1 remains on its own branch as the prior theory. Operators with running v4.1.1 projects complete them on v4.1.1; new projects start on 6.1.0.
 
 ## Structure
 

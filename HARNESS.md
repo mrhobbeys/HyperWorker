@@ -1,4 +1,4 @@
-# HyperWorker v6.0.1
+# HyperWorker v6.1.0
 
 > **Read this file first. It is the entry point for any agent, from any vendor.** The next four sections are what you need before you touch anything. Everything after them is detail you can come back for.
 
