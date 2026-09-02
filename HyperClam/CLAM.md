@@ -122,5 +122,5 @@ Ship gate: a configuration is usable on real data when measured recall on the cu
 ## Roadmap
 
 - v0.2 — international phone/address patterns; IPv6; NER stage between regex and LLM; HyperFinch flight-plan templates for the injection sweep.
-- v0.3 — structured-format awareness (CSV/JSON field-level scrubbing — Spencer's existing research spreadsheets are the use case); reversible re-identification workflow (scrubbed answer comes back from the frontier model → mapping re-inflates it locally).
+- v0.3 — structured-format awareness (CSV/JSON field-level scrubbing — the operator's existing research spreadsheets are the use case); reversible re-identification workflow (scrubbed answer comes back from the frontier model → mapping re-inflates it locally).
 - Each addition states a hypothesis and a falsifier, house style.

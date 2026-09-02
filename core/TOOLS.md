@@ -2,7 +2,7 @@
 
 > **Not a mechanism, and not a dependency.** The harness is markdown and YAML; it stays that way. But agents working under it write code constantly — a hasher, a JSON differ, a thing that pokes an endpoint and checks the response — and every fresh session writes it again, slightly differently, unverified. This file is the contract for using a shared catalog of proven tools instead. The harness works exactly as well when no catalog is reachable.
 
-The catalog is **HyperOtter** (`slh.local:spencer/HyperOtter.git`), a sibling repo in the Hyper ecosystem. It holds small, single-file, hash-pinned tools, each with a manifest and a check predicate that proves it works. What follows is HyperWorker's side of the contract: when to look, what to verify, when to ignore it entirely, and what you owe back.
+The catalog is **HyperOtter** (`<your-git-host>:<user>/HyperOtter.git`), a sibling repo in the Hyper ecosystem. It holds small, single-file, hash-pinned tools, each with a manifest and a check predicate that proves it works. What follows is HyperWorker's side of the contract: when to look, what to verify, when to ignore it entirely, and what you owe back.
 
 ---
 
